@@ -1,0 +1,22 @@
+[package]
+name = "supa-providers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+supa-domain.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-trait.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+bs58.workspace = true
+ring.workspace = true
+zeroize.workspace = true
+uuid.workspace = true
+base64.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
