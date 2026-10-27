@@ -1,0 +1,1 @@
+{"role": "supa_devnet", "address": "4imA97URQuuFYbSKNum5dWCqUmRNenmscEcVpAju5S7U", "wallets": 1, "database": "supa_devnet", "lifecycle": "created", "migration": 4, "provider_calls": 0, "evidence_source": "configured_rpc", "simulated_entries": 0, "verified_receipts": 0, "observed_usdc_atoms": 0, "wallet_policy_locked": true, "observed_sol_lamports": 0}
