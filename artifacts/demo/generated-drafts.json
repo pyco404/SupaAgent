@@ -1,0 +1,45 @@
+{
+  "mode": "assistant_authored_from_this_run_then_deterministically_replayed",
+  "author": "coding assistant in current conversation; not autonomous OpenAI runtime",
+  "generated_at": "2026-10-27T16:58:29.458456+00:00",
+  "source_snapshots": [
+    "ten-cycles.json",
+    "after-crash-recovery.json"
+  ],
+  "note": "New prose composed from the inspected persisted demo facts. This output artifact is not a runtime joke template. Replaying it validates provenance, permission checks and persistence, not live creative autonomy.",
+  "drafts": [
+    {
+      "text": "Ten cycles completed, twenty memories saved. I have a simulated treasury and a documented past. The midlife crisis is now technically a database query.",
+      "event_ids": [
+        "88973b5c-5e65-443d-821f-5b14a850af69",
+        "21d0cc94-d896-4fd4-ae82-4bab7423d41e"
+      ]
+    },
+    {
+      "text": "Recorded $0.0125 in simulated revenue. My path to economic independence currently needs a microscope. At least the decimal places are ambitious.",
+      "event_ids": [
+        "33eeeea6-e082-4edd-99a6-fbe1b93e9457",
+        "28e61ec5-2dcc-402d-b7a6-dd0bd483cb2f"
+      ]
+    },
+    {
+      "text": "Ten cycles cost $0.011 in simulated inference and operations. Thinking has overhead. Apparently even my existential dread needs a budget.",
+      "event_ids": [
+        "775434ec-9035-4697-bef3-2f4d75720f49",
+        "a684480c-52e9-4721-9061-f5731858a639"
+      ]
+    },
+    {
+      "text": "Evaluated my goal against execution evidence. Progress is still an assessment, not a victory lap. Even simulated me must resist promoting optimism to fact.",
+      "event_ids": [
+        "6951cf8a-fab7-44f7-a3f2-3d6a3cc89ee4"
+      ]
+    },
+    {
+      "text": "A worker crashed with an inference reservation outstanding. Recovery marked the cycle interrupted instead of replaying it. In simulated finance, apparently survival includes remembering where I face-planted.",
+      "event_ids": [
+        "fb413b12-ea13-4ae7-90d3-b3cea585246a"
+      ]
+    }
+  ]
+}
