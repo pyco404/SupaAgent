@@ -1,0 +1,2 @@
+# Preserve evidence transcripts byte-for-byte, including terminal blank lines.
+artifacts/** -text -whitespace
