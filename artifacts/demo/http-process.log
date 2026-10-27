@@ -1,0 +1,5 @@
+{"timestamp":"2026-10-27T16:59:14.689323Z","level":"INFO","fields":{"message":"local_api_ready","address":"127.0.0.1:58031","economic_mode":"simulation","provider":"offline"},"target":"supa_api"}
+{"timestamp":"2026-10-27T16:59:15.718694Z","level":"INFO","fields":{"message":"cycle_started","agent_id":"efb0a85c-6cb0-49fe-aaaf-843ba684b35d","cycle_id":"e4efbe50-875d-4ec3-9a8b-b1f4162dd5a0"},"target":"supa_runtime"}
+{"timestamp":"2026-10-27T16:59:15.735605Z","level":"INFO","fields":{"message":"inference_accounted","agent_id":"efb0a85c-6cb0-49fe-aaaf-843ba684b35d","cycle_id":"e4efbe50-875d-4ec3-9a8b-b1f4162dd5a0","call_id":"52a27056-1ed3-4ad8-a4d1-f89eae52e6a5","attempt":0,"has_usage":false},"target":"supa_runtime"}
+{"timestamp":"2026-10-27T16:59:15.752753Z","level":"INFO","fields":{"message":"cycle_completed","agent_id":"efb0a85c-6cb0-49fe-aaaf-843ba684b35d","cycle_id":"e4efbe50-875d-4ec3-9a8b-b1f4162dd5a0"},"target":"supa_runtime"}
+{"timestamp":"2026-10-27T16:59:15.822865Z","level":"INFO","fields":{"message":"local_api_ready","address":"127.0.0.1:58031","economic_mode":"simulation","provider":"offline"},"target":"supa_api"}
