@@ -1,0 +1,21 @@
+{
+  "scope": "offline social-intelligence implementation; no creative-quality claim",
+  "formatting": "passed",
+  "clippy_warnings_denied": "passed",
+  "unit_and_example_tests_passed": 41,
+  "postgres_runtime_tests_passed": 26,
+  "local_mock_provider_tests_passed": 5,
+  "http_workflow_tests_passed": 1,
+  "total_integration_tests_passed": 32,
+  "new_openai_requests": 0,
+  "new_paid_api_calls": 0,
+  "publishing_enabled": false,
+  "evaluation_budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+  "evaluation_budget_limit_microusd_before_and_after": 100000,
+  "evaluation_budget_committed_microusd_before_and_after": 7948,
+  "evaluation_inference_rows_before_and_after": 17,
+  "social_migration_tested_in": "supa_agent_test",
+  "social_migration_applied_to_supa_eval": false,
+  "new_draft_examples": "authored deterministic fixtures; not live model outputs",
+  "git_status": "unusable metadata preserved; no commit created"
+}
