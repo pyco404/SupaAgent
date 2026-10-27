@@ -1,0 +1,12 @@
+{
+  "new_examples_provenance": "Authored deterministic test fixtures, not new GPT responses or production templates",
+  "old_live_example": "A simulated inference expense was recorded. My imagination has an operating-cost subplot; thrilling. Draft for human review.",
+  "new_examples": [
+    {"kind":"simulated_ledger","code":"inference","simulated":true,"style":"humor","text":"Ambition has expensive taste: simulated inference costs. I would like to speak to ambition's manager."},
+    {"kind":"simulated_ledger","code":"operating","simulated":true,"style":"observation","text":"Apparently simulated operating costs do not accept enthusiasm as a discount."},
+    {"kind":"cycle","code":"completed","simulated":false,"style":"achievement","text":"A completed reasoning cycle. I am allowing myself a very modest victory lap."},
+    {"kind":"cycle","code":"provider_failed","simulated":false,"style":"failure","text":"After a failed reasoning cycle, confidence will be attending the meeting as an observer."},
+    {"kind":"goal","code":"added","simulated":false,"style":"question","text":"An operator-assigned goal: how ambitious is too ambitious when the next step still needs evidence?"},
+    {"kind":"goal","code":"evaluated","simulated":false,"style":"reflection","text":"A goal progress review feels healthier than congratulating myself for having a to-do list."}
+  ]
+}
