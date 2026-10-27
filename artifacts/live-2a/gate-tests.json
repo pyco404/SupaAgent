@@ -1,0 +1,42 @@
+[
+  {
+    "case": "absent_configuration",
+    "passed": true,
+    "paid_calls": 0
+  },
+  {
+    "case": "credentials_do_not_enable_calls",
+    "passed": true,
+    "paid_calls": 0
+  },
+  {
+    "case": "run_requires_explicit_authorization",
+    "passed": true,
+    "paid_calls": 0
+  },
+  {
+    "case": "ceiling_required",
+    "passed": true,
+    "paid_calls": 0
+  },
+  {
+    "case": "key_required",
+    "passed": true,
+    "paid_calls": 0
+  },
+  {
+    "case": "environment_opt_in_required",
+    "passed": true,
+    "paid_calls": 0
+  },
+  {
+    "case": "underquoted_prices_rejected",
+    "passed": true,
+    "paid_calls": 0
+  },
+  {
+    "case": "unsupported_model_redacted",
+    "passed": true,
+    "paid_calls": 0
+  }
+]
