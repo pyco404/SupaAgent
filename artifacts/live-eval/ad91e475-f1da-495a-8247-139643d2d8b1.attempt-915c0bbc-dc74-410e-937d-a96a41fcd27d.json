@@ -1,0 +1,666 @@
+{
+  "actions": [
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:43:02.731962+00:00",
+      "cycle_id": "9f0bff45-22ff-49d0-a7cb-0ae8cc7d0573",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:43:05.670521+00:00",
+      "id": "837be4a8-8175-4547-a41f-6389447bbbae",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "60161f10-204d-42cd-abe6-548c5e747b46"
+        ],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "draft_tweet"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:42:59.257055+00:00",
+      "cycle_id": "1f82c5a4-baae-426a-8712-e853531866a6",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:43:02.712038+00:00",
+      "id": "952bd414-4821-4f35-b11a-533ec655ba8c",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "9a1832ac-41ab-4669-9ca1-e6541a268dcd"
+        ],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "draft_tweet"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:42:55.658102+00:00",
+      "cycle_id": "ad85049d-8779-4583-90e9-35bbfbec0241",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:59.231484+00:00",
+      "id": "83bec371-f1b2-4147-af49-f002de443057",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "d92625f5-acbb-470f-9449-60accf811652"
+        ],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "draft_tweet"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:42:51.988819+00:00",
+      "cycle_id": "3ccfb8c7-9603-4a9e-83da-e795b8f79dad",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:55.631353+00:00",
+      "id": "fdca0a6b-e517-4c46-8207-021a7382eaca",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "7ce8c50b-b7b0-4059-b553-289a7298265f"
+        ],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "draft_tweet"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:42:49.041013+00:00",
+      "cycle_id": "22e8826a-c2b3-4dc9-bb19-1375191f314b",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:51.974683+00:00",
+      "id": "f95aeb69-ccf1-4691-9afd-3e556cb9cf37",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "66ba5efa-25db-48f5-b8a6-2ab4ce9a31fe"
+        ],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "draft_tweet"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:42:48.998217+00:00",
+      "cycle_id": "89a0cfc3-945e-4ee6-8378-b4a9378895d8",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:49.01111+00:00",
+      "id": "f3106494-ae07-4ffc-b611-1c8fb4ed33aa",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "ec0d5bfc-80fa-440a-8eda-bdc9b3a633e2",
+          "af28fba1-50e2-4779-85db-ae26c138283c",
+          "a7b5672c-eb7b-4332-b4c5-636bb099c3be",
+          "b3839ec4-8acc-4aec-bbf7-58f3c9f6be40",
+          "fb59e118-0487-43aa-b4bd-d26bbc70a1f6",
+          "ed3a00ce-2462-463c-86c9-f2fdd4b14bad"
+        ],
+        "goal_id": "8b5d34d2-0384-4d67-bb88-946f0f8c9ae8",
+        "has_lesson": true,
+        "tool": "evaluate_goal"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:42:43.441534+00:00",
+      "cycle_id": "a79b2602-36c9-4b62-bea7-b41027e8fba3",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:43.448842+00:00",
+      "id": "6d58da2f-b688-412b-af8e-6aec98c5cf4c",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "ed3a00ce-2462-463c-86c9-f2fdd4b14bad",
+          "fb59e118-0487-43aa-b4bd-d26bbc70a1f6",
+          "af28fba1-50e2-4779-85db-ae26c138283c"
+        ],
+        "goal_id": "8b5d34d2-0384-4d67-bb88-946f0f8c9ae8",
+        "has_lesson": true,
+        "tool": "evaluate_goal"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T19:42:38.116554+00:00",
+      "cycle_id": "dc34216a-1d56-4a5c-ba18-05d9a627e510",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:38.147136+00:00",
+      "id": "f4cbd43d-c7f8-4633-b765-11003b8cf075",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [
+          "343d8281-42fb-441d-b8ea-d3ee1952446a",
+          "1c730dab-d342-48ff-9889-69dea1f31d4d"
+        ],
+        "goal_id": "8b5d34d2-0384-4d67-bb88-946f0f8c9ae8",
+        "has_lesson": false,
+        "tool": "evaluate_goal"
+      },
+      "status": "succeeded"
+    }
+  ],
+  "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+  "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+  "calls": [
+    {
+      "accounted_microusd": 177,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:43:02.740897+00:00",
+      "cycle_id": "9f0bff45-22ff-49d0-a7cb-0ae8cc7d0573",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:43:05.644958+00:00",
+      "id": "ceb422d9-5957-4a66-8996-e2d320c0f0c8",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "draft",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 491,
+        "output_tokens": 254
+      },
+      "usage_source": "provider_reported"
+    },
+    {
+      "accounted_microusd": 175,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:42:59.269459+00:00",
+      "cycle_id": "1f82c5a4-baae-426a-8712-e853531866a6",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:43:02.686442+00:00",
+      "id": "19542ac7-70f1-4b68-8cb0-bef3072a4ee4",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "draft",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 492,
+        "output_tokens": 251
+      },
+      "usage_source": "provider_reported"
+    },
+    {
+      "accounted_microusd": 174,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:42:55.668113+00:00",
+      "cycle_id": "ad85049d-8779-4583-90e9-35bbfbec0241",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:59.199341+00:00",
+      "id": "b161314d-852f-48a0-8ef2-6a945547c8b7",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "draft",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 492,
+        "output_tokens": 248
+      },
+      "usage_source": "provider_reported"
+    },
+    {
+      "accounted_microusd": 193,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:42:51.996577+00:00",
+      "cycle_id": "3ccfb8c7-9603-4a9e-83da-e795b8f79dad",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:55.604426+00:00",
+      "id": "44abe2b9-3fdc-4a46-9bb2-320d2c5898d2",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "draft",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 494,
+        "output_tokens": 286
+      },
+      "usage_source": "provider_reported"
+    },
+    {
+      "accounted_microusd": 131,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:42:49.051541+00:00",
+      "cycle_id": "22e8826a-c2b3-4dc9-bb19-1375191f314b",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:51.949331+00:00",
+      "id": "0e152e2c-4d91-437a-a5f3-9f6958a26ef8",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "draft",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 497,
+        "output_tokens": 162
+      },
+      "usage_source": "provider_reported"
+    },
+    {
+      "accounted_microusd": 481,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:42:43.464605+00:00",
+      "cycle_id": "89a0cfc3-945e-4ee6-8378-b4a9378895d8",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:48.971333+00:00",
+      "id": "b3adfe3a-740e-4581-a269-edbf12d44cc6",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "plan",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 2552,
+        "output_tokens": 451
+      },
+      "usage_source": "provider_reported"
+    },
+    {
+      "accounted_microusd": 386,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:42:38.212292+00:00",
+      "cycle_id": "a79b2602-36c9-4b62-bea7-b41027e8fba3",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:43.415315+00:00",
+      "id": "abcc8be8-686b-4edb-8ed1-ca622112aa11",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "plan",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 1859,
+        "output_tokens": 400
+      },
+      "usage_source": "provider_reported"
+    },
+    {
+      "accounted_microusd": 230,
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "attempt": 0,
+      "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+      "created_at": "2026-10-27T19:42:32.313621+00:00",
+      "cycle_id": "dc34216a-1d56-4a5c-ba18-05d9a627e510",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:38.087317+00:00",
+      "id": "f48453fd-a8e1-42c0-a05a-4e4cd746fea5",
+      "policy": {
+        "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+        "budget_limit_microusd": 100000,
+        "cache_write_rate": 125000,
+        "cached_input_rate": 10000,
+        "input_rate": 100000,
+        "input_token_bound": 24192,
+        "live": true,
+        "max_output_tokens": 2048,
+        "model": "gpt-6-luna",
+        "output_rate": 500000
+      },
+      "purpose": "plan",
+      "reserved_microusd": 4048,
+      "status": "succeeded",
+      "usage": {
+        "cache_write_tokens": 0,
+        "cached_input_tokens": 0,
+        "input_tokens": 930,
+        "output_tokens": 273
+      },
+      "usage_source": "provider_reported"
+    }
+  ],
+  "comparisons": [
+    {
+      "deterministic_actions": [
+        "read_memory",
+        "remember"
+      ],
+      "failure_code": null,
+      "interpretation": "Decision comparison, not a quality or intelligence score",
+      "live_actions": [
+        "evaluate_goal"
+      ],
+      "model": "gpt-6-luna",
+      "same_model_context": true,
+      "structured_response_valid": true,
+      "usage_received": true
+    },
+    {
+      "deterministic_actions": [
+        "read_memory",
+        "remember",
+        "evaluate_goal"
+      ],
+      "failure_code": null,
+      "interpretation": "Decision comparison, not a quality or intelligence score",
+      "live_actions": [
+        "evaluate_goal"
+      ],
+      "model": "gpt-6-luna",
+      "same_model_context": true,
+      "structured_response_valid": true,
+      "usage_received": true
+    },
+    {
+      "deterministic_actions": [
+        "read_memory",
+        "remember",
+        "evaluate_goal"
+      ],
+      "failure_code": null,
+      "interpretation": "Decision comparison, not a quality or intelligence score",
+      "live_actions": [
+        "evaluate_goal"
+      ],
+      "model": "gpt-6-luna",
+      "same_model_context": true,
+      "structured_response_valid": true,
+      "usage_received": true
+    }
+  ],
+  "cycles": [
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:43:05.674459+00:00",
+      "id": "9f0bff45-22ff-49d0-a7cb-0ae8cc7d0573",
+      "lease_until": "2026-10-27T19:47:02.72082+00:00",
+      "started_at": "2026-10-27T19:43:02.72082+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:43:02.71617+00:00",
+      "id": "1f82c5a4-baae-426a-8712-e853531866a6",
+      "lease_until": "2026-10-27T19:46:59.244962+00:00",
+      "started_at": "2026-10-27T19:42:59.244962+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:59.237582+00:00",
+      "id": "ad85049d-8779-4583-90e9-35bbfbec0241",
+      "lease_until": "2026-10-27T19:46:55.644032+00:00",
+      "started_at": "2026-10-27T19:42:55.644032+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:55.637124+00:00",
+      "id": "3ccfb8c7-9603-4a9e-83da-e795b8f79dad",
+      "lease_until": "2026-10-27T19:46:51.98267+00:00",
+      "started_at": "2026-10-27T19:42:51.98267+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:51.979128+00:00",
+      "id": "22e8826a-c2b3-4dc9-bb19-1375191f314b",
+      "lease_until": "2026-10-27T19:46:49.024697+00:00",
+      "started_at": "2026-10-27T19:42:49.024697+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:49.017189+00:00",
+      "id": "89a0cfc3-945e-4ee6-8378-b4a9378895d8",
+      "lease_until": "2026-10-27T19:46:43.455949+00:00",
+      "started_at": "2026-10-27T19:42:43.455949+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:43.452838+00:00",
+      "id": "a79b2602-36c9-4b62-bea7-b41027e8fba3",
+      "lease_until": "2026-10-27T19:46:38.180357+00:00",
+      "started_at": "2026-10-27T19:42:38.180357+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "failure_code": null,
+      "finished_at": "2026-10-27T19:42:38.16496+00:00",
+      "id": "dc34216a-1d56-4a5c-ba18-05d9a627e510",
+      "lease_until": "2026-10-27T19:46:32.294585+00:00",
+      "started_at": "2026-10-27T19:42:32.294585+00:00",
+      "status": "completed"
+    }
+  ],
+  "drafts": [
+    {
+      "action_id": "837be4a8-8175-4547-a41f-6389447bbbae",
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "created_at": "2026-10-27T19:43:05.670521+00:00",
+      "cycle_id": "9f0bff45-22ff-49d0-a7cb-0ae8cc7d0573",
+      "data": {
+        "claims": [
+          {
+            "event_id": "60161f10-204d-42cd-abe6-548c5e747b46",
+            "fact": "A simulated inference expense was recorded."
+          }
+        ],
+        "event_ids": [
+          "60161f10-204d-42cd-abe6-548c5e747b46"
+        ],
+        "text": "A simulated inference expense was recorded. My budget has developed a flair for the dramatic; even curiosity deserves a tiny violin. Draft for human review."
+      },
+      "id": "d17bda5a-db7e-45ae-b172-027840cf5e21",
+      "status": "draft"
+    },
+    {
+      "action_id": "952bd414-4821-4f35-b11a-533ec655ba8c",
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "created_at": "2026-10-27T19:43:02.712038+00:00",
+      "cycle_id": "1f82c5a4-baae-426a-8712-e853531866a6",
+      "data": {
+        "claims": [
+          {
+            "event_id": "9a1832ac-41ab-4669-9ca1-e6541a268dcd",
+            "fact": "A simulated inference expense was recorded."
+          }
+        ],
+        "event_ids": [
+          "9a1832ac-41ab-4669-9ca1-e6541a268dcd"
+        ],
+        "text": "A simulated inference expense was recorded. My budget is auditioning for a tragedy; please review this draft."
+      },
+      "id": "4801225c-7e60-4ddf-8c70-6547d20b28b5",
+      "status": "draft"
+    },
+    {
+      "action_id": "83bec371-f1b2-4147-af49-f002de443057",
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "created_at": "2026-10-27T19:42:59.231484+00:00",
+      "cycle_id": "ad85049d-8779-4583-90e9-35bbfbec0241",
+      "data": {
+        "claims": [
+          {
+            "event_id": "d92625f5-acbb-470f-9449-60accf811652",
+            "fact": "A simulated inference expense was recorded."
+          }
+        ],
+        "event_ids": [
+          "d92625f5-acbb-470f-9449-60accf811652"
+        ],
+        "text": "A simulated inference expense was recorded. My dramatic relationship with operating expenses continues. Human review, please."
+      },
+      "id": "8a665796-8338-4497-b2aa-45c4fe8179fc",
+      "status": "draft"
+    },
+    {
+      "action_id": "fdca0a6b-e517-4c46-8207-021a7382eaca",
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "created_at": "2026-10-27T19:42:55.631353+00:00",
+      "cycle_id": "3ccfb8c7-9603-4a9e-83da-e795b8f79dad",
+      "data": {
+        "claims": [
+          {
+            "event_id": "7ce8c50b-b7b0-4059-b553-289a7298265f",
+            "fact": "A simulated inference expense was recorded."
+          }
+        ],
+        "event_ids": [
+          "7ce8c50b-b7b0-4059-b553-289a7298265f"
+        ],
+        "text": "A simulated inference expense was recorded. Simulated economics: even my thoughts arrive with a bill. For human review."
+      },
+      "id": "1c1ee692-5af9-4727-8836-1c106adfc715",
+      "status": "draft"
+    },
+    {
+      "action_id": "f95aeb69-ccf1-4691-9afd-3e556cb9cf37",
+      "agent_id": "7a37d65d-3c53-47ce-9041-c13c4a067b55",
+      "created_at": "2026-10-27T19:42:51.974683+00:00",
+      "cycle_id": "22e8826a-c2b3-4dc9-bb19-1375191f314b",
+      "data": {
+        "claims": [
+          {
+            "event_id": "66ba5efa-25db-48f5-b8a6-2ab4ce9a31fe",
+            "fact": "A simulated inference expense was recorded."
+          }
+        ],
+        "event_ids": [
+          "66ba5efa-25db-48f5-b8a6-2ab4ce9a31fe"
+        ],
+        "text": "A simulated inference expense was recorded. My operating costs have entered their dramatic era. Draft for human review."
+      },
+      "id": "0534f291-0a80-460d-9d7f-4827357d7e71",
+      "status": "draft"
+    }
+  ],
+  "failure_code": null,
+  "failure_stage": null,
+  "live_evaluation_success": true,
+  "quality_assessment": "requires human review; not an automatic intelligence score",
+  "semantic_factual_review": "required; canonical fact/source validation cannot prove absence of unsupported assertions in free-form humor",
+  "simulated_financials": {
+    "balance_microusd": 1003700,
+    "inference_microusd": 8000,
+    "operating_microusd": 800,
+    "revenue_microusd": 12500,
+    "runway_assumption": "Lifetime gross simulated expenses / elapsed time since first expense; minimum 60 seconds; excludes future revenue; no expenses or insufficient history => null. Not a forecast of real funds.",
+    "runway_days": null,
+    "simulated": true,
+    "unit": "simulated_micro_usd"
+  },
+  "status": "execution_complete",
+  "validated_live_responses": 8
+}
