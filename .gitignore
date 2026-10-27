@@ -1,0 +1,35 @@
+/target/
+.env
+.env.*
+!.env.example
+*.log
+__pycache__/
+# Audited, secret-free logs from the controlled demonstration are evidence artifacts.
+!artifacts/demo/*.log
+
+# Encrypted wallet envelopes and local custody master material.
+/.supa-vault/
+/.supa-secrets/
+
+# Non-destructive local Git recovery; original .git remains preserved.
+/.git-recovery/
+# Additional local credentials/custody formats must never enter version control.
+*.pem
+*.key
+id.json
+*keypair*.json
+/.agents/
+/.codex/
+/.aws/
+*.p12
+*.pfx
+
+# Local persistence and backup material; SQL migrations remain eligible.
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+*.sql.gz
+/pgdata/
+/postgres-data/
