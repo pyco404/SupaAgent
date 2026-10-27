@@ -1,0 +1,69 @@
+{
+  "milestone": "3A",
+  "status": "read_only_devnet_verified_payment_test_awaits_funding_approval",
+  "formatting": "passed",
+  "clippy_warnings_denied": "passed",
+  "tests": {
+    "full": {
+      "passed": 97,
+      "failed": 0,
+      "ignored": 0
+    },
+    "default": {
+      "passed": 55,
+      "failed": 0,
+      "ignored": 42
+    },
+    "postgresql": 36,
+    "local_http_mocks": 6,
+    "scanner_self_tests": 7
+  },
+  "actual_devnet": {
+    "chain_and_mint_verified": true,
+    "genesis_hash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+    "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "decimals": 6,
+    "wallet_address": "4imA97URQuuFYbSKNum5dWCqUmRNenmscEcVpAju5S7U",
+    "sol_lamports": 0,
+    "usdc_atoms": 0,
+    "observation_slot": 515835517,
+    "separate_process_recovery_passed": true,
+    "evidence_source": "configured_rpc",
+    "transaction_signature": null,
+    "verified_receipts": 0,
+    "actual_payment_duplicate_test": "not_run_no_approved_test_payment"
+  },
+  "mocked_security_tests": [
+    "RPC timeout/retry/failure",
+    "malicious mint/owner/decimals",
+    "confirmation status and slot regression",
+    "concurrent exactly_once_receipt",
+    "unauthorized_signing",
+    "reservation_limits_and_recovery"
+  ],
+  "git": {
+    "original_metadata_preserved": true,
+    "separate_metadata": ".git-recovery",
+    "branch": "main",
+    "remote": "https://github.com/pyco404/SupaAgent",
+    "remote_initially_empty": true,
+    "pre_commit_scan_installed": true,
+    "pre_push_guard_installed": true,
+    "push_attempted": false
+  },
+  "evaluation_budget": {
+    "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+    "limit_microusd": 100000,
+    "inference_records": 25,
+    "committed_microusd": 10299,
+    "devnet_role_can_modify_budget": false
+  },
+  "funding_requested": false,
+  "signing_enabled": false,
+  "paid_inference_requests": 0,
+  "remaining": [
+    "Separate approval and an external Devnet test USDC transfer required before actual receipt verification",
+    "Explicit approval required before first public push",
+    "Local custody and configured-RPC trust are not production-grade custody or consensus verification"
+  ]
+}
