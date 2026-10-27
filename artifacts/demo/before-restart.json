@@ -1,0 +1,1388 @@
+{
+  "actions": [
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:56.121568+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:56.144379+00:00",
+      "id": "d1ddc24d-4149-41ed-a57a-42154aa7bc15",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "read_memory"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:56.121568+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:56.162562+00:00",
+      "id": "26bc5e60-f4d2-48f4-be12-bdcb059fd036",
+      "ordinal": 1,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": true,
+        "tool": "remember"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:56.121568+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:56.174351+00:00",
+      "id": "1e729558-d79a-4eaf-8f41-67918adfd2ea",
+      "ordinal": 2,
+      "proposal": {
+        "event_ids": [
+          "bada6575-f548-4d04-a4c9-8c5201f8ff4e"
+        ],
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "has_lesson": false,
+        "tool": "evaluate_goal"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:54.942024+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:54.95179+00:00",
+      "id": "64b43591-9467-4fbb-88e2-f1952eb62827",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "read_memory"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:54.942024+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:54.961243+00:00",
+      "id": "b85c5372-e94f-49ba-9b9e-9eb7bdd7e87c",
+      "ordinal": 1,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": true,
+        "tool": "remember"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:54.942024+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:54.972921+00:00",
+      "id": "9b8f1773-15bc-4c9b-b55f-f686e87b603d",
+      "ordinal": 2,
+      "proposal": {
+        "event_ids": [
+          "6cb4721b-fdd7-4b79-aa96-15cb890129b4"
+        ],
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "has_lesson": false,
+        "tool": "evaluate_goal"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:53.760337+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:53.769725+00:00",
+      "id": "3ba2dcae-a6ae-4e7c-a659-083d60a1c52a",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "read_memory"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:53.760337+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:53.779622+00:00",
+      "id": "07ac4194-1faa-41da-bec3-75cc7c50f5a6",
+      "ordinal": 1,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": true,
+        "tool": "remember"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:53.760337+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:53.79145+00:00",
+      "id": "729a8a1d-ffee-44c8-9980-d4b583c375ae",
+      "ordinal": 2,
+      "proposal": {
+        "event_ids": [
+          "ba57ed50-d04e-4770-a3a3-ab2add221a38"
+        ],
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "has_lesson": false,
+        "tool": "evaluate_goal"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:52.109527+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:52.121472+00:00",
+      "id": "94eaa1eb-531f-428d-bfca-482a1e4af0fc",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "read_memory"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:52.109527+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:52.131929+00:00",
+      "id": "11163fc9-ff5e-4765-b0ae-25db0f0460d0",
+      "ordinal": 1,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": true,
+        "tool": "remember"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:52.109527+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:52.141743+00:00",
+      "id": "aea56f48-9316-4a52-bbab-47a3937c193e",
+      "ordinal": 2,
+      "proposal": {
+        "event_ids": [
+          "88973b5c-5e65-443d-821f-5b14a850af69"
+        ],
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "has_lesson": false,
+        "tool": "evaluate_goal"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:50.936324+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:50.944805+00:00",
+      "id": "3b806b68-876c-4443-8067-d13402ce2d39",
+      "ordinal": 0,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": false,
+        "tool": "read_memory"
+      },
+      "status": "succeeded"
+    },
+    {
+      "authorization_outcome": "allowed",
+      "created_at": "2026-10-27T16:56:50.936324+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:50.95447+00:00",
+      "id": "240ea2f2-72fd-45c6-a6cd-7436f4634a8a",
+      "ordinal": 1,
+      "proposal": {
+        "event_ids": [],
+        "goal_id": null,
+        "has_lesson": true,
+        "tool": "remember"
+      },
+      "status": "succeeded"
+    }
+  ],
+  "agent": {
+    "capabilities": [
+      "read_memory",
+      "remember",
+      "draft_tweet",
+      "evaluate_goal",
+      "conserve"
+    ],
+    "config": {
+      "draft_cost_microusd": 1000,
+      "inference_cost_microusd": 1000,
+      "interval_seconds": 1,
+      "max_cycle_tokens": 150000,
+      "max_provider_calls": 5,
+      "max_steps": 4,
+      "operating_cost_microusd": 100,
+      "retry_budget": 0,
+      "timeout_seconds": 20
+    },
+    "created_at": "2026-10-27T16:56:50.889519238Z",
+    "goals": [
+      {
+        "completed": false,
+        "description": "Learn from verified execution outcomes while tracking simulated operating expenses",
+        "id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "priority": 10,
+        "suggested_progress_bps": 2000
+      }
+    ],
+    "id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+    "lifecycle": "active",
+    "memory": [
+      {
+        "created_at": "2026-10-27T16:56:50.956005481Z",
+        "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+        "id": "a18bc89d-4401-4e6a-b68d-36c27e2fc93f",
+        "kind": "hypothesis",
+        "lesson": "Observed verified event 1408c696-ff45-4d94-ae68-41968099d2e3 (cycle: started). Check previous outcomes before the next action.",
+        "source_event_ids": []
+      },
+      {
+        "created_at": "2026-10-27T16:56:50.962384353Z",
+        "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+        "id": "17179231-19bc-404c-8eb3-443ca400fdbe",
+        "kind": "verified_observation",
+        "lesson": "Verified cycle 21bd63bd-a675-49d8-b4c0-30adaa4a9dce outcome: completed. Review this outcome before repeating a task.",
+        "source_event_ids": [
+          "88973b5c-5e65-443d-821f-5b14a850af69"
+        ]
+      },
+      {
+        "created_at": "2026-10-27T16:56:52.133622948Z",
+        "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+        "id": "12317b1d-18e0-467e-978c-65e9e3bcb83f",
+        "kind": "hypothesis",
+        "lesson": "Observed verified event 2076b9bb-b1de-4f51-a4ef-1305af5f96f6 (cycle: started). Check previous outcomes before the next action.",
+        "source_event_ids": []
+      },
+      {
+        "created_at": "2026-10-27T16:56:52.151064392Z",
+        "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+        "id": "fe35b67d-4fbb-4b98-b066-549a1c9b7b11",
+        "kind": "verified_observation",
+        "lesson": "Verified cycle 357788a8-be3a-4fee-a937-f10d26cbc4f2 outcome: completed. Review this outcome before repeating a task.",
+        "source_event_ids": [
+          "ba57ed50-d04e-4770-a3a3-ab2add221a38"
+        ]
+      },
+      {
+        "created_at": "2026-10-27T16:56:53.781181204Z",
+        "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+        "id": "58428692-28e7-4f53-8a84-481ecc824f21",
+        "kind": "hypothesis",
+        "lesson": "Observed verified event e4df0a6c-a86f-441d-b342-a1dc24e6b7e2 (cycle: started). Check previous outcomes before the next action.",
+        "source_event_ids": []
+      },
+      {
+        "created_at": "2026-10-27T16:56:53.799251411Z",
+        "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+        "id": "670e07b9-42b7-43ff-a73e-2e67a5f49b28",
+        "kind": "verified_observation",
+        "lesson": "Verified cycle cb74b47d-baa0-4354-bb97-e759ee8e485a outcome: completed. Review this outcome before repeating a task.",
+        "source_event_ids": [
+          "6cb4721b-fdd7-4b79-aa96-15cb890129b4"
+        ]
+      },
+      {
+        "created_at": "2026-10-27T16:56:54.962970984Z",
+        "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+        "id": "5efca98f-4e06-41da-ace6-fbe190c7cde8",
+        "kind": "hypothesis",
+        "lesson": "Observed verified event 14912631-c853-4c02-ba84-48d30e4aefac (cycle: started). Check previous outcomes before the next action.",
+        "source_event_ids": []
+      },
+      {
+        "created_at": "2026-10-27T16:56:54.978275857Z",
+        "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+        "id": "4d9330c8-b66b-4e3a-b325-9f81ce74bbf9",
+        "kind": "verified_observation",
+        "lesson": "Verified cycle 46024147-dd57-408f-8afc-d8975084bff1 outcome: completed. Review this outcome before repeating a task.",
+        "source_event_ids": [
+          "bada6575-f548-4d04-a4c9-8c5201f8ff4e"
+        ]
+      },
+      {
+        "created_at": "2026-10-27T16:56:56.164656811Z",
+        "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+        "id": "c1fb08c9-2b6a-446c-90cb-7ea3c3e9be90",
+        "kind": "hypothesis",
+        "lesson": "Observed verified event 74d03886-820b-49ca-ba5a-863e03a7f00d (cycle: started). Check previous outcomes before the next action.",
+        "source_event_ids": []
+      },
+      {
+        "created_at": "2026-10-27T16:56:56.181755982Z",
+        "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+        "id": "cec8e8c5-6f5d-47d9-973b-bd12a3606dd6",
+        "kind": "verified_observation",
+        "lesson": "Verified cycle bbce37f1-75a2-4701-ac16-9002f080f9d0 outcome: completed. Review this outcome before repeating a task.",
+        "source_event_ids": [
+          "a0d5810d-17a4-4b38-8d92-f99e87e05018"
+        ]
+      }
+    ],
+    "name": "Supa",
+    "personality": {
+      "traits": [
+        "intelligent",
+        "curious",
+        "ambitious about economic independence",
+        "transparent about mistakes"
+      ],
+      "voice": "Conversational, witty, sarcastic and occasionally dramatic. Learn from experience. Do not force jokes or invent accomplishments."
+    }
+  },
+  "cycles": [
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:56.179954+00:00",
+      "id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "lease_until": "2026-10-27T17:00:56.081704+00:00",
+      "started_at": "2026-10-27T16:56:56.081704+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:54.976517+00:00",
+      "id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "lease_until": "2026-10-27T17:00:54.902683+00:00",
+      "started_at": "2026-10-27T16:56:54.902683+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:53.797478+00:00",
+      "id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "lease_until": "2026-10-27T17:00:53.254855+00:00",
+      "started_at": "2026-10-27T16:56:53.254855+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:52.148331+00:00",
+      "id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "lease_until": "2026-10-27T17:00:52.066869+00:00",
+      "started_at": "2026-10-27T16:56:52.066869+00:00",
+      "status": "completed"
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:50.959642+00:00",
+      "id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "lease_until": "2026-10-27T17:00:50.911662+00:00",
+      "started_at": "2026-10-27T16:56:50.911662+00:00",
+      "status": "completed"
+    }
+  ],
+  "drafts": [],
+  "evaluations": [
+    {
+      "action_id": "1e729558-d79a-4eaf-8f41-67918adfd2ea",
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "created_at": "2026-10-27T16:56:56.174351+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "data": {
+        "assessment": "4 completed cycles provide execution evidence; progress is a provisional assessment, not a verified completion.",
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "progress_bps": 2000
+      },
+      "evidence_event_ids": [
+        "bada6575-f548-4d04-a4c9-8c5201f8ff4e"
+      ],
+      "id": "cb97bfbe-5fa0-41f2-ad6a-99dbf1b8b8db",
+      "verification": "model_assessment"
+    },
+    {
+      "action_id": "9b8f1773-15bc-4c9b-b55f-f686e87b603d",
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "created_at": "2026-10-27T16:56:54.972921+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "data": {
+        "assessment": "3 completed cycles provide execution evidence; progress is a provisional assessment, not a verified completion.",
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "progress_bps": 1500
+      },
+      "evidence_event_ids": [
+        "6cb4721b-fdd7-4b79-aa96-15cb890129b4"
+      ],
+      "id": "6a898c72-a5f7-4729-bb72-2bc26c34236a",
+      "verification": "model_assessment"
+    },
+    {
+      "action_id": "729a8a1d-ffee-44c8-9980-d4b583c375ae",
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "created_at": "2026-10-27T16:56:53.79145+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "data": {
+        "assessment": "2 completed cycles provide execution evidence; progress is a provisional assessment, not a verified completion.",
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "progress_bps": 1000
+      },
+      "evidence_event_ids": [
+        "ba57ed50-d04e-4770-a3a3-ab2add221a38"
+      ],
+      "id": "9b4e63de-a25c-4ba6-b98b-b1f09eafcfc0",
+      "verification": "model_assessment"
+    },
+    {
+      "action_id": "aea56f48-9316-4a52-bbab-47a3937c193e",
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "created_at": "2026-10-27T16:56:52.141743+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "data": {
+        "assessment": "1 completed cycles provide execution evidence; progress is a provisional assessment, not a verified completion.",
+        "goal_id": "12199ac4-db67-49bd-a9dd-257b9b0d8d11",
+        "progress_bps": 500
+      },
+      "evidence_event_ids": [
+        "88973b5c-5e65-443d-821f-5b14a850af69"
+      ],
+      "id": "ec11b94b-de58-4eaa-b0a0-014e792f38d9",
+      "verification": "model_assessment"
+    }
+  ],
+  "events": [
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "created",
+      "created_at": "2026-10-27T16:56:50.889744+00:00",
+      "cycle_id": null,
+      "id": "2c158a4f-e72b-4e4b-91e3-878b4926cea6",
+      "kind": "lifecycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "seed",
+      "created_at": "2026-10-27T16:56:50.893629+00:00",
+      "cycle_id": null,
+      "id": "1b5418af-b608-4c91-9d7e-982870cbc151",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "revenue",
+      "created_at": "2026-10-27T16:56:50.898892+00:00",
+      "cycle_id": null,
+      "id": "33eeeea6-e082-4edd-99a6-fbe1b93e9457",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "added",
+      "created_at": "2026-10-27T16:56:50.903444+00:00",
+      "cycle_id": null,
+      "id": "d9f46b51-fb8c-459d-89db-6e05b2f8f9e8",
+      "kind": "goal",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "active",
+      "created_at": "2026-10-27T16:56:50.907435+00:00",
+      "cycle_id": null,
+      "id": "23b8dd23-2163-41ca-8d7a-09b208773bd8",
+      "kind": "lifecycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "started",
+      "created_at": "2026-10-27T16:56:50.911662+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "1408c696-ff45-4d94-ae68-41968099d2e3",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "operating",
+      "created_at": "2026-10-27T16:56:50.921129+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "98406420-99b6-439c-ae88-f40a208d02e4",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "inference",
+      "created_at": "2026-10-27T16:56:50.926151+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "1c62069a-320b-4854-9a1b-35099cb2bff2",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "reserved",
+      "created_at": "2026-10-27T16:56:50.926151+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "4bb1f31f-58af-4091-abc5-1a7ad295afde",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:50.932928+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "c0056c0b-1b52-419f-a1ca-74f16396d847",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "proposed",
+      "created_at": "2026-10-27T16:56:50.936324+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "b7c32496-4619-447a-8a52-7e76143b64ef",
+      "kind": "plan",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:50.942302+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "484a6870-0134-4945-a68e-126a96ad5df2",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:50.944805+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "a99c915d-aaab-4c5b-ac52-3764bf3dac0c",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:50.951466+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "934316c3-c7e6-4e0b-aa4f-e953fb86f538",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:50.95447+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "83bbe780-adb2-4137-be85-0fa0ea13c16b",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "completed",
+      "created_at": "2026-10-27T16:56:50.959642+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "88973b5c-5e65-443d-821f-5b14a850af69",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "started",
+      "created_at": "2026-10-27T16:56:52.066869+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "2076b9bb-b1de-4f51-a4ef-1305af5f96f6",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "operating",
+      "created_at": "2026-10-27T16:56:52.098919+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "c5c2f713-b33a-4142-9bb9-f60f1b10c9df",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "reserved",
+      "created_at": "2026-10-27T16:56:52.101901+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "4b068ec7-4f6c-4e1e-b05d-fa827a2de8cc",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "inference",
+      "created_at": "2026-10-27T16:56:52.101901+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "82a6ba16-9d27-4dda-a89b-4f689a93b50e",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:52.106912+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "c8ba1839-ca24-4bed-bc1d-c95e4b64b898",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "proposed",
+      "created_at": "2026-10-27T16:56:52.109527+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "f8f5091c-4936-4845-af06-1bad75fd84b6",
+      "kind": "plan",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:52.115191+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "4266ef3f-7448-4892-84e0-99a5bbe07033",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:52.121472+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "bff00b4c-8d12-4a35-a3d4-b642661f766c",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:52.129623+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "33bc4f5c-3674-4cd3-8f4e-880b6858dc0a",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:52.131929+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "a4e75c15-be82-4fbe-be95-22b475a696c3",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:52.138814+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "3b43d8bf-c1d7-4f1d-8961-0f89118b71dd",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "evaluated",
+      "created_at": "2026-10-27T16:56:52.141743+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "fb229551-6937-4b36-9f51-700ea0d15feb",
+      "kind": "goal",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "completed",
+      "created_at": "2026-10-27T16:56:52.148331+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "ba57ed50-d04e-4770-a3a3-ab2add221a38",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "started",
+      "created_at": "2026-10-27T16:56:53.254855+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "e4df0a6c-a86f-441d-b342-a1dc24e6b7e2",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "operating",
+      "created_at": "2026-10-27T16:56:53.750648+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "0f565a2a-7400-496e-aa3d-a439e4b638df",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "inference",
+      "created_at": "2026-10-27T16:56:53.753501+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "428391bd-8103-4fe9-85fa-051024a43dd8",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "reserved",
+      "created_at": "2026-10-27T16:56:53.753501+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "7f461841-a224-45ef-8486-7b1c5e367f4e",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:53.757107+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "ef58b289-aa93-45e4-93d6-872038846b26",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "proposed",
+      "created_at": "2026-10-27T16:56:53.760337+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "e45a3d61-974a-48d6-8424-b393dd8252c4",
+      "kind": "plan",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:53.765968+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "dc17b028-7ca6-408d-a3e9-9eb21dc25a1a",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:53.769725+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "c130812b-3c6f-4b87-8453-1b4bcd2abbd4",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:53.775586+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "8e370d5f-3d72-4c9f-a891-0de84aeeb6ca",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:53.779622+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "17ea59fa-9aba-4dc6-8ebd-0d4f07b9af99",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:53.788263+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "4157a72a-d178-457f-9513-7877935bbefb",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "evaluated",
+      "created_at": "2026-10-27T16:56:53.79145+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "4e2a4cef-a79d-472a-94d4-24aea8de391f",
+      "kind": "goal",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "completed",
+      "created_at": "2026-10-27T16:56:53.797478+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "6cb4721b-fdd7-4b79-aa96-15cb890129b4",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "started",
+      "created_at": "2026-10-27T16:56:54.902683+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "14912631-c853-4c02-ba84-48d30e4aefac",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "operating",
+      "created_at": "2026-10-27T16:56:54.932113+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "4eb2bbd6-b76b-455f-88ca-e2b7c31fa774",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "reserved",
+      "created_at": "2026-10-27T16:56:54.93511+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "4155fed6-b4a8-4011-af77-fc1b71e922fb",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "inference",
+      "created_at": "2026-10-27T16:56:54.93511+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "d1414f95-5018-4981-8810-aa1f73b64651",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:54.938723+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "14b76765-3867-4874-af4f-3c9dcf049a15",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "proposed",
+      "created_at": "2026-10-27T16:56:54.942024+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "34930c51-3e2f-4a8d-a571-92ac5bc7a38d",
+      "kind": "plan",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:54.948163+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "b5d108e2-1d6d-42a4-bf32-ba64a3bb74f1",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:54.95179+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "c2267fc6-19fb-48e5-8935-cc89829b6426",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:54.958251+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "c9418ea7-21e3-4cc5-ba5f-71a630b1e9c5",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:54.961243+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "0d571414-e6de-47b2-b7f2-101e65acbc6a",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:54.970112+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "12a3f5b2-79a2-4de0-ae18-364cc7b9c64e",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "evaluated",
+      "created_at": "2026-10-27T16:56:54.972921+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "29094cbe-4904-4ef4-a18d-7c4c7c50ad9c",
+      "kind": "goal",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "completed",
+      "created_at": "2026-10-27T16:56:54.976517+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "bada6575-f548-4d04-a4c9-8c5201f8ff4e",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "started",
+      "created_at": "2026-10-27T16:56:56.081704+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "74d03886-820b-49ca-ba5a-863e03a7f00d",
+      "kind": "cycle",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "operating",
+      "created_at": "2026-10-27T16:56:56.111184+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "ed3827b9-693f-41c8-95ee-4e34fff32525",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "reserved",
+      "created_at": "2026-10-27T16:56:56.113884+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "3839f543-0e41-4c88-a869-1e75b38aeeaf",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "inference",
+      "created_at": "2026-10-27T16:56:56.113884+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "e1363ab3-e4d7-4b56-afa1-540b83123e6a",
+      "kind": "simulated_ledger",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:56.118629+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "b128a7c2-c1b2-40b3-ab93-dbe5f52ca8e4",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "proposed",
+      "created_at": "2026-10-27T16:56:56.121568+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "0ac346ce-9c56-4ce3-87cd-7452aa4155cc",
+      "kind": "plan",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:56.137579+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "27256ac8-9ed6-4b67-8619-830a6b294739",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:56.144379+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "f6754a02-159b-4d33-9316-9263fc7e4f46",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:56.157166+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "209cbbea-171c-481c-9997-29a58836a9a4",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "succeeded",
+      "created_at": "2026-10-27T16:56:56.162562+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "e1fc6e57-7480-4eee-8e87-4efee4fcb0fe",
+      "kind": "tool",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "allowed",
+      "created_at": "2026-10-27T16:56:56.172133+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "9821f7b1-af39-4239-a680-1c42615df14f",
+      "kind": "authorization_outcome",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "evaluated",
+      "created_at": "2026-10-27T16:56:56.174351+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "577d524a-c85c-4e2f-848c-243bff90d1c7",
+      "kind": "goal",
+      "simulated": false
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "code": "completed",
+      "created_at": "2026-10-27T16:56:56.179954+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "a0d5810d-17a4-4b38-8d92-f99e87e05018",
+      "kind": "cycle",
+      "simulated": false
+    }
+  ],
+  "financials": {
+    "balance_microusd": 999500,
+    "inference_microusd": 5000,
+    "operating_microusd": 500,
+    "revenue_microusd": 5000,
+    "runway_assumption": "Lifetime gross simulated expenses / elapsed time since first expense; minimum 60 seconds; excludes future revenue; no expenses or insufficient history => null. Not a forecast of real funds.",
+    "runway_days": null,
+    "simulated": true,
+    "unit": "simulated_micro_usd"
+  },
+  "inference": [
+    {
+      "accounted_microusd": 0,
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "attempt": 0,
+      "budget_id": null,
+      "created_at": "2026-10-27T16:56:56.113884+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:56.118629+00:00",
+      "id": "e24358e7-3dfa-4093-89b7-13d30f5af296",
+      "policy": {
+        "budget_id": null,
+        "budget_limit_microusd": 0,
+        "cached_input_rate": 0,
+        "input_rate": 0,
+        "input_token_bound": 0,
+        "live": false,
+        "max_output_tokens": 0,
+        "model": "deterministic",
+        "output_rate": 0
+      },
+      "purpose": "plan",
+      "reserved_microusd": 0,
+      "status": "succeeded",
+      "usage": null,
+      "usage_source": "unavailable"
+    },
+    {
+      "accounted_microusd": 0,
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "attempt": 0,
+      "budget_id": null,
+      "created_at": "2026-10-27T16:56:54.93511+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:54.938723+00:00",
+      "id": "d3ab9c80-f458-4314-b0ad-de71fa17df4a",
+      "policy": {
+        "budget_id": null,
+        "budget_limit_microusd": 0,
+        "cached_input_rate": 0,
+        "input_rate": 0,
+        "input_token_bound": 0,
+        "live": false,
+        "max_output_tokens": 0,
+        "model": "deterministic",
+        "output_rate": 0
+      },
+      "purpose": "plan",
+      "reserved_microusd": 0,
+      "status": "succeeded",
+      "usage": null,
+      "usage_source": "unavailable"
+    },
+    {
+      "accounted_microusd": 0,
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "attempt": 0,
+      "budget_id": null,
+      "created_at": "2026-10-27T16:56:53.753501+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:53.757107+00:00",
+      "id": "3382f5f4-f3ae-4792-97b0-9c67c51c05cf",
+      "policy": {
+        "budget_id": null,
+        "budget_limit_microusd": 0,
+        "cached_input_rate": 0,
+        "input_rate": 0,
+        "input_token_bound": 0,
+        "live": false,
+        "max_output_tokens": 0,
+        "model": "deterministic",
+        "output_rate": 0
+      },
+      "purpose": "plan",
+      "reserved_microusd": 0,
+      "status": "succeeded",
+      "usage": null,
+      "usage_source": "unavailable"
+    },
+    {
+      "accounted_microusd": 0,
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "attempt": 0,
+      "budget_id": null,
+      "created_at": "2026-10-27T16:56:52.101901+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:52.106912+00:00",
+      "id": "44fa1789-b3f2-485f-ad6d-b5670634db7f",
+      "policy": {
+        "budget_id": null,
+        "budget_limit_microusd": 0,
+        "cached_input_rate": 0,
+        "input_rate": 0,
+        "input_token_bound": 0,
+        "live": false,
+        "max_output_tokens": 0,
+        "model": "deterministic",
+        "output_rate": 0
+      },
+      "purpose": "plan",
+      "reserved_microusd": 0,
+      "status": "succeeded",
+      "usage": null,
+      "usage_source": "unavailable"
+    },
+    {
+      "accounted_microusd": 0,
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "attempt": 0,
+      "budget_id": null,
+      "created_at": "2026-10-27T16:56:50.926151+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "failure_code": null,
+      "finished_at": "2026-10-27T16:56:50.932928+00:00",
+      "id": "3d4e6bbb-15c9-4a71-81e1-81e18c0a40c8",
+      "policy": {
+        "budget_id": null,
+        "budget_limit_microusd": 0,
+        "cached_input_rate": 0,
+        "input_rate": 0,
+        "input_token_bound": 0,
+        "live": false,
+        "max_output_tokens": 0,
+        "model": "deterministic",
+        "output_rate": 0
+      },
+      "purpose": "plan",
+      "reserved_microusd": 0,
+      "status": "succeeded",
+      "usage": null,
+      "usage_source": "unavailable"
+    }
+  ],
+  "ledger": [
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -1000,
+      "created_at": "2026-10-27T16:56:56.113884+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "4c07f53d-125e-4337-8fc8-21df660f25d9",
+      "idempotency_key": "e24358e7-3dfa-4093-89b7-13d30f5af296",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -100,
+      "created_at": "2026-10-27T16:56:56.111184+00:00",
+      "cycle_id": "bbce37f1-75a2-4701-ac16-9002f080f9d0",
+      "id": "f64afe53-5224-4d89-9976-79e68552f168",
+      "idempotency_key": "04b0b31d-b56f-4443-be01-3184bfdd8acf",
+      "kind": "operating",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -1000,
+      "created_at": "2026-10-27T16:56:54.93511+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "d952b98d-64a5-4967-9edb-f2fe69965771",
+      "idempotency_key": "d3ab9c80-f458-4314-b0ad-de71fa17df4a",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -100,
+      "created_at": "2026-10-27T16:56:54.932113+00:00",
+      "cycle_id": "46024147-dd57-408f-8afc-d8975084bff1",
+      "id": "df57a4a3-b5d5-46fb-829e-d957472a66b4",
+      "idempotency_key": "9ae0b1fe-dbbc-4707-b323-20fdf4d8da0d",
+      "kind": "operating",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -1000,
+      "created_at": "2026-10-27T16:56:53.753501+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "3d294fe6-db80-4795-9d76-dd38b52efdd0",
+      "idempotency_key": "3382f5f4-f3ae-4792-97b0-9c67c51c05cf",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -100,
+      "created_at": "2026-10-27T16:56:53.750648+00:00",
+      "cycle_id": "cb74b47d-baa0-4354-bb97-e759ee8e485a",
+      "id": "f586c641-55b0-477a-9b25-0621f4ac8277",
+      "idempotency_key": "5c760bd5-75ad-4af0-89be-3dd89ac24a30",
+      "kind": "operating",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -1000,
+      "created_at": "2026-10-27T16:56:52.101901+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "c04c4ba4-589b-4b3e-b970-17bfdee1170e",
+      "idempotency_key": "44fa1789-b3f2-485f-ad6d-b5670634db7f",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -100,
+      "created_at": "2026-10-27T16:56:52.098919+00:00",
+      "cycle_id": "357788a8-be3a-4fee-a937-f10d26cbc4f2",
+      "id": "7a9ae770-9be7-49e0-b713-72236e70a430",
+      "idempotency_key": "a0fc45a3-6724-48bc-87d0-78d79537704d",
+      "kind": "operating",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -1000,
+      "created_at": "2026-10-27T16:56:50.926151+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "ac0d5a92-f887-454f-b7ab-474056edce85",
+      "idempotency_key": "3d4e6bbb-15c9-4a71-81e1-81e18c0a40c8",
+      "kind": "inference",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": -100,
+      "created_at": "2026-10-27T16:56:50.921129+00:00",
+      "cycle_id": "21bd63bd-a675-49d8-b4c0-30adaa4a9dce",
+      "id": "55663e41-3205-4363-8e08-f5248c410511",
+      "idempotency_key": "fde58428-641d-4d76-a028-60100aa6b1da",
+      "kind": "operating",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": 5000,
+      "created_at": "2026-10-27T16:56:50.898892+00:00",
+      "cycle_id": null,
+      "id": "7e645d7f-c672-44ad-b8af-02e88d9ba981",
+      "idempotency_key": "1bc94456-7e17-4ee9-8e32-2e3a275513be",
+      "kind": "revenue",
+      "simulated": true
+    },
+    {
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "amount_microusd": 1000000,
+      "created_at": "2026-10-27T16:56:50.893629+00:00",
+      "cycle_id": null,
+      "id": "b5a1bb0a-49fb-461f-abb5-95675b8eb64b",
+      "idempotency_key": "54cb420c-6ad2-4ec0-a574-b3c1515b7915",
+      "kind": "seed",
+      "simulated": true
+    }
+  ],
+  "mode": "deterministic_offline_no_live_calls",
+  "transitions": [
+    {
+      "actor": "operator",
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "created_at": "2026-10-27T16:56:50.907435+00:00",
+      "from_state": "created",
+      "id": 2,
+      "reason": "operator authorizes controlled offline demonstration",
+      "to_state": "active"
+    },
+    {
+      "actor": "operator",
+      "agent_id": "dfaf94cd-8229-4ef0-b4a4-2b2cda6c42db",
+      "created_at": "2026-10-27T16:56:50.889744+00:00",
+      "from_state": null,
+      "id": 1,
+      "reason": "operator_created",
+      "to_state": "created"
+    }
+  ]
+}
