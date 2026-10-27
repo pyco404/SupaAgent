@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Stage one literal file, verify it is the only change, then make its own commit."""
+import argparse
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+GIT = [str(ROOT / 'scripts/git-local')]
+
+
+def git(*args):
+    result = subprocess.run(GIT + list(args), cwd=ROOT, capture_output=True)
+    if result.returncode:
+        raise ValueError('git_command_failed')
+    return result.stdout
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('path', help='exact project-relative regular-file path')
+    parser.add_argument('message', help='descriptive Conventional Commit subject')
+    args = parser.parse_args()
+    path = Path(args.path)
+    if path.is_absolute() or '..' in path.parts or path.as_posix() != args.path:
+        raise ValueError('exact_relative_path_required')
+    target = ROOT / path
+    if target.is_symlink() or not target.is_file():
+        raise ValueError('one_existing_regular_file_required')
+    if git('symbolic-ref', '--short', 'HEAD').strip() != b'main':
+        raise ValueError('main_branch_required')
+    if git('diff', '--cached', '--name-only', '--no-renames', '-z'):
+        raise ValueError('index_must_be_empty_before_staging_one_file')
+    # Literal pathspec mode prevents a file name being interpreted as a Git glob.
+    git('--literal-pathspecs', 'add', '--', args.path)
+    paths = [p for p in git('diff', '--cached', '--name-only', '--no-renames', '-z').split(b'\0') if p]
+    if paths != [os.fsencode(args.path)]:
+        raise ValueError('staged_change_must_equal_the_single_requested_file')
+    subprocess.run(GIT + ['commit', '-m', args.message, '-m', 'File: ' + args.path], cwd=ROOT, check=True)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (ValueError, subprocess.CalledProcessError) as error:
+        code = str(error) if isinstance(error, ValueError) else 'commit_rejected_by_git_or_policy'
+        print(code, file=sys.stderr)
+        raise SystemExit(1)
