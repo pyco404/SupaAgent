@@ -1,0 +1,121 @@
+{
+  "execution_complete": true,
+  "live_responses": 8,
+  "planning_cycles": 3,
+  "social_opportunities": 5,
+  "accepted_drafts": 4,
+  "abstentions": 1,
+  "rejected_drafts": 0,
+  "automatic_retries": 0,
+  "styles": [
+    "achievement",
+    "reflection",
+    "observation",
+    "humor"
+  ],
+  "event_topics": [
+    "execution",
+    "goal",
+    "goal_review",
+    "inference_cost",
+    "operating_cost"
+  ],
+  "selected_memory_ids": [],
+  "new_memory_records": 9,
+  "verified_cycle_observations": 8,
+  "model_written_hypotheses": 1,
+  "activity_entries": 79,
+  "token_and_cost_totals": {
+    "draft": {
+      "calls": 5,
+      "input_tokens": 6922,
+      "output_tokens": 1119,
+      "estimated_microusd": 1254
+    },
+    "plan": {
+      "calls": 3,
+      "input_tokens": 5618,
+      "output_tokens": 1068,
+      "estimated_microusd": 1097
+    }
+  },
+  "current_run_estimated_microusd": 2351,
+  "cumulative_committed_microusd": 10299,
+  "remaining_microusd": 89701,
+  "cross_run_lexical_repetition_flags": [],
+  "validation": [
+    {
+      "disposition": "draft",
+      "style": "achievement",
+      "event_ids": [
+        "38aedd4e-dca8-468c-81a6-2781b80909e5"
+      ],
+      "memory_ids": [],
+      "topics": [
+        "execution"
+      ],
+      "characters": 111,
+      "source_ownership": "passed",
+      "canonical_claims_and_approved_wording": "passed",
+      "simulation_labels": "passed when required",
+      "repetition_checks": "passed"
+    },
+    {
+      "disposition": "draft",
+      "style": "reflection",
+      "event_ids": [
+        "8dc555bf-5c6e-4264-a502-e57c5d815095"
+      ],
+      "memory_ids": [],
+      "topics": [
+        "goal_review"
+      ],
+      "characters": 109,
+      "source_ownership": "passed",
+      "canonical_claims_and_approved_wording": "passed",
+      "simulation_labels": "passed when required",
+      "repetition_checks": "passed"
+    },
+    {
+      "disposition": "draft",
+      "style": "observation",
+      "event_ids": [
+        "71ba2913-4d0e-48d5-ac66-998cdd140e88",
+        "017b18fb-5f4d-44b4-8999-54268adeca31"
+      ],
+      "memory_ids": [],
+      "topics": [
+        "operating_cost",
+        "inference_cost"
+      ],
+      "characters": 132,
+      "source_ownership": "passed",
+      "canonical_claims_and_approved_wording": "passed",
+      "simulation_labels": "passed when required",
+      "repetition_checks": "passed"
+    },
+    {
+      "disposition": "draft",
+      "style": "humor",
+      "event_ids": [
+        "fdaa3244-2b91-45e3-8db2-ddfaed824ee9"
+      ],
+      "memory_ids": [],
+      "topics": [
+        "goal"
+      ],
+      "characters": 164,
+      "source_ownership": "passed",
+      "canonical_claims_and_approved_wording": "passed",
+      "simulation_labels": "passed when required",
+      "repetition_checks": "passed"
+    },
+    {
+      "disposition": "abstain",
+      "reason": "too_repetitive",
+      "cycle_id": "0d84b208-2b1a-4a40-80ca-8c50c268b01b",
+      "model_generated": true
+    }
+  ],
+  "creative_assessment": "Topic/style variety and voluntary abstention improved. Fact-first colon structure remains repetitive. Financial wording needs semantic review. No explicit social memory citations; memory-driven personalization is not demonstrated."
+}
