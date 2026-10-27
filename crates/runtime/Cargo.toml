@@ -1,0 +1,26 @@
+[package]
+name = "supa-runtime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+supa-domain.workspace = true
+supa-persistence.workspace = true
+supa-providers.workspace = true
+supa-capabilities.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+
+[dev-dependencies]
+async-trait.workspace = true
+sqlx.workspace = true
+tracing-subscriber.workspace = true
+dotenvy.workspace = true
+tempfile.workspace = true
+bs58.workspace = true
