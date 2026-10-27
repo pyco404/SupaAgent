@@ -1,0 +1,25 @@
+[package]
+name = "supa-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+supa-domain.workspace = true
+supa-persistence.workspace = true
+supa-providers.workspace = true
+supa-capabilities.workspace = true
+supa-runtime.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+tokio.workspace = true
+axum.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tower.workspace = true
+tempfile.workspace = true
+async-trait.workspace = true
