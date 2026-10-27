@@ -1,0 +1,10 @@
+{
+  "mode": "offline",
+  "actual_process_restart": true,
+  "autonomous_scheduler": true,
+  "authentication": true,
+  "paused_and_resumed": true,
+  "emergency_stop_persisted": true,
+  "memory_persisted": true,
+  "public_bind": false
+}
