@@ -30,3 +30,13 @@ test('unknown outcomes and conflicts preserve request identity and never retry',
   assert.equal(calls,1);assert.equal(out.body.agent_id,id);assert.equal(out.status,503);assert.ok(!JSON.stringify(out).includes('sensitive'));
   const conflict=await runAutonomy('/api/autonomy',headers,JSON.stringify(body),async()=>new Response('private',{status:409}));assert.equal(conflict.status,409);assert.equal(conflict.body.agent_id,id);assert.ok(!JSON.stringify(conflict).includes('private'));
 });
+test('schedule controls enforce operator scope revisions and offline response contracts',async()=>{
+  const path=`/api/agents/${id}/schedule`,command={request_id:id,expected_revision:0,operation:'start',authorize_offline:true,reason:'Explicit test',policy:{goal_ids:[id],interval_seconds:5,max_cycles:3,simulated_budget_microusd:3300,valid_for_seconds:3600}};
+  const view={agent_id:id,lifecycle:'active',revision:2,enabled:true,policy:command.policy,cycles_started:0,reserved_microusd:0,expires_at:'2026-10-28T23:00:00Z',next_cycle_at:'2026-10-28T22:00:00Z',last_error:null,mode:'offline',simulated:true,paid_requests_enabled:false};
+  let calls=0;const fetcher=async(url,options)=>{calls++;assert.equal(url.pathname,`/agents/${id}/schedule`);assert.deepEqual(JSON.parse(options.body),command);return Response.json({...view,private_context:'excluded'});};
+  assert.equal((await readResource(path,{host:headers.host},fetcher)).status,401);
+  for(const altered of [{authorization:''},{origin:''},{origin:'https://outside.invalid'},{'x-supa-action':''}])assert.ok((await runAutonomy(path,{...headers,...altered},JSON.stringify(command),fetcher)).status>=400);
+  for(const bad of [{...command,provider:'openai'},{...command,authorize_offline:false},{...command,expected_revision:-1},{...command,policy:{...command.policy,max_cycles:101}},{...command,operation:'resume'}])assert.equal((await runAutonomy(path,headers,JSON.stringify(bad),fetcher)).status,400);
+  assert.equal(calls,0);const ok=await runAutonomy(path,headers,JSON.stringify(command),fetcher);assert.equal(ok.status,200);assert.deepEqual(ok.body,view);
+  assert.equal((await runAutonomy(path,headers,JSON.stringify(command),async()=>Response.json({...view,paid_requests_enabled:true}))).status,502);
+});
