@@ -15,10 +15,13 @@ For the website, run `npm ci --prefix web`, then `npm run build --prefix web`. U
 ```bash
 export DATABASE_URL='postgresql://supa:your-local-password@127.0.0.1:5432/supa_agent'
 export SUPA_API_TOKEN="$(openssl rand -hex 32)"
+export SUPA_OPERATOR_ID="$(cat /proc/sys/kernel/random/uuid)"
 export SUPA_PROVIDER=offline
 export SUPA_BIND=127.0.0.1:8080
 cargo run -p supa-api
 ```
+
+Choose the operator UUID once and persist it with the token in ignored private configuration; reuse both across restarts. Existing agents are not automatically assigned to this identity. See [ownership rollout, roles, authorization renewal and measured worker health](docs/authorization-renewal.md).
 
 Migrations run at startup. Configuration is read from exported environment variables; `.env` is not automatically loaded. See [.env.example](.env.example). The API rejects non-loopback bind addresses, requires a bearer token even for health checks, and has no CORS policy permitting browser origins. Keep credentials out of source control and request bodies.
 
@@ -43,13 +46,11 @@ curl -sS "http://127.0.0.1:8080/agents/$AGENT_ID/simulated-funding" \
 curl -sS "http://127.0.0.1:8080/agents/$AGENT_ID/goals" \
   -H "Authorization: Bearer $SUPA_API_TOKEN" -H 'Content-Type: application/json' \
   -d '{"description":"Review verified execution events and learn from mistakes."}'
-curl -sS "http://127.0.0.1:8080/agents/$AGENT_ID/lifecycle" \
-  -H "Authorization: Bearer $SUPA_API_TOKEN" -H 'Content-Type: application/json' \
-  -d '{"state":"active","reason":"Operator authorizes local simulated cycles"}'
 ```
 
-This activation permits manually requested cycles; it does not authorize continuous
-scheduling. Agent and scheduler-process defaults are disabled. Use the approved
+Funding and goal creation do not authorize execution. Agent and scheduler-process
+defaults are disabled. HTTP cycles require a recorded finite offline approval.
+Use the approved
 experience at `http://127.0.0.1:3200`, operator sign-in, then **Intelligence → Agent
 lifecycle and bounded scheduling** to authorize goals, interval, cycle count,
 simulated expenses and expiry. An explicitly enabled offline execution host is also
