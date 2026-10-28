@@ -19,8 +19,12 @@ async fn authenticated_http_workflow_and_safe_errors() {
     .unwrap();
     s.migrate().await.unwrap();
     let token = "test-token-with-at-least-32-characters";
-    let app =
-        router(AppState::new(s.clone(), Runtime::new(s, Arc::new(Offline)), token.into()).unwrap());
+    let app = router(
+        AppState::new(s.clone(), Runtime::new(s, Arc::new(Offline)), token.into())
+            .unwrap()
+            .with_operator(uuid::Uuid::from_u128(1))
+            .unwrap(),
+    );
     let ready = app
         .clone()
         .oneshot(
@@ -183,6 +187,8 @@ async fn wallet_routes_authenticate_hide_keys_and_reject_signing() {
     .unwrap();
     let dir = tempfile::tempdir().unwrap();
     let operator = Uuid::new_v4();
+    s.establish_owner(a.id, operator).await.unwrap();
+    state = state.with_operator(operator).unwrap();
     state.wallets = Some(WalletService::new(
         s.clone(),
         KeyVault::open(&dir.path().join("vault"), [6; 32]).unwrap(),
