@@ -1,6 +1,6 @@
 use crate::*;
 
-/// One non-renewable authorization. Resume never replenishes counters or extends expiry.
+/// One finite authorization. Explicit renewal creates a new audited epoch; resume changes no limits.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SchedulePolicy {
@@ -30,6 +30,7 @@ impl SchedulePolicy {
 #[serde(rename_all = "snake_case")]
 pub enum ScheduleOperation {
     Start,
+    Renew,
     Pause,
     Resume,
     Stop,
@@ -41,6 +42,8 @@ pub struct ScheduleCommand {
     pub expected_revision: i64,
     pub operation: ScheduleOperation,
     pub authorize_offline: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub consented_at: Option<DateTime<Utc>>,
     pub reason: String,
     pub policy: Option<SchedulePolicy>,
 }
@@ -53,9 +56,20 @@ impl ScheduleCommand {
             return Err(Error::Invalid);
         }
         clean_text(&self.reason, 500)?;
+        if self.operation == ScheduleOperation::Renew {
+            let consent = self.consented_at.ok_or(Error::Invalid)?;
+            let age = Utc::now().signed_duration_since(consent).num_seconds();
+            if !(-5..=120).contains(&age) {
+                return Err(Error::Stale);
+            }
+        }
         match (&self.operation, &self.policy) {
-            (ScheduleOperation::Start, Some(policy)) => policy.validate(),
-            (ScheduleOperation::Start, None) | (_, Some(_)) => Err(Error::Invalid),
+            (ScheduleOperation::Start | ScheduleOperation::Renew, Some(policy)) => {
+                policy.validate()
+            }
+            (ScheduleOperation::Start | ScheduleOperation::Renew, None) | (_, Some(_)) => {
+                Err(Error::Invalid)
+            }
             _ => Ok(()),
         }
     }
@@ -81,6 +95,31 @@ pub struct ScheduleStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn renewal_requires_recent_specific_consent() {
+        let mut command = ScheduleCommand {
+            request_id: Uuid::new_v4(),
+            expected_revision: 1,
+            operation: ScheduleOperation::Renew,
+            authorize_offline: true,
+            consented_at: None,
+            reason: "Fresh approval".into(),
+            policy: Some(SchedulePolicy {
+                goal_ids: vec![Uuid::new_v4()],
+                interval_seconds: 5,
+                max_cycles: 1,
+                simulated_budget_microusd: 1100,
+                valid_for_seconds: 60,
+            }),
+        };
+        assert!(command.validate().is_err());
+        command.consented_at = Some(Utc::now() - chrono::Duration::seconds(121));
+        assert!(matches!(command.validate(), Err(Error::Stale)));
+        command.consented_at = Some(Utc::now() + chrono::Duration::seconds(10));
+        assert!(matches!(command.validate(), Err(Error::Stale)));
+        command.consented_at = Some(Utc::now());
+        command.validate().unwrap();
+    }
     #[test]
     fn scheduler_authorization_has_strict_bounds_and_no_live_options() {
         assert!(!CycleConfig::default().scheduler_enabled);
