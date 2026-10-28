@@ -1,4 +1,6 @@
+mod scheduling;
 mod wallet;
+pub use scheduling::*;
 pub use wallet::*;
 mod social;
 use chrono::{DateTime, Utc};
@@ -130,7 +132,7 @@ pub struct CycleConfig {
 impl Default for CycleConfig {
     fn default() -> Self {
         Self {
-            scheduler_enabled: true,
+            scheduler_enabled: false,
             retry_budget: 0,
             max_provider_calls: 5,
             max_cycle_tokens: 150_000,
