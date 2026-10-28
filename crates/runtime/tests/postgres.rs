@@ -410,9 +410,12 @@ async fn event_grounded_draft_is_persisted_and_never_published() {
 async fn scheduling_respects_interval_and_lease_fences_old_worker() {
     let s = database().await;
     let a = agent(&s, 10000).await;
-    let cycle = s.begin_cycle(a.id, true).await.unwrap();
+    let cycle = s.begin_cycle(a.id, false).await.unwrap();
     s.finish(a.id, cycle, None).await.unwrap();
-    assert!(matches!(s.begin_cycle(a.id, true).await, Err(Error::Busy)));
+    assert!(matches!(
+        s.begin_cycle(a.id, true).await,
+        Err(Error::Denied)
+    ));
     assert!(matches!(s.begin_cycle(a.id, false).await, Err(Error::Busy)));
     allow_next(&s, a.id).await;
     let old = s.begin_cycle(a.id, false).await.unwrap();
