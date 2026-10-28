@@ -1,0 +1,114 @@
+{
+  "checked_at": "2026-10-28T08:21:12.867985+00:00",
+  "database": "supa_devnet",
+  "synthetic_data": false,
+  "agent_count": 1,
+  "lifecycle": "created",
+  "scheduler_enabled": false,
+  "endpoints": [
+    {
+      "path": "health",
+      "status": 200
+    },
+    {
+      "path": "agents",
+      "status": 200,
+      "records": 1
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2",
+      "status": 200
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/goals",
+      "status": 200,
+      "records": 0
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/memory",
+      "status": 200,
+      "records": 0
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/activity",
+      "status": 200,
+      "records": 5
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/cycles",
+      "status": 200,
+      "records": 0
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/actions",
+      "status": 200,
+      "records": 0
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/social",
+      "status": 200,
+      "records": 0
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/drafts",
+      "status": 200,
+      "records": 0
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/simulated-ledger",
+      "status": 200,
+      "records": 0
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/financials",
+      "status": 200
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/wallet",
+      "status": 200
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/wallet/balances",
+      "status": 200
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/wallet/treasury",
+      "status": 200
+    },
+    {
+      "path": "agents/fab35ded-49c2-4168-b078-09a9470092c2/wallet/payments",
+      "status": 200,
+      "records": 0
+    }
+  ],
+  "unauthenticated_status": 401,
+  "mutation_status": 405,
+  "signing_path_status": 403,
+  "wallet_policy": {
+    "locked": true,
+    "reservations_enabled": false
+  },
+  "observed_balance": {
+    "evidence_source": "configured_rpc",
+    "network": "devnet",
+    "address": "4imA97URQuuFYbSKNum5dWCqUmRNenmscEcVpAju5S7U",
+    "slot": 515987213,
+    "sol_lamports": 0,
+    "usdc_atoms": 0
+  },
+  "treasury": {
+    "network": "devnet",
+    "environment": "devnet_test_tokens_no_monetary_value",
+    "observed_sol_lamports": 0,
+    "observed_usdc_atoms": 0,
+    "verified_incoming_usdc_atoms": 0,
+    "reserved_usdc_atoms": 0,
+    "available_operating_usdc_atoms": 0,
+    "api_inference_estimate_microusd": 0,
+    "fresh": false,
+    "reconciled": true,
+    "observed_at": "2026-10-28T07:59:43.965046Z"
+  },
+  "paid_inference_requests": 0,
+  "funding_or_signing_requests": 0
+}
