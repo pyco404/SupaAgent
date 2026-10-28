@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-28",
+  "rust": {
+    "format": {
+      "command": "cargo fmt --all -- --check",
+      "passed": true
+    },
+    "clippy": {
+      "command": "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+      "passed": true
+    },
+    "tests": {
+      "command": "TEST_DATABASE_URL=postgresql://pikoo@127.0.0.1:55432/supa_agent_test cargo test --workspace --all-targets --locked --offline -- --include-ignored",
+      "passed": 97,
+      "failed": 0,
+      "ignored": 0,
+      "database": "supa_agent_test",
+      "external_rpc": "mocked_for_tests"
+    }
+  },
+  "frontend": {
+    "typecheck": true,
+    "eslint_zero_warnings": true,
+    "production_webpack_build": true,
+    "browser_tests": {
+      "startTime": "2026-10-28T08:23:20.941Z",
+      "duration": 26124.013,
+      "expected": 66,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "dependency_audit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "known_client_secret_matches": 0
+  },
+  "rea": {
+    "actual_measured_views": 27,
+    "saved_screenshots": 13,
+    "viewports": [
+      [
+        1440,
+        1000
+      ],
+      [
+        768,
+        1024
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "artifact_hashes_verified": true
+  },
+  "devnet": {
+    "read_only_command": "cargo run -p supa-runtime --example devnet_verify --locked --offline -- --check",
+    "success": true,
+    "evidence_source": "configured_rpc",
+    "rpc": "https://api.devnet.solana.com",
+    "genesis_hash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+    "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "decimals": 6,
+    "commitment": "finalized",
+    "slot": 515987213,
+    "wallet": "4imA97URQuuFYbSKNum5dWCqUmRNenmscEcVpAju5S7U",
+    "sol_lamports": 0,
+    "usdc_atoms": 0,
+    "observed_at": "2026-10-28T07:59:43.965046Z",
+    "verified_receipts": 0,
+    "actual_transaction_verified": false,
+    "migrations": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "safety": {
+    "paid_inference_calls": 0,
+    "funding_requests": 0,
+    "signing_requests": 0,
+    "transfers": 0,
+    "tokens_created": 0,
+    "trades": 0,
+    "x_publications": 0,
+    "deployments": 0,
+    "protected_evaluation_database_used": false
+  },
+  "git": {
+    "branch": "main",
+    "base_commit": "02b7d47b1529c03037453e9758af23db9285f0ca",
+    "one_file_per_commit_required": true,
+    "push_authorized_for_milestone": false,
+    "pushed": false
+  }
+}
