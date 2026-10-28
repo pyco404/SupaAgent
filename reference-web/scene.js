@@ -3,7 +3,7 @@
 export function createScenes({ intro, blueprint, entity, transition, spark, reduced, data }) {
   let mode = 'intro', frame = 0, previous = 0, warpStart = 0, warpResolve, input = '', selected = 0, worm = false;
   const pointer = { x: .5, y: .5 };
-  let introProgress = 0, introTime = null;
+  let introProgress = 0, introTime = null, handBeat = -1, handKey = "";
   const contexts = new Map();
   let code = [
     '// workspace / a small study in motion', '',
@@ -71,34 +71,62 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     }
     ctx.globalAlpha = 1;
   }
-  // Procedural tracking illustration: pointer-driven geometry, never webcam data.
-  function drawHands(ctx, w, h, time) {
-    const scale = Math.min(1.25, w / 900), x = w * .5, y = h * .785;
-    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
-    ctx.font = '11px Plex,monospace'; ctx.globalAlpha = .2;
-    const keys = ['esc  1 2 3 4 5 6 7 8 9 0 - =', '  q w e r t y u i o p [ ]', '   a s d f g h j k l ;', '    z x c v b n m , . /'];
-    keys.forEach((text, row) => ctx.fillText(text, -150, row * 23));
-    const connections = [[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20],[5,9,13,17]];
-    for (const [hand, sign] of [[0,-1],[1,1]]) {
-      const hx = sign * 67 + (pointer.x - .5) * 18, hy = 65 + (pointer.y - .5) * 9;
-      const points = [[hx,hy+83]];
-      // Thumb and four articulated fingers, each with four visible landmarks.
+  // Decorative hands share the editor's typing clock; no camera or key capture.
+  function drawHands(ctx, w, h, typing, character) {
+    const width=Math.min(700,w-40,h*.8),pitch=width/15,rowPitch=pitch*.68,keyHeight=pitch*.54;
+    const left=(w-width)/2,top=h*.755,height=rowPitch*4.65;
+    const rows=[['esc','`','1','2','3','4','5','6','7','8','9','0','-','=','back'],['tab','q','w','e','r','t','y','u','i','o','p','[',']','\\'],['caps','a','s','d','f','g','h','j','k','l',';',"'",'enter'],['shift','z','x','c','v','b','n','m',',','.','/','shift']];
+    const keys=[],byKey=new Map();
+    rows.forEach((row,r)=>{
+      const offset=[0,.25,.5,.75][r]*pitch;
+      row.forEach((label,c)=>{
+        const key={label,x:left+offset+c*pitch,y:top+r*rowPitch,w:pitch-4,h:keyHeight};
+        key.cx=key.x+key.w/2;key.cy=key.y+key.h/2;keys.push(key);byKey.set(label,key);
+      });
+    });
+    const space={label:' ',x:w/2-width*.25,y:top+4*rowPitch,w:width*.5,h:keyHeight};
+    space.cx=w/2;space.cy=space.y+space.h/2;keys.push(space);byKey.set(' ',space);
+    const aliases={'{':'[','}':']','(': '9',')':'0',':':';','"':"'",'<':',','>':'.','|':'\\','_':'-','+':'=','!':'1'};
+    const beat=typing?Math.floor(introProgress/5):-1;
+    if(beat!==handBeat){handBeat=beat;handKey=aliases[character]||character.toLowerCase();}
+    const active=typing?byKey.get(handKey):null,pulse=typing?Math.sin((introProgress/5%1)*Math.PI):0;
+    const leftFingers=[' ','45rtfgvb','3edc','2wsx','1qaz'];
+    const rightFingers=[' ','67yuhjnm','8ik,','9ol.','0p;/-=[]\\\''];
+    let activeHand=handBeat%2,activeFinger=0;
+    if(active&&handKey!==' '){
+      const li=leftFingers.findIndex(group=>group.includes(handKey));
+      const ri=rightFingers.findIndex(group=>group.includes(handKey));
+      if(li>=0){activeHand=0;activeFinger=li;}else if(ri>=0){activeHand=1;activeFinger=ri;}
+    }
+    ctx.save();ctx.font=`${Math.max(8,Math.min(13,pitch*.3))}px Plex,monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=.6;
+    for(const key of keys){
+      const pressed=key===active;
+      ctx.fillStyle=pressed?'#71957d':ink();ctx.strokeStyle=ink();
+      if(pressed){ctx.globalAlpha=.12+pulse*.2;ctx.fillRect(key.x,key.y,key.w,key.h);}
+      ctx.globalAlpha=pressed?.65:.16;ctx.strokeRect(key.x,key.y,key.w,key.h);
+      ctx.globalAlpha=pressed?.95:.42;ctx.fillText(key.label===' '?'space':key.label,key.cx,key.cy+(pressed?pulse*2:0));
+    }
+    const connections=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20],[5,9,13,17]];
+    for(const [hand,sign,home] of [[0,-1,[' ','f','d','s','a']],[1,1,[' ','j','k','l',';']]]){
+      const wristX=w/2+sign*width*.145,wristY=top+height+pitch*.36,points=[[wristX,wristY]];
       for(let finger=0;finger<5;finger++){
-        const bend = reduced.matches ? 0 : Math.sin(time/1200+finger+hand)*2;
-        const baseX=hx+(finger-2)*17, tipY=hy-40+Math.abs(finger-2)*7;
+        const rest=byKey.get(home[finger]),press=active&&hand===activeHand&&finger===activeFinger;
+        const tipX=press?active.cx:rest.cx+(finger===0?sign*pitch*.65:0);
+        const tipY=(press?active.cy:rest.cy)-pitch*.18+(press?pulse*pitch*.23:0);
+        const baseX=wristX+(rest.cx-wristX)*.65,baseY=top+height*.85;
         for(let joint=0;joint<4;joint++){
           const t=joint/3;
-          points.push([baseX+(finger===0?-sign*17*t:sign*2*t),hy+24+(tipY-hy-24)*t+bend*t]);
+          points.push([baseX+(tipX-baseX)*t,baseY+(tipY-baseY)*t-(press?Math.sin(t*Math.PI)*pulse*pitch*.12:0)]);
         }
       }
-      ctx.globalAlpha=.42;ctx.lineWidth=.65;
+      ctx.strokeStyle=ink();ctx.fillStyle=ink();ctx.globalAlpha=.6;ctx.lineWidth=.8;
       for(const path of connections){ctx.beginPath();path.forEach((id,i)=>{if(i)ctx.lineTo(...points[id]);else ctx.moveTo(...points[id]);});ctx.stroke();}
-      ctx.globalAlpha=.72;for(const [px,py] of points)ctx.fillRect(px-1,py-1,2,2);
-      ctx.globalAlpha=.36;ctx.strokeRect(hx-53,hy-45,106,132);
-      ctx.font='8px Plex,monospace';ctx.globalAlpha=.6;
-      ctx.fillText(`hand:${hand} · u ${(pointer.x*.2+.4+sign*.1).toFixed(5)}`,hx-55,hy-51);
+      ctx.globalAlpha=.85;for(const [px,py] of points)ctx.fillRect(px-1,py-1,2,2);
     }
     ctx.restore();
+    intro.dataset.handState=typing?'typing':'idle';
+    intro.dataset.keyboardBounds=[left,top,width,height+pitch*.42].map(n=>n.toFixed(2)).join(',');
   }
   function drawCodeFace(ctx,x,y,width,height,time) {
     const columns=48,rows=58,cw=width/columns,ch=height/rows;
@@ -146,7 +174,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     if(reduced.matches) introProgress=Infinity;
     else if(introTime!==null) introProgress+=Math.max(0,Math.min(100,time-introTime))/30;
     introTime=time;
-    let remaining=introProgress,revealedRows=0,typedCharacters=0,activeRow=0,activeColumn=0;
+    let remaining=introProgress,revealedRows=0,typedCharacters=0,activeRow=0,activeColumn=0,typedKey=" ";
     ctx.save();ctx.beginPath();ctx.rect(left,top,width,bottom-top);ctx.clip();
     ctx.globalAlpha=.25;ctx.fillText('// — reference-web/app.js —',left+cell*3,top+font);
     for(let row=0;row<rows;row++){
@@ -156,7 +184,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       if(complete)revealedRows++;
       typedCharacters+=count;
       if(!started)continue;
-      activeRow=row;activeColumn=count;
+      activeRow=row;activeColumn=count;if(count>0)typedKey=full[count-1];
       const baseline=first+row*line;
       if(!complete){ctx.globalAlpha=.7;ctx.fillStyle='#161615';ctx.fillRect(left,baseline-font,width,line);}
       ctx.fillStyle=ink();ctx.globalAlpha=.28;ctx.fillText(String(row+1).padStart(3),left,baseline);
@@ -178,7 +206,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     const faceWidth=narrow?Math.min(145,w*.38):Math.min(290,w*.17);
     const faceX=left+width*.32-faceWidth/2+(pointer.x-.5)*width*.12,faceY=top+font*2+(pointer.y-.5)*h*.06;
     drawCodeFace(ctx,faceX,faceY,faceWidth,faceWidth*1.35,time);
-    drawHands(ctx,w,h,time);
+    drawHands(ctx,w,h,!reduced.matches&&revealedRows<rows,typedKey);
     ctx.globalAlpha=1;
   }
   function drawBlueprint() {
@@ -263,7 +291,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   window.addEventListener('pointermove', pointerMove, { passive: true }); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
     setMode(value) { mode = value; introTime=null; resize(); },
-    setCode(text) { code=String(text).split('\n').slice(0,500);introProgress=0;introTime=null;resize(); },
+    setCode(text) { code=String(text).split('\n').slice(0,500);introProgress=0;introTime=null;handBeat=-1;handKey='';resize(); },
     setSelection(index) { selected = index; blueprint.dataset.selection = String(selected); drawBlueprint(); },
     setWorm(value) { worm = value; schedule(); },
     onInput(value) { input = value; schedule(); },
