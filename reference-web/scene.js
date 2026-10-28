@@ -250,7 +250,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   const observer = new ResizeObserver(resize); [intro, blueprint, entity, spark].forEach(c => observer.observe(c));
   window.addEventListener('pointermove', pointerMove, { passive: true }); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
-    setMode(value) { mode = value; introTime=null; resize(); },
+    setMode(value) { mode = value; if(value==='intro'){introProgress=0;handBeat=-1;handKey='';}introTime=null;resize(); },
     setCode(text) { code=String(text).split('\n').slice(0,500);introProgress=0;introTime=null;handBeat=-1;handKey='';resize(); },
     setSelection(index) { selected = index; blueprint.dataset.selection = String(selected); drawBlueprint(); },
     setWorm(value) { worm = value; schedule(); },
