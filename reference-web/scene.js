@@ -128,42 +128,6 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     intro.dataset.handState=typing?'typing':'idle';
     intro.dataset.keyboardBounds=[left,top,width,height+pitch*.42].map(n=>n.toFixed(2)).join(',');
   }
-  function drawCodeFace(ctx,x,y,width,height,time) {
-    const columns=48,rows=58,cw=width/columns,ch=height/rows;
-    const lookX=(pointer.x-.5)*.16,lookY=(pointer.y-.5)*.08;
-    ctx.save();ctx.font=`${ch*.88}px Plex,monospace`;
-    for(let row=0;row<rows;row++){
-      const ny=row/(rows-1)*2-1;
-      // Head, cheeks and tapered jaw; glyphs use this implementation's public code.
-      const halfWidth=ny<-.65?Math.sqrt(Math.max(0,1-((ny+.58)/.44)**2))*.75:ny>.36?.83-(ny-.36)*.65:.86;
-      const text=(code[(row*3)%code.length].trim().replace(/\s+/g,' ')||'const frame = pointer.position;');
-      for(let col=0;col<columns;col++){
-        const nx=col/(columns-1)*2-1;
-        if(Math.abs(nx)>halfWidth)continue;
-        const eyes=Math.exp(-(((Math.abs(nx-lookX)-.3)/.15)**2)-((ny+.17-lookY)/.065)**2);
-        const nose=Math.exp(-(((nx-lookX)/.105)**2)-((ny-.07)/.28)**2);
-        const mouth=Math.exp(-(((nx-lookX)/.31)**2)-((ny-.48)/.045)**2);
-        const surface=Math.max(0,1-(nx/Math.max(.1,halfWidth))**2)*(.18+.11*Math.sin(row*.7+col*.22));
-        const blink=!reduced.matches&&Math.sin(time/1900)>.996?.15:1;
-        ctx.globalAlpha=Math.min(.9,.07+surface+eyes*.58*blink+nose*.46+mouth*.38);
-        ctx.fillStyle=col%11===0?'#71957d':ink();
-        ctx.fillText(text[col%text.length],x+col*cw,y+row*ch);
-      }
-    }
-    const eyeY=y+height*(.415+lookY*.5), eyeX=x+width*(.5+lookX*.5);
-    ctx.strokeStyle=ink();ctx.fillStyle=ink();ctx.lineWidth=.6;ctx.globalAlpha=.55;
-    ctx.strokeRect(eyeX-width*.23,eyeY-height*.045,width*.46,height*.09);
-    ctx.fillRect(eyeX-1,eyeY-1,2,2);
-    if(!reduced.matches){
-      const targetX=pointer.x*innerWidth,targetY=pointer.y*innerHeight;
-      ctx.globalAlpha=.3;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(eyeX,eyeY);ctx.lineTo(targetX,targetY);ctx.stroke();ctx.setLineDash([]);
-      ctx.strokeRect(targetX-9,targetY-6,18,12);
-    }
-    ctx.font='8px Plex,monospace';ctx.globalAlpha=.65;
-    ctx.fillText(`pointer:u ${pointer.x.toFixed(6)}`,x+width*.8,y+height*.07);
-    ctx.fillText(`pointer:v ${pointer.y.toFixed(6)}`,x+width*.8,y+height*.07+10);
-    ctx.restore();
-  }
   function drawIntro(time) {
     const view = fit(intro); if (!view) return;
     const { ctx, w, h } = view, narrow=w<700;
@@ -202,10 +166,6 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     if(status)status.dataset.mode=state;
     if(label&&label.textContent!==state)label.textContent=state;
     if(position&&position.textContent!==cursor)position.textContent=cursor;
-    // A text-built entity overlays the single editor, with articulated hands below.
-    const faceWidth=narrow?Math.min(145,w*.38):Math.min(290,w*.17);
-    const faceX=left+width*.32-faceWidth/2+(pointer.x-.5)*width*.12,faceY=top+font*2+(pointer.y-.5)*h*.06;
-    drawCodeFace(ctx,faceX,faceY,faceWidth,faceWidth*1.35,time);
     drawHands(ctx,w,h,!reduced.matches&&revealedRows<rows,typedKey);
     ctx.globalAlpha=1;
   }
