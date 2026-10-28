@@ -1,0 +1,1395 @@
+{
+  "reference": {
+    "url": "https://aiengineeringfromscratch.com/",
+    "evidence_id": "ev_f5094b7b290fd35dbbec34db4742a98ff365ff132a670b6c36af83e6fee0133d",
+    "content_copied": false
+  },
+  "tools_used": [
+    "binary_session",
+    "capture_browser_scenario",
+    "list_browser_targets",
+    "inspect_web_page",
+    "capture_web_screenshot"
+  ],
+  "rea_version": "6.8.0",
+  "browser": "Chromium 146.0.7680.177",
+  "views": [
+    {
+      "name": "home",
+      "label": "desktop",
+      "page": "home",
+      "path": "/",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_7d1c121c506d6deaae00a5d13e67c7940593b579c6de352ed1aefd16642e73f8",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "c1d61368e7d1e77ec6c5415fcf0462191b20f1d92bc3cbf7ba06ea46d49596f8",
+      "bytes": 105878,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "agents",
+      "label": "desktop",
+      "page": "agents",
+      "path": "/agents",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_8c411342d3d5f7aa956f64d16ca9beb12f092ae5360bb7fa1a7fa7848e1ac34e",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "642d48c564e8a316251c2dcc323488ad7eee4ff0c4602b2b7dd4375a16353d77",
+      "bytes": 92214,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "profile",
+      "label": "desktop",
+      "page": "profile",
+      "path": "/agents/fab35ded-49c2-4168-b078-09a9470092c2",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_9dc81b0758fce7ab035eee2507e9657a24cd23d28e9171f500f112b20bec6428",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "6274069205bbe76844673582cb4f1bb6209c0a901f9b669c470c1b2ea4e6e997",
+      "bytes": 109440,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "economy",
+      "label": "desktop",
+      "page": "economy",
+      "path": "/economy",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_a5cd41e138e01128fba4754e42f68c0143025258fbb769f54da89d6e36843b8b",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "d106aedf68d52893d256fe0bfead60441e7b69627f550c1597322e46918b5ecb",
+      "bytes": 104656,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "memory",
+      "label": "desktop",
+      "page": "memory",
+      "path": "/memory",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_b7bc2af07fa4c3760f574199f175934b3153afee8c243b8b3579621e3db82782",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "97b1d836c7286f552c2de4bdf16deea38f573ea676e5bbc86b458dce97001d9a",
+      "bytes": 102227,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "social",
+      "label": "desktop",
+      "page": "social",
+      "path": "/social",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_322f8c65a6b475a005756eb6175d2081e1028238aab8b94827a37da09b37e8db",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "12140461da3a83acb9ba7892008a6d116313f949d509d57d367791f28bbe43f6",
+      "bytes": 81759,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "trading",
+      "label": "desktop",
+      "page": "trading",
+      "path": "/trading",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_2188270b50b64c72a3d55866d00190f14fc527bcd98956da55a91f47aee4c0a6",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "535ad3db689c06e3a2cd19c177e7d8f626d31a1e3512b869ad55f71f33ef89d5",
+      "bytes": 105427,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "launch",
+      "label": "desktop",
+      "page": "launch",
+      "path": "/launch",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_30d52b441c798287d5d64bf44ea9474eabbc603dbc5464b520218740b4672129",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "3fc40825d58f6c3a36195eaa208ca5172a4287803df03a7ebc43e5fcd86d33b9",
+      "bytes": 111656,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "factory",
+      "label": "desktop",
+      "page": "factory",
+      "path": "/factory",
+      "actual_viewport": {
+        "width": 1440,
+        "height": 1000,
+        "scroll_width": 1440
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_a83b9a58da4fdff18cbaabf74d31815d3236f117c5aeba53adb844b041d12ccc",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "252740e0131771c0d432564d4e0d2b14f78b755bbcb4d003480cad47cc5db0b1",
+      "bytes": 103193,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "home",
+      "label": "tablet",
+      "page": "home",
+      "path": "/",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_875a25ace83e7ef1b1a0f20c860980a7ec43c56b19925b1729d63fb03c9cdd0e",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "b67c0bedb0a7c468d8eb46142b2f015ad4159a77d7d43dae4ea2c4e599749852",
+      "bytes": 78881,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "agents",
+      "label": "tablet",
+      "page": "agents",
+      "path": "/agents",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_d7c4c4564b4a61a7d6725c6b6076cdaff479b01fe3a3ecb3e5a4273ba3949d4d",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "3b49885c2f80fd71ce8532fb4cdebbb3e8fbe9414791f9aa102b4c25a914c4f2",
+      "bytes": 75852,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "profile",
+      "label": "tablet",
+      "page": "profile",
+      "path": "/agents/fab35ded-49c2-4168-b078-09a9470092c2",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_c9d794e0b0a1cf9c5ebf824abade6ba8fee47c3c9c0e0fa92a5e1d25d3f0df65",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "67de9eb81bd1eb977f2883bef23af6738bb10f60f7cebb7ebeb3747c6f12b7fb",
+      "bytes": 102429,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "economy",
+      "label": "tablet",
+      "page": "economy",
+      "path": "/economy",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_3ee1ea3a6be1090bc73970bf0f2a6abed43b6932379428407e55de9f9abe9975",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "7f2a1ae3d5b04f53e8ee0fc3ea135cd48db55c54e256bcf8c9ece1f186e07bef",
+      "bytes": 71239,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "memory",
+      "label": "tablet",
+      "page": "memory",
+      "path": "/memory",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_cf867a300232bfd72291aafb66c201c8d222c2fe0a6b72bf442c8674c84837d8",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "b86c54d8290c5a98c49cc8684ec01cfebf924e819641802ed795af9a10f4c0c5",
+      "bytes": 78804,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "social",
+      "label": "tablet",
+      "page": "social",
+      "path": "/social",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_74ef5cc2af1d365dd5c183fb28dbecd2244782dded19b8a8994bb96bc27e73b3",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "739a8b26dfa570e2f017ef24afb5dc9683598025ae6e1f665ee08298375c32ea",
+      "bytes": 76248,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "trading",
+      "label": "tablet",
+      "page": "trading",
+      "path": "/trading",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_6eafb996fd76290082125b7230fcd5e52d6ea657340b9e65e39f384fbdfac221",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "98c0e41450f15c4df4e52cd2c87d6ff02db0d61115d16be53ceeb9ffcac1a098",
+      "bytes": 68852,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "launch",
+      "label": "tablet",
+      "page": "launch",
+      "path": "/launch",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_d3ebf62e705b60daa3fbbb045f6ea515a20102bb05c9e0214d06aa6cc25624e5",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "806fc70ab642460628421e35f8dc5dd9d605f1aeef901186f0bf8aa58f396c96",
+      "bytes": 69153,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "factory",
+      "label": "tablet",
+      "page": "factory",
+      "path": "/factory",
+      "actual_viewport": {
+        "width": 768,
+        "height": 1024,
+        "scroll_width": 768
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_9aa6054426942eea6fe83c96a684d0a936bab63cca89c310d2400e22c79a45f7",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "c0ce10edbb0158de8d9479c5a5be43d498145ec401137c6e23d7020fa7e66da7",
+      "bytes": 69914,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "home",
+      "label": "mobile",
+      "page": "home",
+      "path": "/",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_cff3febc42e3d970671f6d32e28454390ac5cfe4e7c56e57e94082a4fb6cf89d",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "6001ce9e1ec5d9a415f382441e6590022c4740056ce2979ea4aa8f39d95b86ce",
+      "bytes": 53263,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "agents",
+      "label": "mobile",
+      "page": "agents",
+      "path": "/agents",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_f7f6427c5d9a976966c3d4b6539f5260c6ed2358ac1122068cf6fcef0f4f28b2",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "bee9100862dcbe01e86d799fa01dea2b425b1578cbd5d55c034d4221297305a8",
+      "bytes": 45246,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "profile",
+      "label": "mobile",
+      "page": "profile",
+      "path": "/agents/fab35ded-49c2-4168-b078-09a9470092c2",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_7e98b327d7109f1b0ac6be414b04b47cf78a25fec2c14245aad8b74836c414c3",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "b97a6951b7cb1c197c5d445a485a191bf1a362acb8c7d3115f71d799fba606d8",
+      "bytes": 62816,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "economy",
+      "label": "mobile",
+      "page": "economy",
+      "path": "/economy",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_8305c2f434280d584fbbddeabea669d21d3e160129507f8f794f211caaa3ffbc",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "574649c3a552e51fae63e6ec7c555f5a7b7d75b0e4c59c194282564380ebe3b3",
+      "bytes": 50183,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "memory",
+      "label": "mobile",
+      "page": "memory",
+      "path": "/memory",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_990901026a0f295b341851edecf7427ea7b77a1ea1c99621d4b06696c15a2deb",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "0d0c26b2fd8f6bb3d31ae7f274180e12b3ec22bd92c7f235d16fd6d129f86ff5",
+      "bytes": 57817,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "social",
+      "label": "mobile",
+      "page": "social",
+      "path": "/social",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_b004953621e1290a25b3ccc87ae1203994559582f0b3f7994119c492ca232cf4",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "cb8cd45036054133c68ae8ba01416328aef9b2d2be671e44a8d89ab0dfb16894",
+      "bytes": 55208,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "trading",
+      "label": "mobile",
+      "page": "trading",
+      "path": "/trading",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_620531202ccbc13d11bdec82f5319ae6e53e02c57f0b7507569e4755960f387a",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "c4690c4ed136350f582373c48e5bc3e3e8924fa8e90201bd304ddacb696b442f",
+      "bytes": 46216,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "launch",
+      "label": "mobile",
+      "page": "launch",
+      "path": "/launch",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_906454a93c88fe77a09b8cd2dbb009492806856272952004ec0c2b0b6b8be5ff",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "64f2b72dd72917ed21bbace700d5a8a94acad54be0d8d5480640476751e06b69",
+      "bytes": 45046,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    },
+    {
+      "name": "factory",
+      "label": "mobile",
+      "page": "factory",
+      "path": "/factory",
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "scroll_width": 390
+      },
+      "status": 200,
+      "synthetic_data": false,
+      "evidence_id": "ev_5d511c37562cd9fe7fb7c662ab1c10fb2e85d841820f00fa963c64b02f0fea65",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "04919dddc01362202b6f60aa2f321f2a62e233e982acbbf6fa1011acd2d563ba",
+      "bytes": 45833,
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "limitations": [
+        "The screenshot contains the visible viewport, including on-screen content.",
+        "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport."
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "artifacts/milestone-4/home-desktop.png",
+      "evidence_id": "ev_7d1c121c506d6deaae00a5d13e67c7940593b579c6de352ed1aefd16642e73f8",
+      "sha256": "c1d61368e7d1e77ec6c5415fcf0462191b20f1d92bc3cbf7ba06ea46d49596f8",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/agents-desktop.png",
+      "evidence_id": "ev_8c411342d3d5f7aa956f64d16ca9beb12f092ae5360bb7fa1a7fa7848e1ac34e",
+      "sha256": "642d48c564e8a316251c2dcc323488ad7eee4ff0c4602b2b7dd4375a16353d77",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/profile-desktop.png",
+      "evidence_id": "ev_9dc81b0758fce7ab035eee2507e9657a24cd23d28e9171f500f112b20bec6428",
+      "sha256": "6274069205bbe76844673582cb4f1bb6209c0a901f9b669c470c1b2ea4e6e997",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/economy-desktop.png",
+      "evidence_id": "ev_a5cd41e138e01128fba4754e42f68c0143025258fbb769f54da89d6e36843b8b",
+      "sha256": "d106aedf68d52893d256fe0bfead60441e7b69627f550c1597322e46918b5ecb",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/memory-desktop.png",
+      "evidence_id": "ev_b7bc2af07fa4c3760f574199f175934b3153afee8c243b8b3579621e3db82782",
+      "sha256": "97b1d836c7286f552c2de4bdf16deea38f573ea676e5bbc86b458dce97001d9a",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/social-desktop.png",
+      "evidence_id": "ev_322f8c65a6b475a005756eb6175d2081e1028238aab8b94827a37da09b37e8db",
+      "sha256": "12140461da3a83acb9ba7892008a6d116313f949d509d57d367791f28bbe43f6",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/trading-desktop.png",
+      "evidence_id": "ev_2188270b50b64c72a3d55866d00190f14fc527bcd98956da55a91f47aee4c0a6",
+      "sha256": "535ad3db689c06e3a2cd19c177e7d8f626d31a1e3512b869ad55f71f33ef89d5",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/launch-desktop.png",
+      "evidence_id": "ev_30d52b441c798287d5d64bf44ea9474eabbc603dbc5464b520218740b4672129",
+      "sha256": "3fc40825d58f6c3a36195eaa208ca5172a4287803df03a7ebc43e5fcd86d33b9",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/factory-desktop.png",
+      "evidence_id": "ev_a83b9a58da4fdff18cbaabf74d31815d3236f117c5aeba53adb844b041d12ccc",
+      "sha256": "252740e0131771c0d432564d4e0d2b14f78b755bbcb4d003480cad47cc5db0b1",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/home-tablet.png",
+      "evidence_id": "ev_875a25ace83e7ef1b1a0f20c860980a7ec43c56b19925b1729d63fb03c9cdd0e",
+      "sha256": "b67c0bedb0a7c468d8eb46142b2f015ad4159a77d7d43dae4ea2c4e599749852",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/home-mobile.png",
+      "evidence_id": "ev_cff3febc42e3d970671f6d32e28454390ac5cfe4e7c56e57e94082a4fb6cf89d",
+      "sha256": "6001ce9e1ec5d9a415f382441e6590022c4740056ce2979ea4aa8f39d95b86ce",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/economy-mobile.png",
+      "evidence_id": "ev_8305c2f434280d584fbbddeabea669d21d3e160129507f8f794f211caaa3ffbc",
+      "sha256": "574649c3a552e51fae63e6ec7c555f5a7b7d75b0e4c59c194282564380ebe3b3",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/milestone-4/profile-mobile.png",
+      "evidence_id": "ev_7e98b327d7109f1b0ac6be414b04b47cf78a25fec2c14245aad8b74836c414c3",
+      "sha256": "b97a6951b7cb1c197c5d445a485a191bf1a362acb8c7d3115f71d799fba606d8",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "evidence_id": "ev_f0356f8513be3fbda713964cafafb387ee25088ca1248e166bbe564e7bac9ac6",
+      "scenario": "Select authorization stage of original interactive survival diagram",
+      "status": "completed"
+    },
+    {
+      "evidence_id": "ev_25666e0879c5e8f6b18342630d04ee9f9b435570f24e470b5970bbbd4f8626e1",
+      "scenario": "Measured 390px mobile navigation to Memory, search and hypothesis filter",
+      "status": "completed"
+    }
+  ],
+  "discarded_evidence": [
+    {
+      "reason": "Attached scenario screenshot clipped a desktop layout rather than proving mobile dimensions. Not counted as responsive evidence.",
+      "evidence_ids": [
+        "ev_19f6242966fd1dd6982192fa11ea0505f993aa652168f925b8cb68b148e5c19f",
+        "ev_103184edda45207c1e3fdac4db8d0b00071565ae581d83cf89621d04475e6282",
+        "ev_a7166693bf1bd8f3f42f236fa07da57a19030bed2b41139b576e41dc0b356ef0",
+        "ev_803c4c522fa46262a68391d9144e7260539fffb0e7fd735b8a9ce1a8518cfe0b",
+        "ev_c3301b4bfb1dc6b920191e1a11c84335e52e631cc6589d73c78b673cd742ace3",
+        "ev_7ee15793a733a4c02e808f1c86fc61dfca746dfd7b7b311ba7469ea4e3e91539",
+        "ev_18a5ec52794d6fb54751dcba8f29d4e4db13c204fdec54a3e5200ac72c3f88ba",
+        "ev_1b652550f70bb9576327da0fe3afed704ff6beb766b83575fe623d937f9737cb",
+        "ev_91dfb6f8d7170a08d4a90ecb9ae6963ed1061681c40725b3fc657e3880370cad"
+      ]
+    },
+    {
+      "reason": "Memory wait locator matched two empty states; corrected to a unique selector for final captures.",
+      "evidence_id": "ev_87d0d5773121c0c76a80dd61ee4274b7b63fa9e5b67f444bf5485d8c8a66742a"
+    },
+    {
+      "reason": "Preview process had stopped; navigation/cleanup failed. Restarted preview in persistent terminal and recovered the owned browser before final captures.",
+      "classification": "cleanup_incomplete"
+    }
+  ],
+  "limitations": [
+    "Screenshots are point-in-time observations, not visual equivalence to the reference.",
+    "REA attached scenarios could not prove viewport resizing alone. Final captures use Playwright-measured dimensions and REA read-only screenshot capture.",
+    "Attached scenario page-error capture reported incomplete event coverage; zero retained events is not proof of complete error coverage.",
+    "Live Devnet database has no memory, reasoning or social history; populated browser component states use explicit synthetic test fixtures.",
+    "rea doctor found optional native analysis engines and unrelated client registrations missing; registered browser tools operated successfully."
+  ]
+}
