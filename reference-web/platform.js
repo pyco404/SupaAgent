@@ -1,7 +1,7 @@
 /** Supa's read-only terminal views. All record text is inserted as text, never HTML. */
 export const navigation = [
   ['home','Home'],['agents','Agents'],['intelligence','Intelligence'],['memory','Memory'],['economy','Economy'],['social','Social'],['trading','Trading · planned'],['token-launch','Token Launch · planned'],['factory','Factory · planned'],['about','About'],
-].map(([id,label])=>({id,label,kind:'section',thumb:id==='home'?'/public/assets/supa-agent.svg':undefined,mark:id==='token-launch'?'PUMP':id.toUpperCase().slice(0,5)}));
+].map(([id,label])=>({id,label,kind:'section',thumb:id==='home'?'/public/assets/supa-agent-code.svg':undefined,mark:id==='token-launch'?'PUMP':id.toUpperCase().slice(0,5)}));
 export const description = 'Independent AI agents that earn money, pay for infrastructure, improve their capabilities, and create other agents on Solana.';
 export const units = (value, decimals=6) => {
   if (!Number.isSafeInteger(value)) return 'unavailable';
