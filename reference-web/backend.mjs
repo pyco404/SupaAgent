@@ -3,7 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { parseEnv } from 'node:util';
 import { resolve } from 'node:path';
 import { schemas, autonomyRequestSchema, scheduleCommandSchema } from '../web/src/lib/contracts.ts';
-import { operatorAuthorized, localRequest } from '../web/src/lib/auth.ts';
+import { operatorAuthorized, operatorToken, localRequest } from '../web/src/lib/auth.ts';
 
 export async function loadLocalEnvironment() {
   if (process.env.SUPA_SITE_MODE === 'staging') return;
@@ -13,7 +13,7 @@ export async function loadLocalEnvironment() {
     const info = await stat(path);
     if (!info.isFile() || (info.mode & 0o077) !== 0 || info.uid !== process.getuid()) throw new Error('unsafe');
     const values = parseEnv(await readFile(path, 'utf8'));
-    for (const key of ['SUPA_BACKEND_URL','SUPA_API_TOKEN','SUPA_WEB_USERNAME','SUPA_WEB_PASSWORD']) {
+    for (const key of ['SUPA_BACKEND_URL','SUPA_API_TOKEN','SUPA_WEB_USERNAME','SUPA_WEB_PASSWORD','SUPA_WEB_OPERATORS']) {
       if (process.env[key] === undefined && values[key] !== undefined) process.env[key] = values[key];
     }
   } catch (error) {
@@ -24,12 +24,12 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function resource(path) {
   if (path === '/api/autonomy') return {path:'/autonomy',schema:schemas.autonomy,public:false};
   if (path === '/api/status') return { path:'/health', schema:schemas.health, public:true };
-  if (path === '/api/agents') return { path:'/agents', schema:schemas.agents, public:true };
+  if (path === '/api/agents') return { path:'/directory', schema:schemas.directory, public:true };
   const parts = path.split('/').slice(2);
   if (parts[0] !== 'agents' || !uuid.test(parts[1] ?? '')) return null;
   let schema;
   if (parts.length === 2) schema = schemas.agent;
-  if (parts.length === 3 && ['schedule','financials','memory','goals','activity','cycles','actions','simulated-ledger','social','drafts','wallet'].includes(parts[2])) schema = schemas[parts[2]];
+  if (parts.length === 3 && ['access','authorizations','execution-health','schedule','financials','memory','goals','activity','cycles','actions','simulated-ledger','social','drafts','wallet'].includes(parts[2])) schema = schemas[parts[2]];
   if (parts.length === 4 && parts[2] === 'wallet' && ['balances','treasury','payments'].includes(parts[3])) schema = schemas[parts[3]];
   return schema ? { path:'/'+parts.join('/'), schema, public:false } : null;
 }
@@ -41,6 +41,7 @@ function scrub(value) {
     for (const [key, secret] of Object.entries(process.env)) {
       if (/(?:KEY|TOKEN|PASSWORD|SECRET|DATABASE_URL)$/.test(key) && secret?.length >= 8) text = text.split(secret).join('[redacted]');
     }
+    try { for (const account of JSON.parse(process.env.SUPA_WEB_OPERATORS??'[]')) for (const value of [account.api_token,account.password]) if(typeof value==='string'&&value.length>=8)text=text.split(value).join('[redacted]'); } catch {}
     return text;
   }
   if (Array.isArray(value)) return value.map(scrub);
@@ -54,7 +55,7 @@ export async function readResource(path, headers, fetcher = fetch) {
   const route = resource(path);
   if (!route) return fail('read_not_permitted',403);
   if (!route.public && !operatorAuthorized(request.headers.get('authorization'))) return fail('operator_authentication_required',401);
-  const raw = process.env.SUPA_BACKEND_URL, token = process.env.SUPA_API_TOKEN;
+  const raw = process.env.SUPA_BACKEND_URL, token = route.public ? process.env.SUPA_API_TOKEN : operatorToken(request.headers.get('authorization'));
   if (!raw || !token) return fail('backend_not_configured',503);
   let base;
   try {
@@ -90,7 +91,7 @@ export async function runAutonomy(path, headers, body, fetcher=fetch) {
   if(Buffer.byteLength(body)>4096)return fail('request_too_large',413);
   let input;try{input=(scheduled?scheduleCommandSchema:autonomyRequestSchema).safeParse(JSON.parse(body));}catch{return fail('invalid_workflow_request',400);}
   if(!input.success)return fail('invalid_workflow_request',400);
-  const token=process.env.SUPA_API_TOKEN;let base;
+  const token=operatorToken(request.headers.get('authorization'));let base;
   try{
     base=new URL(process.env.SUPA_BACKEND_URL);
     const privateStaging=process.env.SUPA_SITE_MODE==='staging'&&/^[a-z0-9][a-z0-9-]*\.railway\.internal$/.test(base.hostname);
