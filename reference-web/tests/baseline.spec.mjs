@@ -140,6 +140,24 @@ test("opening code types slowly from the top and reduced motion completes it", a
   expect(Number(await intro.getAttribute("data-revealed-rows"))).toBeGreaterThan(next.rows);
 });
 
+test("opening uses one file status bar and keeps it inside the viewport", async ({ page }) => {
+  await open(page, "/");
+  const status = page.locator(".intro-modes");
+  await expect(status.locator(".mode-label")).toHaveCount(1);
+  await expect(status.locator(".mode-label")).toHaveText("NORMAL");
+  await expect(status.locator(".intro-file")).toHaveText("reference-web/app.js");
+  await expect(status.locator(".intro-position")).toHaveText(/\d+:\d+/);
+  await expect(page.locator(".intro-command")).toBeVisible();
+  const box = await status.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize().width);
+  await page.locator(".theme-key").click();
+  await expect(status).toBeVisible();
+  await page.locator(".enter").click();
+  await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
+  await expect(status).toBeHidden();
+});
+
 test("changing projects cancels the previous terminal boot without restoring stale text", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/site/", { waitUntil: "domcontentloaded" });
