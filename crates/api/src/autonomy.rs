@@ -1,7 +1,7 @@
 //! Operator-authorized, bounded offline rehearsal. Never uses the configured provider.
 use crate::{ApiError, ApiResult, AppState};
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -48,6 +48,7 @@ impl Input {
 }
 async fn run(
     State(state): State<AppState>,
+    Extension(actor): Extension<crate::Principal>,
     body: std::result::Result<Json<Input>, axum::extract::rejection::JsonRejection>,
 ) -> Response {
     let input = match body {
@@ -64,7 +65,7 @@ async fn run(
     // Continue the bounded task and final pause even if the HTTP caller disconnects.
     match tokio::spawn(async move {
         let _permit = permit;
-        execute(state, input).await
+        execute(state, input, actor.id).await
     })
     .await
     {
@@ -72,7 +73,7 @@ async fn run(
         Err(_) => ApiError(Error::Provider).into_response(),
     }
 }
-async fn execute(state: AppState, input: Input) -> Response {
+async fn execute(state: AppState, input: Input, actor: Uuid) -> Response {
     let id = input.request_id;
     match state.store.get(id).await {
         Ok(_) => {
@@ -111,7 +112,7 @@ async fn execute(state: AppState, input: Input) -> Response {
         Err(error) => return ApiError(error).into_response(),
     };
     agent.id = id;
-    if let Err(error) = state.store.create(&agent).await {
+    if let Err(error) = state.store.create_owned(&agent, actor).await {
         // Another API process may have won the primary-key race. Never touch its agent.
         return if state.store.get(id).await.is_ok() {
             (
