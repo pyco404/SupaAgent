@@ -60,13 +60,13 @@ def rules(data, known):
 
 def protected(path):
     parts = Path(path).parts
-    return any(x in {'.git', '.git-recovery', '.supa-secrets', '.supa-vault', '.aws', '.codex', '.agents', 'pgdata', 'postgres-data'} for x in parts) or any(x.startswith('.env') and x != '.env.example' for x in parts) or Path(path).suffix in {'.pem', '.key', '.p12', '.pfx', '.db', '.sqlite', '.sqlite3', '.dump', '.backup'} or path.endswith('.sql.gz')
+    return any(x in {'.git', '.git-recovery', '.supa-secrets', '.supa-vault', '.aws', '.codex', '.agents', 'pgdata', 'postgres-data', 'node_modules', '.next', '.browser-profile', 'test-results', 'playwright-report'} for x in parts) or any(x.startswith('.env') and x != '.env.example' for x in parts) or Path(path).suffix in {'.pem', '.key', '.p12', '.pfx', '.db', '.sqlite', '.sqlite3', '.dump', '.backup'} or path.endswith('.sql.gz')
 
 def local_secrets():
     known = []
     values = dict(os.environ)
     # Read only for exact-match detection; never echo values or copy them into reports.
-    for path in ROOT.glob('.env*'):
+    for path in [*ROOT.glob('.env*'), *ROOT.joinpath('web').glob('.env*')]:
         if not path.is_file() or path.name == '.env.example':
             continue
         for line in path.read_text().splitlines():
@@ -122,7 +122,7 @@ def scan():
         for rule in rules(git('cat-file', 'blob', oid), known):
             findings.append({'path': path, 'rule': rule})
     # Verify local sensitive paths remain ignored even if they do not exist yet.
-    ignored = ['.env', '.env.eval', '.env.devnet', '.env.wallet', '.supa-secrets/devnet-master', '.supa-vault/devnet/wallet.json', '.git-recovery/config', 'local.db', 'local.sqlite3', 'data.dump', 'pgdata/PG_VERSION']
+    ignored = ['.env', '.env.eval', '.env.devnet', '.env.wallet', '.supa-secrets/devnet-master', '.supa-vault/devnet/wallet.json', '.git-recovery/config', 'local.db', 'local.sqlite3', 'data.dump', 'pgdata/PG_VERSION', 'web/.env.local', 'web/.browser-profile/Default/Cookies', 'web/.next/server/private.json', 'web/test-results/trace.zip', 'web/node_modules/package/index.js']
     for path in ignored:
         result = subprocess.run(GIT + ['check-ignore', '-q', '--no-index', path], cwd=ROOT)
         if result.returncode:
@@ -137,7 +137,8 @@ def self_test():
     assert 'credential_url' in rules(b''.join([b'postgresql://', b'user', b':', b'actual-secret', b'@localhost/db']), [])
     assert not rules(b'postgresql://supa:your-local-password@localhost/db', [])
     assert protected('.env.eval') and protected('.supa-vault/devnet/x.json') and protected('local.db') and protected('backup.sql.gz') and not protected('.env.example') and not protected('migrations/0004_wallet.sql')
-    print(json.dumps({'self_tests_passed': 7}))
+    assert protected('web/.env.local') and protected('web/.browser-profile/Default/Cookies') and protected('web/.next/server/private.json') and protected('web/test-results/trace.zip') and not protected('web/tests/fixtures.ts')
+    print(json.dumps({'self_tests_passed': 8}))
 
 def main():
     parser = argparse.ArgumentParser()
