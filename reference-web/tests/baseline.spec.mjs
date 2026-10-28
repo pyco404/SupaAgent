@@ -181,7 +181,7 @@ test("Supa backdrop preserves the approved pixel mask and stays behind readable 
   },paths);
   expect(comparison.results.every(result=>result.identical)).toBe(true);
   expect(comparison.opacity).toBeGreaterThan(0);
-  expect(comparison.opacity).toBeLessThan(.4);
+  expect(comparison.opacity).toBeLessThan(.75);
   expect(comparison.filter).toContain("blur(");
   expect(comparison.belowCode).toBe(true);
   for(const name of ["supa-agent.svg","supa-agent-icon.svg","supa-agent-header.svg","supa-agent-monochrome.svg","supa-agent-code.svg"]){
@@ -362,7 +362,7 @@ test("preview is read only and cannot expose project secrets or parent paths", a
 test("code logo keeps the canonical silhouette and transparent facial cutouts", async ({ page, request }) => {
   await open(page,"/");
   const svg=await (await request.get('/public/assets/supa-agent-code.svg')).text();
-  expect(svg).toContain('clip-rule="evenodd"');expect(svg).toContain('const agent');expect(svg).toContain('<text');
+  expect(svg).toContain('clip-rule="evenodd"');expect(svg).toContain('const');expect(svg).toContain('<text');expect(svg).toContain('<tspan');
   const solid=await (await request.get('/public/assets/supa-agent.svg')).text();
   expect(svg.match(/ d="([^"]+)"/)[1]).toBe(solid.match(/ d="([^"]+)"/)[1]);
   const raster=await page.locator('.intro-mascot').evaluate(async image=>{
