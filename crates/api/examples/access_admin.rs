@@ -7,7 +7,7 @@ async fn main() {
     if let Err(error) = run().await {
         eprintln!(
             "{}",
-            serde_json::json!({"error":error.to_string(),"ownership_changed":false})
+            serde_json::json!({"error":error.to_string(),"ownership_change_confirmed":false,"next_step":"inspect_access_audit_before_retry"})
         );
         std::process::exit(1);
     }
@@ -33,7 +33,7 @@ async fn run() -> Result<()> {
     store.establish_owner(agent, owner).await?;
     println!(
         "{}",
-        serde_json::json!({"ownership_changed":true,"agent_id":agent,"owner_id":owner,"execution_started":false})
+        serde_json::json!({"ownership_change_confirmed":true,"agent_id":agent,"owner_id":owner,"execution_started":false})
     );
     Ok(())
 }
