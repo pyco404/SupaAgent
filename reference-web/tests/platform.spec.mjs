@@ -58,3 +58,32 @@ test.describe('authorized saved records',()=>{
     await page.keyboard.press('Enter');await expect(page.locator('.tabline')).toHaveAttribute('aria-expanded','false');await expect(page.locator('.pane')).toHaveJSProperty('inert',false);
   });
 });
+
+test('every section types in document order and replays on return',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.goto('/site/#home');
+  await expect(page.locator('html')).toHaveAttribute('data-ready','true');
+  await expect(page.locator('.reload-records')).toBeEnabled();
+  for(const section of ['home','agents','intelligence','memory','economy','social','trading','token-launch','factory','about','home']){
+    await page.locator('.command-toggle').click();await page.locator('.command-input').fill(`supa ${section}`);await page.keyboard.press('Enter');
+    const buffer=page.locator('.buffer');await expect(buffer).toHaveAttribute('data-typing-state','typing');
+    expect(await buffer.locator(':scope > [hidden]').count()).toBeGreaterThan(0);
+    const order=await buffer.evaluate(el=>{let hidden=false;return [...el.children].every(row=>{if(row.hidden)hidden=true;return row.hidden||!hidden;});});expect(order).toBe(true);
+    const before=(await buffer.textContent()).length;await page.waitForTimeout(180);expect((await buffer.textContent()).length).toBeGreaterThanOrEqual(before);
+    await page.locator('.skip-typing').click();await expect(buffer).toHaveAttribute('data-typing-state','complete');
+    expect(await buffer.locator('[hidden],[inert]').count()).toBe(0);await expect(page.locator('.skip-typing')).toBeHidden();await expect(buffer).toBeFocused();
+    await expect(page).toHaveURL(new RegExp(`#${section}$`));
+  }
+});
+
+test('reloading restarts typing and navigation cancels old text safely',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/site/#about');
+  await expect(page.locator('.skip-typing')).toBeVisible();await page.locator('.skip-typing').click();
+  await page.locator('.reload-records').click();await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+  await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa trading');await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#trading$/);await page.locator('.skip-typing').click();
+  await expect(page.locator('.buffer')).toContainText('strict maximum of $5');await page.waitForTimeout(300);
+  await expect(page.locator('.buffer')).not.toContainText('six-crate Rust runtime');
+  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.reload-records').click();
+  await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','complete');await expect(page.locator('.skip-typing')).toBeHidden();
+});
