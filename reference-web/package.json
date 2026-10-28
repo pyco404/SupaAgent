@@ -1,0 +1,12 @@
+{
+  "name": "hancore-reference-baseline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "node build.mjs",
+    "check": "node --check server.mjs && node --check build.mjs && node --check app.js && node --check scene.js && node --check wheel.js && node --check playwright.config.mjs && node --check tests/baseline.spec.mjs",
+    "test": "../web/node_modules/.bin/playwright test"
+  }
+}
