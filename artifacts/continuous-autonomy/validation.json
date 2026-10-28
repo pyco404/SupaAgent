@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "provider": "offline",
+  "rust_workspace_all_targets_postgres": {"passed": 108, "failed": 0},
+  "final_targeted_api": {"passed": 10, "failed": 0},
+  "final_targeted_cooldown_test": {"passed": 1, "failed": 0},
+  "approved_experience_browser": {"passed": 144, "failed": 0, "retries": 0},
+  "preserved_console_browser": {"passed": 144, "failed": 0, "workers": 1, "retries": 0},
+  "adapter_unit_tests": {"passed": 15, "failed": 0},
+  "cargo_format": true,
+  "clippy_warnings_denied": true,
+  "frontend_lint": true,
+  "typescript": true,
+  "next_production_build": true,
+  "reference_syntax_and_asset_build": true,
+  "real_system_check": "system-check.json",
+  "rea_evidence": "rea-evidence.json",
+  "local_preview_controls_available": true,
+  "local_existing_agents_unchanged": true,
+  "local_authorized_schedules": 0,
+  "local_offline_coordinator_explicitly_enabled": true,
+  "default_scheduling_enabled": false,
+  "paid_inference_calls": 0,
+  "financial_transactions": 0,
+  "production_migrations": false,
+  "deployment": false,
+  "initial_validation_issues": [
+    "Restricted build could not parse TypeScript subprocess output; normal local build passed.",
+    "Overlapping browser suites exhausted available memory/swap and timed out; owned competing runners were stopped, and sequential full suites passed without retries or weaker assertions."
+  ]
+}
