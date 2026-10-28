@@ -85,3 +85,8 @@ html[data-motion=still] .intro-modes span+span{display:block}
 .command{flex-wrap:wrap;padding-block:6px}.command-actions{display:flex;align-items:center;flex-wrap:wrap;gap:4px 18px;flex:1 0 100%}
 .command-actions button,.command-actions a{display:inline-flex;align-items:center;min-height:44px;padding:4px 0;color:var(--dim);text-decoration:underline;text-underline-offset:4px}
 .wheel-item[data-index="0"] .wheel-thumb{padding:6px 14px;filter:none;image-rendering:auto}
+
+/* Input illustration reserves its own space below saved-record status. */
+.workspace-hands{display:block;grid-row:3;width:100%;height:144px;pointer-events:none}
+.projects{grid-template-rows:minmax(0,1fr) 58px 144px 20px}
+@media(max-width:700px){.projects{grid-template-rows:44px minmax(0,1fr) 52px 100px 0}.workspace-hands{grid-row:4;height:100px}.study-note{grid-row:5}}
