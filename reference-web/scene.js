@@ -8,6 +8,8 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   tether.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:8';
   document.body.append(tether);
   let introProgress = 0, introTime = null, handBeat = -1, handKey = "";
+  let diagramTime=0,diagramPrevious=null,diagramVisible=false,diagramPaused=false;
+  const diagramControl=document.querySelector('.diagram-motion');
   const contexts = new Map();
   const portalBrand = document.querySelector('.portal-brand');
   let code = [
@@ -170,6 +172,8 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   function drawBlueprint() {
     const view = fit(blueprint); if (!view) return;
     const { ctx, w, h } = view, compact = w < 400, split = compact ? w : w * .62, rootX = w * (compact ? .3 : .15), baseY = h * (compact ? .88 : .92);
+    const phase=reduced.matches?0:diagramTime/1000;
+    blueprint.dataset.motionPhase=String(phase);
     ctx.font = '11px Plex,monospace'; ctx.globalAlpha = .7;
     ctx.fillText('SUPA / architecture · decorative branches', 9, 16);
     if(!compact) ctx.fillText('section A—A', split + 10, 24);
@@ -179,11 +183,20 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     for (let n = 0; n < 35; n++) {
       const fork = baseY - (n / 35) * h * .45;
       const side = n % 6 === 0 ? -.3 : .7;
-      const tipX = Math.min(split - 13, rootX + (n % 6 === 0 ? 20 : split * .58)) - Math.sin(n * .9) * 8;
-      const tipY = 50 + n * (h - 95) / 41;
+      const sway=Math.sin(phase*.55+n*.19)*3;
+      const tipX = Math.min(split - 13, rootX + (n % 6 === 0 ? 20 : split * .58)) - Math.sin(n * .9) * 8+sway;
+      const tipY = 50 + n * (h - 95) / 41+sway*.4;
+      const c1x=rootX-n*side,c2x=rootX+(tipX-rootX)*.45,c2y=tipY+n;
       ctx.globalAlpha = .25 + n / 70; ctx.beginPath(); ctx.moveTo(rootX, baseY);
-      ctx.bezierCurveTo(rootX - n * side, fork, rootX + (tipX - rootX) * .45, tipY + n, tipX, tipY); ctx.stroke();
+      ctx.bezierCurveTo(c1x,fork,c2x,c2y,tipX,tipY); ctx.stroke();
       ctx.fillRect(tipX - 1, tipY - 1, 2, 2);
+      // Decorative flow along the same cubic; never a transaction/activity signal.
+      if(!reduced.matches&&n%4===0){
+        const t=(phase*.085+n*.071)%1,u=1-t;
+        const x=u*u*u*rootX+3*u*u*t*c1x+3*u*t*t*c2x+t*t*t*tipX;
+        const y=u*u*u*baseY+3*u*u*t*fork+3*u*t*t*c2y+t*t*t*tipY;
+        ctx.globalAlpha=.8;ctx.fillRect(x-1,y-1,2,2);
+      }
     }
     for (let n=0;n<12;n++) { ctx.globalAlpha=.35;ctx.beginPath();ctx.moveTo(rootX,baseY);ctx.bezierCurveTo(rootX-n*3,baseY-h*.2,rootX-35+n*2,90,rootX-12+n*3,52+n*2);ctx.stroke(); }
     if (!compact) { ctx.globalAlpha = .75; ctx.strokeRect(split + 9, 33, w - split - 20, h * .17);
@@ -253,6 +266,13 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     const resolve=warpResolve;warpResolve=undefined;resolve?.(completed);
   }
   function draw(time = performance.now()) {
+    const animateDiagram=mode==='projects'&&diagramVisible&&!diagramPaused&&!reduced.matches&&!warpStart;
+    blueprint.dataset.motionState=reduced.matches?'reduced':diagramPaused?'paused':animateDiagram?'running':'offscreen';
+    if(animateDiagram){
+      if(diagramPrevious!==null)diagramTime+=Math.max(0,Math.min(100,time-diagramPrevious));
+      drawBlueprint();
+    }
+    diagramPrevious=animateDiagram?time:null;
     if (mode === 'intro') drawIntro(time); else { drawEntity(time); if (worm) { const p = fit(spark); if (p) { p.ctx.fillStyle = ink(); p.ctx.fillRect(((time / 20) % p.w), 8, 3, 3); } } }
     drawPointer();
     if (warpStart) drawWarp(time);
@@ -262,8 +282,12 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   function resize() { drawBlueprint(); drawSpark(); draw(); schedule(); }
   function pointerMove(e) { pointer.x = e.clientX / innerWidth; pointer.y = e.clientY / innerHeight; pointer.visible=e.pointerType!=='touch';schedule(); }
   function pointerLeave() { pointer.visible=false;schedule(); }
-  function visibility() { introTime=null; if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
-  function motionChange() { document.documentElement.dataset.motion = reduced.matches ? 'still' : 'running'; if (reduced.matches) { cancelAnimationFrame(frame); frame = 0; if (warpResolve) finishWarp(true); } resize(); }
+  function visibility() { introTime=null;diagramPrevious=null; if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
+  function updateDiagramControl(){diagramControl.disabled=reduced.matches;diagramControl.textContent=reduced.matches?'Diagram motion reduced':diagramPaused?'Play diagram':'Pause diagram';diagramControl.setAttribute('aria-pressed',String(!diagramPaused&&!reduced.matches));}
+  function toggleDiagram(){diagramPaused=!diagramPaused;diagramPrevious=null;updateDiagramControl();schedule();}
+  diagramControl.addEventListener('click',toggleDiagram);
+  function motionChange() { document.documentElement.dataset.motion = reduced.matches ? 'still' : 'running';updateDiagramControl();diagramPrevious=null; if (reduced.matches) { cancelAnimationFrame(frame); frame = 0; if (warpResolve) finishWarp(true); } resize(); }
+  const diagramObserver=new IntersectionObserver(entries=>{diagramVisible=entries[0].isIntersecting;diagramPrevious=null;schedule();});diagramObserver.observe(blueprint);
   const observer = new ResizeObserver(resize); [intro, blueprint, entity, spark].forEach(c => observer.observe(c));
   window.addEventListener('pointermove', pointerMove, { passive: true });document.documentElement.addEventListener('pointerleave',pointerLeave);window.addEventListener('blur',pointerLeave); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
@@ -275,7 +299,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     redraw: resize,
     warp() { if (reduced.matches) return Promise.resolve(true); if (warpResolve) return Promise.resolve(false); return new Promise(resolve => { warpResolve = resolve; warpStart = performance.now(); transition.dataset.progress='0';drawWarp(warpStart);transition.classList.add('active');schedule(); }); },
     cancelWarp() { finishWarp(false); },
-    destroy() { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('pointermove', pointerMove);document.documentElement.removeEventListener('pointerleave',pointerLeave);window.removeEventListener('blur',pointerLeave);tether.remove(); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); finishWarp(false); },
+    destroy() { cancelAnimationFrame(frame); observer.disconnect();diagramObserver.disconnect();diagramControl.removeEventListener('click',toggleDiagram); window.removeEventListener('pointermove', pointerMove);document.documentElement.removeEventListener('pointerleave',pointerLeave);window.removeEventListener('blur',pointerLeave);tether.remove(); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); finishWarp(false); },
   };
 }
 function format(value) { return Number(value).toLocaleString('en-US').replaceAll(',', "'"); }
