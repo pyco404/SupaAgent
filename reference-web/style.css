@@ -90,3 +90,10 @@ html[data-motion=still] .intro-modes span+span{display:block}
 .workspace-hands{display:block;grid-row:3;width:100%;height:144px;pointer-events:none}
 .projects{grid-template-rows:minmax(0,1fr) 58px 144px 20px}
 @media(max-width:700px){.projects{grid-template-rows:44px minmax(0,1fr) 52px 100px 0}.workspace-hands{grid-row:4;height:100px}.study-note{grid-row:5}}
+
+/* Illustrated section index: decorative schematics, never saved-record previews. */
+.wheel-item[data-index] .wheel-preview{padding:7px 10px;filter:none;color:var(--ink)}
+.wheel-item .wheel-thumb{height:calc(100% - 32px)}
+.wheel-item .wheel-label{height:32px;padding:0 7px 3px;display:flex;flex-direction:column;justify-content:flex-end;gap:1px;line-height:13px;white-space:normal;overflow:visible}
+.wheel-name{display:block;font-size:11px;color:var(--ink);overflow-wrap:anywhere}
+.wheel-planned{display:block;font-size:11px;color:var(--dim)}
