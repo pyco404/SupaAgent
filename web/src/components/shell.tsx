@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PixelMark } from "./visuals";
+import { SupaLogo } from "./supa-logo";
 import { PageMotion } from "./motion";
 
 export const sections = [
@@ -70,7 +71,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return <><a href="#content" className="skip-link">Skip to content</a>
     <header className="site-header">
       <div className="header-inner">
-        <Link className="brand" href="/" aria-label="Supa Agent home"><PixelMark/><span>SUPA<span className="muted"> / AGENT</span></span></Link>
+        <Link className="brand" href="/" aria-label="Supa Agent home"><SupaLogo/><span>SUPA<span className="muted"> / AGENT</span></span></Link>
         <div className="header-right">
           <span className="environment">LOCAL / DEVNET</span>
           <a className="source-link" href="https://github.com/pyco404/SupaAgent" rel="noreferrer" target="_blank">SOURCE ↗</a>
@@ -101,7 +102,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }}>
       <div className="mobile-navigation-header">
-        <Link className="brand" href="/" onClick={closeMenu} aria-label="Supa Agent home"><PixelMark/><span>SUPA<span className="muted"> / AGENT</span></span></Link>
+        <Link className="brand" href="/" onClick={closeMenu} aria-label="Supa Agent home"><SupaLogo/><span>SUPA<span className="muted"> / AGENT</span></span></Link>
         <button ref={closeButton} className="mobile-navigation-close" aria-label="Close navigation" onClick={closeMenu}>×</button>
       </div>
       <div className="mobile-navigation-content">
