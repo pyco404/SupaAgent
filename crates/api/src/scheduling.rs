@@ -1,7 +1,7 @@
 //! Narrow operator control plane. No arbitrary configuration or funding endpoint.
 use crate::{ApiError, ApiResult, AppState};
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
     extract::{Path, State},
     routing::get,
 };
@@ -17,11 +17,22 @@ async fn status(State(state): State<AppState>, Path(id): Path<Uuid>) -> ApiResul
 }
 async fn control(
     State(state): State<AppState>,
+    Extension(actor): Extension<crate::Principal>,
     Path(id): Path<Uuid>,
     body: std::result::Result<Json<ScheduleCommand>, axum::extract::rejection::JsonRejection>,
 ) -> ApiResult {
     let Json(command) = body.map_err(|_| ApiError(Error::Invalid))?;
-    let result = state.store.schedule_control(id, &command).await;
+    if matches!(
+        command.operation,
+        ScheduleOperation::Start | ScheduleOperation::Renew
+    ) && !actor.role.permits(supa_persistence::Role::Owner)
+    {
+        return Err(Error::Denied.into());
+    }
+    let result = state
+        .store
+        .schedule_control_as(id, &command, Some(actor.id))
+        .await;
     match &result {
         Ok(status) => {
             tracing::info!(agent_id=%id,request_id=%command.request_id,operation=?command.operation,revision=status.revision,"schedule_control_saved")
