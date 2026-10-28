@@ -156,6 +156,21 @@ The added regression checks opaque canvas pixels (including a black center), the
 
 Validation passed: syntax checks, static build, whitespace checks and **51/51 browser tests**, with zero failed, skipped, flaky or automatically retried cases. The six added viewport cases cover the transition flow and cancellation. Candidate file scans report zero secret findings, and both PNG hashes were verified before committing.
 
+## Follow-up: centered keyboard and typing fingers
+
+The intro keyboard is enlarged to 700px on the 1440px desktop capture and 350px at a 390px mobile viewport. It is horizontally centered below the editor, with visible key outlines, staggered rows and a space bar. Both hands now rest over the home-row keys rather than floating to either side.
+
+The finger motion shares the editor's reveal clock: approximately every five character intervals it selects a visible source character, maps punctuation to a key, highlights the key and bends the corresponding finger toward it. Fingertips descend and recover over a smooth press cycle. This is a decorative representation of the code reveal, not a claim of one physical keystroke per displayed character. Finger animation and highlights stop when the reveal is complete or reduced motion is enabled; the hands remain resting on the keyboard. No camera or external animation dependency is introduced.
+
+REA captured the actual normal-motion scene on desktop and mobile. The images verify scale, centering and hand placement; animation is additionally checked by comparing rendered pixels in the keyboard area over time and verifying they stay unchanged after reduced motion is enabled.
+
+| Capture | REA evidence ID | PNG SHA-256 |
+| --- | --- | --- |
+| [Desktop typing keyboard](evidence/2026-10-28/typing-keyboard-desktop.png) | `ev_968ab4be14b880791d2e778c3cc65d778c3ae8ae142debdcb5790b0bfd10932c` | `901a89f161047df5fb7483694bc4abb486595ff7b94ddfa7c2fde26a9c7b0c14` |
+| [Mobile typing keyboard](evidence/2026-10-28/typing-keyboard-mobile.png) | `ev_6c5b88e54aa4feeb0f5c2f55f8b3db110e4090d00e8c850b2b148acbd06234fe` | `2fc8ba3a100c1ad3ed920e7216f7186e167ee1932b33c99dbd34b8889fe0bd76` |
+
+Validation passed: syntax checks, static build, whitespace checks and **54/54 browser tests**, with zero failed, skipped, flaky or retried cases. The added regression checks keyboard width, horizontal centering and vertical bounds, visible pixel changes during typing, and unchanged keyboard/hand pixels under reduced motion. Candidate secret scanning reports zero findings; both screenshot hashes match the recorded values.
+
 ## Git handling
 
 All new eligible files are committed individually on `main` through `scripts/commit-one`, with one descriptive Conventional Commit per file and hooks enabled. Secret scanning and the one-file history audit are required before completion. The pre-existing root `.gitignore` edit is preserved and excluded from these commits. No archival branch, private evaluation files or credentials are added. No push or deployment is authorized by this task.
