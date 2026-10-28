@@ -11,7 +11,7 @@ These Git rules are mandatory for all development in this workspace.
 - Run `python3 scripts/git-policy.py audit` to verify every commit on `main` changes exactly one file.
 - Scan for secrets before commits and pushes using `python3 scripts/scan-secrets.py`. Keep private dotenv files, keys, wallet envelopes, database files and sensitive artifacts untracked.
 - Preserve existing project files, migrations, database records and historical evaluation evidence. The old bundled snapshot is retained on `archive/pre-one-file-workflow`; it is historical and must not be pushed as part of `main`.
-- Initial public push has NOT been approved. Do not push until the user explicitly approves setup and the first push. Subsequent authorized pushes must target `origin/main` directly, pass scanning and use no force option.
+- The explicitly approved initial public push completed at `02b7d47b1529c03037453e9758af23db9285f0ca`. That approval does not authorize subsequent pushes. New pushes require explicit user authorization, must target `origin/main` directly, pass scanning and use no force option.
 - Do not delete, replace or relocate existing Git metadata without explicit approval. Normal commits/configuration/ref updates inside the recovered repository are permitted by the requested workflow.
 
 Existing runtime safety boundaries remain in force: no funding, real-money transactions, Mainnet operations, trading, X publishing, deployments, or paid inference without the applicable explicit authorization. Autonomous signing remains disabled.
