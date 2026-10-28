@@ -173,8 +173,8 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   function drawBlueprint() {
     const view = fit(blueprint); if (!view) return;
     const { ctx, w, h } = view, compact = w < 400, split = compact ? w : w * .62, rootX = w * (compact ? .3 : .15), baseY = h * (compact ? .88 : .92);
-    ctx.font = '9px Plex,monospace'; ctx.globalAlpha = .7;
-    ctx.fillText(`HC / ${data.contributions} contributions · public snapshot`, 9, 16);
+    ctx.font = '11px Plex,monospace'; ctx.globalAlpha = .7;
+    ctx.fillText('SUPA / architecture · decorative branches', 9, 16);
     if(!compact) ctx.fillText('section A—A', split + 10, 24);
     ctx.lineWidth = .5;
     for (let r = 0; r < 45; r++) { const y = 32 + r * (h - 45) / 45; ctx.globalAlpha = .1; ctx.beginPath(); ctx.moveTo(15, y); ctx.lineTo(split - 10, y); ctx.stroke(); }
@@ -192,10 +192,10 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     if (!compact) { ctx.globalAlpha = .75; ctx.strokeRect(split + 9, 33, w - split - 20, h * .17);
     const values = data.days.slice(-30).map(d => d.count ?? d.contributions ?? 0), max = Math.max(1, ...values);
     ctx.beginPath(); values.forEach((v, i) => { const x = split + 12 + i * (w - split - 27) / 29, y = 34 + h * .16 - v / max * h * .15; if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke();
-    const rows = [['repositories', data.repositoryCount], ['stars', format(data.stars)], ['followers', format(data.followers)], ['contributions', format(data.contributions)], ['snapshot', data.fetchedAt.slice(0, 10)]];
+    const rows = [['API', data.connection], ['agents', data.agentCount ?? 'unavailable'], ['economy', 'simulation'], ['signing', 'disabled'], ['Mainnet', 'unavailable']];
     rows.forEach(([label, value], i) => { const y = h * .36 + i * 19; ctx.globalAlpha = .6; ctx.fillText(label, split + 10, y); ctx.textAlign = 'right'; ctx.fillText(String(value), w - 12, y); ctx.textAlign = 'left'; ctx.globalAlpha = .2; ctx.beginPath(); ctx.moveTo(split + 10, y + 5); ctx.lineTo(w - 12, y + 5); ctx.stroke(); });
     }
-    ctx.globalAlpha = .6; ctx.fillText(`root · ${data.account}`, 15, h - 12); if(!compact)ctx.fillText('generated geometry', split + 10, h - 12); ctx.globalAlpha = 1;
+    ctx.globalAlpha = .6; ctx.fillText('root · Supa Agent / not runtime activity', 15, h - 12); if(!compact)ctx.fillText('decorative topology', split + 10, h - 12); ctx.globalAlpha = 1;
   }
   function drawEntity(time) {
     const view = fit(entity); if (!view) return;
