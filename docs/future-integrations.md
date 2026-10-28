@@ -1,6 +1,6 @@
 # Frontend and future integrations
 
-The frontend stack remains Next.js, TypeScript and Tailwind CSS. Do not build a generic replacement dashboard. Preserve the approved futuristic dark theme, neon-teal accents, cinematic AI artwork and existing visual hierarchy. No approved artwork/design files were present in the initial workspace; obtain those original assets before frontend implementation. This backend milestone deliberately creates no visual assets or frontend scaffolding.
+Milestone 4 implements Next.js, TypeScript and Tailwind CSS in `web/`, following the user's updated design direction: near-black, restrained mint, pixel typography throughout, dotted grids, thin neutral borders and an editorial technical layout. The live structural reference was inspected with REA; its prose and illustrations were not copied. The original pixel mascot and interactive survival diagram are code-native SVG/CSS. See [implementation, page coverage and REA evidence](milestone-4.md). Earlier milestone documents describe the historical backend-only scope.
 
 Required dashboard sections map to the local API:
 
@@ -14,7 +14,7 @@ Required dashboard sections map to the local API:
 | Trading controls | Disabled/unavailable until a separately authorized integration |
 | Agent factory | Unavailable to autonomous tools; current creation is operator-only local setup |
 
-The client must display simulated values as simulated on every relevant card/chart, never as an on-chain USDC wallet balance. Explicit activation/reactivation and termination need clear user intent. Do not embed the operator API token in browser bundles or public environment variables. A future Next.js server layer must mediate authenticated access; do not expose this local API publicly.
+The client displays simulated values as simulated on relevant cards/charts, separate from Devnet test tokens and API cost estimates. The Next.js server layer mediates authenticated GET requests through a closed path allowlist. The browser never receives the Rust bearer token. The connected website requires local operator authentication; no mutation routes are forwarded. Lifecycle controls and future executable integrations remain outside this console. Do not expose it publicly.
 
 Milestone 3 provides Devnet identity mapping, encrypted local custody, read-only verification, network pinning and operating-reservation policies independent of LLM output; see [wallet requirements and limitations](milestone-3.md). Isolated signing and real settlement remain future work. Mainnet execution is absent. Jupiter integration will require separate financial limits, asset/route restrictions, position/exposure limits, slippage controls, quote expiry and a kill switch. The simulated ledger must never be silently converted into real balances.
 
