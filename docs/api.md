@@ -64,3 +64,19 @@ Social decisions use `consider_tweet` under the existing `DraftTweet` capability
 ## Milestone 3 wallet endpoints
 
 The optional authenticated `/agents/{id}/wallet` family covers public identity, recovery, balances, verified payments/checks, sync, treasury, policy, operating reservations and financial audit. Signing always returns 403. See the [complete wallet API contract and request fields](milestone-3.md#authenticated-api-contract). All values must display network/evidence labels; Devnet test tokens have no monetary value.
+
+## Bounded offline autonomy
+
+Authenticated `GET /autonomy` returns the fixed rehearsal policy. Authenticated
+`POST /autonomy` accepts only `request_id` (new UUID), `goal` (3–500 trimmed UTF-8
+bytes) and `authorize_offline: true`. It creates an isolated operator-requested
+identity, runs three deterministic cycles, and pauses. Maximum expenses are
+3,300 simulated microUSD from a 10,000 simulated microUSD seed. The configured
+live provider is never invoked. Reusing the UUID returns 409 without replay or
+new funding. Inspect saved records after an uncertain result; do not auto-retry.
+
+The approved experience exposes this operation only to authenticated operators
+through `/api/autonomy`, requiring a matching Origin, JSON content type and
+`X-Supa-Action: offline-autonomy`. Browser bodies are limited to 4 KiB. General
+lifecycle, funding and arbitrary tool writes remain unavailable through the BFF.
+See [authorization, recovery and workflow validation](autonomy.md).
