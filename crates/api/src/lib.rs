@@ -1,4 +1,8 @@
+mod access;
 mod autonomy;
+pub use access::{OperatorCredential, Principal};
+use axum::Extension;
+use supa_persistence::Role;
 mod scheduling;
 mod wallet;
 use axum::{
@@ -23,6 +27,7 @@ pub struct AppState {
     pub store: Store,
     pub runtime: Runtime,
     token: Arc<String>,
+    operators: Arc<Vec<OperatorCredential>>,
     pub gate: Arc<Semaphore>,
     pub wallets: Option<supa_runtime::wallet::WalletService>,
     /// Identity-only scope for persisted wallet observations; grants no RPC, vault or write access.
@@ -33,7 +38,7 @@ impl AppState {
         if token.len() < 32
             || token.len() > 256
             || !token.is_ascii()
-            || token.chars().any(char::is_whitespace)
+            || token.bytes().any(|b| !(33..=126).contains(&b))
         {
             return Err(Error::Invalid);
         }
@@ -41,6 +46,7 @@ impl AppState {
             store,
             runtime,
             token: Arc::new(token),
+            operators: Arc::new(Vec::new()),
             gate: Arc::new(Semaphore::new(1)),
             wallets: None,
             wallet_read_operator: None,
@@ -64,24 +70,76 @@ fn token_matches(actual: &str, expected: &str) -> bool {
         .fold(0u8, |acc, (a, b)| acc | (a ^ b))
         == 0
 }
-async fn auth(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    let valid = request
+async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
+    let token = request
         .headers()
         .get("authorization")
         .and_then(|h| h.to_str().ok())
-        .and_then(|h| h.strip_prefix("Bearer "))
-        .is_some_and(|s| token_matches(s, &state.token));
-    if !valid {
+        .and_then(|h| h.strip_prefix("Bearer "));
+    let principal = token
+        .and_then(|t| state.operators.iter().find(|c| token_matches(t, &c.token)))
+        .map(|c| Principal {
+            id: c.id,
+            role: c.role,
+        });
+    if principal.is_none() && !token.is_some_and(|t| token_matches(t, &state.token)) {
         return ApiError(Error::Unauthorized).into_response();
+    }
+    let path = request.uri().path();
+    let public = request.method() == axum::http::Method::GET
+        && matches!(path, "/health" | "/directory" | "/autonomy");
+    if !public {
+        let Some(actor) = principal else {
+            return ApiError(Error::Denied).into_response();
+        };
+        let write = request.method() != axum::http::Method::GET;
+        let parts: Vec<_> = path.split('/').collect();
+        let required =
+            if write && (parts.get(3) == Some(&"access") || parts.get(3) == Some(&"wallet")) {
+                Role::Owner
+            } else if write {
+                Role::Operator
+            } else {
+                Role::Viewer
+            };
+        if !actor.role.permits(required) {
+            return ApiError(Error::Denied).into_response();
+        }
+        if parts.get(1) == Some(&"agents")
+            && let Some(id) = parts.get(2)
+        {
+            let Ok(id) = Uuid::parse_str(id) else {
+                return ApiError(Error::Denied).into_response();
+            };
+            if let Err(error) = state.store.require_access(id, actor.id, required).await {
+                return ApiError(error).into_response();
+            }
+            if write
+                && parts.get(3) == Some(&"wallet")
+                && state
+                    .wallets
+                    .as_ref()
+                    .is_none_or(|s| s.operator() != actor.id)
+            {
+                return ApiError(Error::Denied).into_response();
+            }
+        } else if write && !actor.role.permits(Role::Owner) {
+            return ApiError(Error::Denied).into_response();
+        }
+    }
+    if let Some(actor) = principal {
+        request.extensions_mut().insert(actor);
     }
     next.run(request).await
 }
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .merge(access::routes())
         .merge(wallet::routes())
         .merge(autonomy::routes())
         .merge(scheduling::routes())
         .route("/health", get(health))
+        .route("/directory", get(directory))
         .route("/agents", get(list).post(create))
         .route("/agents/{id}", get(status))
         .route("/agents/{id}/lifecycle", post(lifecycle))
@@ -154,8 +212,11 @@ async fn health(State(s): State<AppState>) -> ApiResult {
         json!({"status":"ok","economic_mode":"simulation","publishing_enabled":false}),
     ))
 }
-async fn list(State(s): State<AppState>) -> ApiResult {
-    Ok(Json(json!(s.store.list().await?)))
+async fn directory(State(s): State<AppState>) -> ApiResult {
+    Ok(Json(json!(s.store.list().await?.into_iter().map(|a|json!({"id":a.id,"name":a.name,"lifecycle":a.lifecycle,"created_at":a.created_at})).collect::<Vec<_>>())))
+}
+async fn list(State(s): State<AppState>, Extension(actor): Extension<Principal>) -> ApiResult {
+    Ok(Json(json!(s.store.accessible_agents(actor.id).await?)))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -170,11 +231,12 @@ struct Create {
 }
 async fn create(
     State(s): State<AppState>,
+    Extension(actor): Extension<Principal>,
     body: std::result::Result<Json<Create>, axum::extract::rejection::JsonRejection>,
 ) -> ApiResult {
     let Json(b) = body.map_err(|_| Error::Invalid)?;
     let a = Agent::new(b.name, b.personality, b.config, b.capabilities)?;
-    s.store.create(&a).await?;
+    s.store.create_owned(&a, actor.id).await?;
     Ok(Json(json!(a)))
 }
 async fn status(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
@@ -292,6 +354,17 @@ async fn fund(
     Ok(Json(json!(s.store.financials(id).await?)))
 }
 async fn cycle(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
+    // HTTP execution is bounded/offline only; legacy unknown approvals must be renewed first.
+    if s.store.schedule_status(id).await?.policy.is_none()
+        || !s
+            .store
+            .authorization_history(id)
+            .await?
+            .iter()
+            .any(|a| a["closed_at"].is_null() && !a["approved_by"].is_null())
+    {
+        return Err(Error::Denied.into());
+    }
     let _permit = s.gate.try_acquire().map_err(|_| Error::Busy)?;
     let cycle = s.runtime.cycle(id, false).await?;
     Ok(Json(json!({"cycle_id":cycle})))
