@@ -495,3 +495,20 @@ test('wheel uses distinct section schematics and full planned labels',async({pag
   if(page.viewportSize().width<=700){const selected=await page.locator('.wheel-item[data-index="9"]').boundingBox();expect(Math.abs(selected.x+selected.width/2-page.viewportSize().width/2)).toBeLessThan(5);}
   const name=page.locator('.wheel-item[data-index="9"] .wheel-name');expect(await name.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
 });
+
+test('navigation fibers keep moving while cards stay still and can be paused',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});await open(page,'/site/#home');
+  if(page.viewportSize().width<=700)await page.locator('.tabline').click();
+  const canvas=page.locator('.wheel-ink'),selected=page.locator('.wheel-item[aria-selected=true]');
+  const pixels=()=>canvas.evaluate(el=>{const data=el.getContext('2d').getImageData(0,0,el.width,el.height).data;let hash=0;for(let i=0;i<data.length;i+=4)hash=(Math.imul(hash,31)+data[i]+data[i+3])|0;return hash;});
+  await expect(canvas).toHaveAttribute('data-motion-state','running');
+  const first=await pixels(),transform=await selected.getAttribute('style');await expect.poll(pixels).not.toBe(first);expect(await selected.getAttribute('style')).toBe(transform);
+  await page.keyboard.press(':');const control=page.getByRole('button',{name:'Animate navigation branches'});await control.click();await expect(canvas).toHaveAttribute('data-motion-state','paused');await expect(control).toHaveText('Play branches');
+  const frozen=await pixels();await page.waitForTimeout(200);expect(await pixels()).toBe(frozen);
+  await control.click();await expect(canvas).toHaveAttribute('data-motion-state','running');
+  await page.locator('.wheel').evaluate(el=>el.style.display='none');await expect(canvas).toHaveAttribute('data-motion-state','offscreen');
+  const phase=await canvas.getAttribute('data-motion-phase');await page.waitForTimeout(200);expect(await canvas.getAttribute('data-motion-phase')).toBe(phase);
+  await page.locator('.wheel').evaluate(el=>el.style.removeProperty('display'));await expect(canvas).toHaveAttribute('data-motion-state','running');
+  await page.emulateMedia({reducedMotion:'reduce'});await expect(canvas).toHaveAttribute('data-motion-state','reduced');await expect(control).toBeDisabled();
+  const still=await pixels();await page.waitForTimeout(200);expect(await pixels()).toBe(still);
+});
