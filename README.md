@@ -48,7 +48,14 @@ curl -sS "http://127.0.0.1:8080/agents/$AGENT_ID/lifecycle" \
   -d '{"state":"active","reason":"Operator authorizes local simulated cycles"}'
 ```
 
-The scheduler now runs this agent at its configured interval. Pause it using the lifecycle endpoint with `state: "paused"`. Paused, suspended and terminated agents never become active on restart. Only a token-authenticated operator can activate eligible agents. Termination is irreversible in this API.
+This activation permits manually requested cycles; it does not authorize continuous
+scheduling. Agent and scheduler-process defaults are disabled. Use the approved
+experience at `http://127.0.0.1:3200`, operator sign-in, then **Intelligence → Agent
+lifecycle and bounded scheduling** to authorize goals, interval, cycle count,
+simulated expenses and expiry. An explicitly enabled offline execution host is also
+required. See [the complete continuous-autonomy workflow and evidence](docs/continuous-autonomy.md).
+Pause and stop fence running work. Paused, suspended and terminated agents never
+become active automatically on restart; termination is irreversible.
 
 ## Validation
 
@@ -93,7 +100,7 @@ Use Conventional Commits on `main` when Git metadata is functional. Never force-
 
 ## Milestone 2 controls and accounting
 
-`POST /agents/{id}/pause`, `/resume` and `/emergency-stop` accept `{ "reason": "Operator reason" }`. These routes require the operator token. Pause/stop invalidate old work, and only an explicit authorized resume reactivates an eligible agent. Manual cycles obey the configured interval.
+`POST /agents/{id}/pause`, `/resume` and `/emergency-stop` accept `{ "reason": "Operator reason" }`. These routes require the operator token. Pause/stop invalidate old work, and only an explicit authorized resume reactivates an eligible agent. Managed schedules require the revision-checked `/agents/{id}/schedule` control to reactivate; legacy resume cannot bypass their limits. Manual cycles obey the configured interval.
 
 `GET /agents/{id}/inference` exposes durable attempts, usage, safe failures and estimated provider-cost accounting separately from the simulated ledger. `GET /agents/{id}/goal-evaluations` exposes evidence-linked model assessments. Model memories are hypotheses; only system cycle observations are verified facts. Operators can set goal priority through `POST /agents/{id}/goals/{goal}/priority` with `{ "priority": 10 }` (0–10).
 
