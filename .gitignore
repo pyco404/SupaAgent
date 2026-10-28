@@ -33,3 +33,12 @@ id.json
 *.sql.gz
 /pgdata/
 /postgres-data/
+
+# Local frontend dependencies, build output and private browser sessions.
+/web/node_modules/
+/web/.next/
+/web/out/
+/web/test-results/
+/web/playwright-report/
+*.tsbuildinfo
+/web/.browser-profile/
