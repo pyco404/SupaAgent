@@ -29,3 +29,21 @@
 .intro-canvas{position:fixed;inset:0;width:100vw;height:100dvh}.frame-top,.intro-bottom,.intro-modes{z-index:1}body[data-view=intro] .frame-top{padding-inline:0}
 html[data-motion=still] .intro-modes{top:auto;bottom:62px;grid-template-columns:1fr}html[data-motion=still] .intro-modes span+span{display:none}
 @media(max-width:700px){body[data-view=intro] .stage{width:calc(100% - 112px)}.intro-modes{top:auto;bottom:62px;grid-template-columns:1fr}.intro-modes span+span{display:none}.intro-bottom{left:0;right:0}.intro-bottom>span{display:none}.intro-bottom>div{gap:8px}.intro-bottom a,.intro-bottom button{padding:0 7px}}
+
+/* Single editor composition pinned to the supplied reference captures. */
+body[data-view=intro] .stage{width:min(1200px,60vw)}
+body[data-view=intro] .frame-top,.intro-bottom{font-size:clamp(12px,1vw,16px);line-height:1.2}
+.intro-modes{position:fixed;top:70dvh;bottom:auto;left:18vw;width:66vw;display:flex;align-items:center;gap:8px;height:clamp(15px,1.2vw,21px);background:#151514;font-size:clamp(11px,.93vw,16px);line-height:1;white-space:nowrap}
+.intro-modes span{padding:0;background:none;color:var(--dim);min-width:0}
+.intro-modes .mode-label{align-self:stretch;display:flex;align-items:center;padding-inline:7px;background:var(--ink);color:var(--bg)}
+.intro-modes[data-mode=INSERT] .mode-label{background:var(--green)}
+.intro-file{overflow:hidden;text-overflow:ellipsis}.intro-position{margin-left:auto;padding-right:5px!important}
+.intro-command{position:fixed;top:calc(70dvh + clamp(15px,1.2vw,21px));left:18vw;margin:0;color:var(--dim);font-size:clamp(11px,.93vw,16px);line-height:1.2}
+html[data-motion=still] .intro-modes{top:70dvh;bottom:auto;display:flex}
+html[data-motion=still] .intro-modes span+span{display:block}
+@media(max-width:700px){
+ body[data-view=intro] .stage{width:calc(100% - 40px)}
+ .intro-modes,html[data-motion=still] .intro-modes{left:20px;width:calc(100vw - 40px);top:70dvh;bottom:auto;display:flex}
+ .intro-modes span+span{display:block}.intro-command{left:20px}
+ .intro-bottom>span{display:block;font-size:11px}.intro-bottom{gap:10px;bottom:22px}.intro-bottom>div{gap:8px}
+}
