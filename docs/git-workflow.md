@@ -45,7 +45,26 @@ Private dotenv files, keys, encrypted wallet envelopes and local databases/backu
 
 ## Push authorization
 
-Initial repository setup and the first public push have **not** been approved. The wrapper blocks push before Git contacts a remote, and the pre-push hook independently requires a fresh secrets scan and blocks the unapproved initial push. No bypass flag was added.
+The approved initial push completed at `02b7d47b1529c03037453e9758af23db9285f0ca`.
+Every subsequent push needs fresh explicit user approval. After that approval, the
+caller sets `SUPA_APPROVED_PUSH_HEAD` only for the individual command to the exact
+reviewed `main` SHA. Do not persist this variable in configuration or dotenv files.
+The variable records the caller's authorization acknowledgment; it does not obtain
+approval from the user, and successful validation never supplies approval.
+
+```bash
+# Only after the user explicitly approves this push:
+SUPA_APPROVED_PUSH_HEAD="$(./scripts/git-local rev-parse HEAD)" \
+  ./scripts/git-local push --no-follow-tags origin refs/heads/main:refs/heads/main
+```
+
+The wrapper accepts only this exact main-to-main command. Both fetch and push URLs
+must be the single official HTTPS repository URL, and the working tree must be
+clean. The enabled pre-push hook checks the actual destination and sole advertised
+ref update, verifies that remote main is an ancestor, audits every one-file commit,
+runs the full secrets gate and rechecks the approved HEAD. Missing/stale approval,
+dirty files, unexpected remotes, multiple refs, deletion, tags and force options
+are rejected. No hook is bypassed or disabled.
 
 After explicit approval, any authorized implementation of the push step must preserve these rules: scan credentials, wallet material and sensitive artifacts first; push only local `main` directly to `origin/main`; never push the archive, squash, or force-push. Refresh remote state before deciding how to proceed. Do not infer approval from successful local validation.
 
