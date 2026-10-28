@@ -1,0 +1,316 @@
+{
+  "assessment": "Independent technical review; Chromium/CDP fallback, parent REA evidence separate",
+  "scope": "web/src + local authenticated console",
+  "scores": {
+    "accessibility": 3,
+    "performance": 3,
+    "theming": 4,
+    "responsive_design": 4,
+    "implementation_integrity": 4
+  },
+  "total": 18,
+  "rating": "Excellent within tested scope",
+  "integrity": "pass",
+  "issues": [],
+  "severity_counts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0,
+    "P3": 0
+  },
+  "detector": {
+    "path": ".agents/skills/impeccable/scripts/impeccable detect --json web/src",
+    "findings": 0,
+    "exit_code": 0,
+    "false_positives": []
+  },
+  "checks": {
+    "persisted_card_evidence": "pass",
+    "private_voice_stripped": "pass",
+    "selected_agent_context": "pass",
+    "all_read_reload_and_provenance": "pass",
+    "empty_chart_controls": "pass",
+    "targets_names_and_mobile_menu": "pass",
+    "normal_and_reduced_motion": "pass"
+  },
+  "measurements": {
+    "agentCount": 1,
+    "facadeVoiceAbsent": true,
+    "directory": {
+      "width": 390,
+      "scroll": 390,
+      "counts": [
+        [
+          "5 recorded events \u00b7 latest 100",
+          "Wallet / Devnet test network"
+        ]
+      ],
+      "targets": [
+        {
+          "label": "Supa Agent home",
+          "w": 71.40625,
+          "h": 44
+        },
+        {
+          "label": "MENU +",
+          "w": 61.203125,
+          "h": 44.09375
+        },
+        {
+          "label": "RELOAD SAVED RECORDS \u21bb",
+          "w": 190,
+          "h": 44.09375
+        }
+      ]
+    },
+    "menu": {
+      "open": true,
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "focus": "Close navigation",
+      "body": "fixed",
+      "overflow": "hidden"
+    },
+    "focusContained": true,
+    "escape": {
+      "open": false,
+      "focus": "MENU +",
+      "body": ""
+    },
+    "economy": {
+      "utc": true,
+      "observation": true,
+      "emptyButtons": 0,
+      "links": [
+        "/agents/fab35ded-49c2-4168-b078-09a9470092c2",
+        "/agents/fab35ded-49c2-4168-b078-09a9470092c2#activity",
+        "/memory?agent=fab35ded-49c2-4168-b078-09a9470092c2",
+        "/economy?agent=fab35ded-49c2-4168-b078-09a9470092c2",
+        "/social?agent=fab35ded-49c2-4168-b078-09a9470092c2"
+      ],
+      "nameWrap": "anywhere",
+      "width": 390,
+      "scroll": 390
+    },
+    "motion": {
+      "details": "disclosure-enter",
+      "retrieval": "retrieval-confirm"
+    },
+    "reduced": {
+      "details": "none",
+      "retrieval": "none",
+      "visible": true
+    },
+    "delayed": {
+      "busy": "true",
+      "disabled": true,
+      "status": "Reading saved records\u2026"
+    },
+    "partial": {
+      "busy": "false",
+      "status": "Some saved records are unavailable. Check the affected section.",
+      "success": false
+    },
+    "delayCaptured": 1,
+    "unknown": {
+      "unavailable": true,
+      "identity": "00000000-0000-4000-8000-000000000001",
+      "navigation": false
+    }
+  },
+  "additional": {
+    "persistedCount": {
+      "count": 5,
+      "display": "5 recorded events \u00b7 latest 100"
+    },
+    "back": {
+      "open": false,
+      "locked": false
+    },
+    "routes": [
+      {
+        "path": "/",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/agents",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/economy",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/memory",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/social",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/trading",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/launch",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/factory",
+        "width": 320,
+        "scroll": 320,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/agents",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/economy",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/memory",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/social",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/trading",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/launch",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/factory",
+        "width": 768,
+        "scroll": 768,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/agents",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/economy",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/memory",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/social",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/trading",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/launch",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      },
+      {
+        "path": "/factory",
+        "width": 1440,
+        "scroll": 1440,
+        "unnamedButtons": 0
+      }
+    ]
+  },
+  "limitations": [
+    "REA tools removed mid-turn; first discovery returned unavailable; no new REA Evidence",
+    "No visible overlay; existing CSP preserved",
+    "Single live agent; multi-agent link context inspected rather than live second agent",
+    "No physical touch, screen reader, cross-engine, text-only zoom, or field performance certification",
+    "Long-name wrapping computed/source checked without persisted fixture"
+  ],
+  "source_changes": false,
+  "browser_closed": true,
+  "post_review_fixes": [
+    "Visitor-facing planned copy",
+    "Zero-memory filters hidden and notice shortened; independently rechecked"
+  ],
+  "usability": {
+    "score": 30,
+    "maximum": 40,
+    "baseline": 27,
+    "heuristics": [
+      3,
+      3,
+      3,
+      4,
+      4,
+      3,
+      2,
+      3,
+      3,
+      2
+    ],
+    "remaining_priorities": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0,
+      "P3": 1
+    },
+    "remaining_issue": "Generic browser tab titles"
+  }
+}
