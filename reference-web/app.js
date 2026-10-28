@@ -16,6 +16,8 @@ let sceneData, revealTyping=null;
 let theme=0,wheel,scenes,itemIndex=0,typing=0,typingTimer=0,leaving=false,entryAttempt=0,worm=false;
 let state={status:{error:'Connecting to local backend…'},agents:{error:'Loading saved agents…'},retrievedAt:'not yet retrieved'},agentId='',renderVersion=0,reloadVersion=0;
 let commandHistory=[],historyIndex=0,liveTimer=0,liveBusy=false,viewFingerprint='';
+let autonomyAttempt=null;
+try{const id=sessionStorage.getItem('supa.offline-request');if(/^[0-9a-f-]{36}$/i.test(id??''))autonomyAttempt={id,status:'unknown'};}catch{/* Optional recovery hint; server UUID uniqueness remains authoritative. */}
 try{const saved=Number(localStorage.getItem('supa.dark-theme'));if(Number.isInteger(saved)&&saved>=0&&saved<palettes.length)theme=saved;}catch{/* Optional preference. */}
 function applyTheme(){['--bg','--ink','--dim'].forEach((name,index)=>root.style.setProperty(name,palettes[theme][index]));}
 applyTheme();
@@ -136,6 +138,7 @@ async function select(index,background=false){
   }
   const rows=await sectionView(item.id,state,agentId);
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
+  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='autonomy')?'offline controls':'read-only'}`;
   const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
   if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
   viewFingerprint=fingerprint;if(background)cancelTyping();
@@ -143,7 +146,8 @@ async function select(index,background=false){
   for(const row of rows){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
-    }else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
+    }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
+    else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
     else if(row.kind==='draft'){const block=node('figure','saved-draft');block.append(node('blockquote','',row.text),node('figcaption','prompt',row.meta));buffer.append(block);}
     else if(row.kind==='navigate'){const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{const target=navigation.findIndex(item=>item.id===row.id);wheel.select(target);void select(target);});buffer.append(button);}
@@ -205,6 +209,39 @@ function typeTerminal() {
   typingTimer=setTimeout(tick,150);
 }
 function openCommand(prefix=''){closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
+function autonomyPanel(policy){
+  const details=node('details','calculation autonomy-panel'),summary=node('summary','','Run an offline autonomy workflow');details.append(summary);
+  details.append(node('p','terminal-notice','A new test agent receives your goal, selects permitted tools for three deterministic cycles, then pauses. No GPT calls, external actions or real spending.'));
+  details.append(node('p','prompt','Offline progress estimates are execution heuristics, not proof that the goal was completed or a measure of intelligence.'));
+  details.append(node('p','prompt',`Tools: ${policy.tools.join(', ')}. Simulated seed: ${policy.simulated_seed_microusd/1000000} USD; maximum simulated expenses: ${policy.simulated_expense_limit_microusd/1000000} USD.`));
+  const form=node('form','autonomy-form'),label=node('label','','Goal / operator-only'),goal=node('textarea');goal.id='autonomy-goal';goal.name='goal';goal.rows=3;goal.maxLength=500;goal.minLength=3;goal.required=true;label.htmlFor=goal.id;
+  const consentLabel=node('label','autonomy-consent'),consent=node('input');consent.type='checkbox';consent.required=true;consent.name='authorize_offline';consentLabel.append(consent,document.createTextNode('I authorize a new test identity, three offline cycles and up to 0.0033 simulated USD of expenses. No real funds.'));
+  const run=node('button','','Run authorized offline workflow');run.type='submit';form.append(label,goal,consentLabel,run);
+  const status=node('p','terminal-notice');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+  const inspect=node('button','','Inspect saved run'),reset=node('button','','Prepare another workflow');inspect.type=reset.type='button';
+  function sync(){
+    form.hidden=!!autonomyAttempt;inspect.hidden=!autonomyAttempt;reset.hidden=!autonomyAttempt||autonomyAttempt.status==='pending';inspect.disabled=autonomyAttempt?.status==='pending';
+    status.textContent=!autonomyAttempt?'Authorization is required for each run.':autonomyAttempt.status==='pending'?`Running offline workflow ${autonomyAttempt.id}…`:autonomyAttempt.status==='completed'?`Saved ${autonomyAttempt.cycles} completed offline cycles. Agent paused. Request ${autonomyAttempt.id}.`:`Outcome not confirmed here. Inspect saved run ${autonomyAttempt.id} before starting another workflow. No automatic retry.`;
+  }
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();event.stopPropagation();if(autonomyAttempt||!form.reportValidity()||!consent.checked)return;
+    const attempt=autonomyAttempt={id:crypto.randomUUID(),status:'pending'};try{sessionStorage.setItem('supa.offline-request',attempt.id);}catch{/* Durable server identity still prevents duplicate execution. */}sync();
+    try{
+      const response=await fetch('/api/autonomy',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Supa-Action':'offline-autonomy'},body:JSON.stringify({request_id:attempt.id,goal:goal.value.trim(),authorize_offline:true}),signal:AbortSignal.timeout(35000)});
+      const result=await response.json();
+      if(!response.ok||result.agent_id!==attempt.id||result.mode!=='offline'||result.lifecycle!=='paused'||result.paid_requests!==0||!Array.isArray(result.cycles)||result.cycles.length!==3)throw Error();
+      attempt.status='completed';attempt.cycles=result.cycles.length;
+    }catch{attempt.status='unknown';}
+    sync();$('.announcement').textContent=attempt.status==='completed'?'Offline workflow saved; agent paused.':'Workflow outcome uncertain. Inspect saved records; do not retry automatically.';
+  });
+  inspect.addEventListener('click',async()=>{
+    const id=autonomyAttempt?.id;if(!id)return;await reload();
+    if(!state.agents.data?.some(agent=>agent.id===id)){status.textContent='No saved identity was returned for this request. Check backend activity before preparing another workflow.';return;}
+    agentId=id;$('#agent-select').value=id;syncAgentPicker();wheel.select(2);void select(2);
+  });
+  reset.addEventListener('click',()=>{if(autonomyAttempt?.status==='pending')return;autonomyAttempt=null;goal.value='';consent.checked=false;try{sessionStorage.removeItem('supa.offline-request');}catch{}sync();goal.focus();});
+  details.append(form,status,inspect,reset);sync();return details;
+}
 function closeCommand(focus=true){$('.command').hidden=true;if(focus)returnFocus();}
 function returnFocus(){if(document.body.dataset.view==='intro'){$('.enter').focus({preventScroll:true});return;}if(matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.tabline').focus({preventScroll:true});}else $('.wheel').focus({preventScroll:true});}
 $('.command-toggle').addEventListener('click',()=>openCommand('supa '));
@@ -229,7 +266,7 @@ $('.worm-switch').addEventListener('click',()=>{worm=!worm;$('.worm-switch').set
 window.addEventListener('keydown',async event=>{
   if(event.defaultPrevented||event.ctrlKey||event.metaKey||event.altKey)return;
   if(event.key==='Escape'){closeCommand(false);returnFocus();return;}
-  if(event.target instanceof HTMLInputElement||event.target instanceof HTMLSelectElement)return;
+  if(event.target instanceof HTMLInputElement||event.target instanceof HTMLSelectElement||event.target instanceof HTMLTextAreaElement)return;
   if(event.key==='Tab'&&$('.projects').classList.contains('drawer-open')){
     const active=$('.wheel-item[aria-selected=true]');if(event.shiftKey&&document.activeElement===$('.tabline')){event.preventDefault();active?.focus();}else if(!event.shiftKey&&document.activeElement===active){event.preventDefault();$('.tabline').focus();}return;
   }
