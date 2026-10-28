@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PixelMark } from "./visuals";
+import { PageMotion } from "./motion";
 
 export const sections = [
   ["/agents", "01", "Agents"], ["/economy", "02", "Economy"], ["/memory", "03", "Memory"],
@@ -70,7 +71,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="header-inner">
         <Link className="brand" href="/" aria-label="Supa Agent home"><PixelMark/><span>SUPA<span className="muted"> / AGENT</span></span></Link>
         <div className="header-right">
-          <span className="environment"><span className="status-dot"/>LOCAL / DEVNET</span>
+          <span className="environment">LOCAL / DEVNET</span>
           <a className="source-link" href="https://github.com/pyco404/SupaAgent" rel="noreferrer" target="_blank">SOURCE ↗</a>
           <button ref={trigger} className="menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-haspopup="dialog" onClick={() => {
             const modal = dialog.current;
@@ -108,5 +109,5 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <p className="mobile-navigation-footer">LOCAL / DEVNET <span>READ-ONLY CONSOLE</span></p>
       </div>
     </dialog>
-    <main id="content">{children}</main><footer className="site-footer"><div><PixelMark/><span>SUPA AGENT</span><span className="muted">An experiment in autonomous survival.</span></div><p>READ-ONLY CONSOLE <span className="mint">/</span> SIMULATION + DEVNET TEST TOKENS</p><p className="muted">Signing, trading, publishing and agent creation are disabled.</p></footer></>;
+    <main id="content"><PageMotion path={pathname}>{children}</PageMotion></main><footer className="site-footer"><div><PixelMark/><span>SUPA AGENT</span><span className="muted">An experiment in autonomous survival.</span></div><p>READ-ONLY CONSOLE <span className="mint">/</span> SIMULATION + DEVNET TEST TOKENS</p><p className="muted">Signing, trading, publishing and agent creation are disabled.</p></footer></>;
 }
