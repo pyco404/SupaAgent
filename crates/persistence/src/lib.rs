@@ -1,4 +1,5 @@
 mod intelligence;
+mod scheduling;
 mod social;
 mod wallet;
 use chrono::Utc;
@@ -77,7 +78,7 @@ impl Store {
         values.into_iter().map(decode).collect()
     }
     pub async fn due_agents(&self) -> Result<Vec<Uuid>> {
-        sqlx::query_scalar("SELECT id FROM agents WHERE data->>'lifecycle'='active' AND COALESCE(data->'config'->>'scheduler_enabled','true')='true' AND next_cycle_at<=now() ORDER BY next_cycle_at LIMIT 100").fetch_all(&self.pool).await.map_err(db)
+        sqlx::query_scalar("SELECT a.id FROM agents a JOIN agent_schedules s ON s.agent_id=a.id WHERE a.data->>'lifecycle'='active' AND a.data->'config'->>'scheduler_enabled'='true' AND s.enabled AND (a.next_cycle_at<=now() OR s.expires_at<=now()) ORDER BY a.next_cycle_at LIMIT 100").fetch_all(&self.pool).await.map_err(db)
     }
     pub async fn transition(
         &self,
@@ -92,6 +93,17 @@ impl Store {
         clean_text(reason, 500)?;
         let mut tx = self.pool.begin().await.map_err(db)?;
         let mut a = locked(&mut tx, id).await?;
+        if next == Lifecycle::Active
+            && sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1)",
+            )
+            .bind(id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(db)?
+        {
+            return Err(Error::Denied); // Managed reactivation requires revision-checked authorization.
+        }
         a.lifecycle.transition(next, authorized)?;
         transition(&mut tx, &mut a, next, reason, "operator").await?;
         if next != Lifecycle::Active {
@@ -148,13 +160,18 @@ impl Store {
         ledger(&mut tx, id, None, kind, amount, key).await?;
         tx.commit().await.map_err(db)
     }
-    pub async fn begin_cycle(&self, id: Uuid, _scheduled: bool) -> Result<Uuid> {
+    pub async fn begin_cycle(&self, id: Uuid, scheduled: bool) -> Result<Uuid> {
         let mut tx = self.pool.begin().await.map_err(db)?;
-        let a = locked(&mut tx, id).await?;
+        let mut a = locked(&mut tx, id).await?;
         if a.lifecycle != Lifecycle::Active {
             return Err(Error::Inactive);
         }
         recover_agent(&mut tx, id).await?;
+        a = locked(&mut tx, id).await?;
+        if a.lifecycle != Lifecycle::Active {
+            tx.commit().await.map_err(db)?;
+            return Err(Error::Inactive);
+        }
         let busy: bool = sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM cycles WHERE agent_id=$1 AND status='running')",
         )
@@ -164,6 +181,10 @@ impl Store {
         .map_err(db)?;
         if busy {
             return Err(Error::Busy);
+        }
+        if let Some(error) = scheduling::claim(&mut tx, &mut a, scheduled).await? {
+            tx.commit().await.map_err(db)?;
+            return Err(error);
         }
         {
             let due: bool =
@@ -329,6 +350,7 @@ impl Store {
             )
             .await?;
         }
+        scheduling::finish(&mut tx, &mut a, failure).await?;
         event(
             &mut tx,
             id,
@@ -449,6 +471,11 @@ async fn live(tx: &mut Tx<'_>, id: Uuid, cycle: Uuid) -> Result<Agent> {
     if a.lifecycle != Lifecycle::Active {
         return Err(Error::Inactive);
     }
+    let permitted: bool = sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1 AND (NOT enabled OR expires_at<=now()))")
+        .bind(id).fetch_one(&mut **tx).await.map_err(db)?;
+    if !permitted {
+        return Err(Error::Stale);
+    }
     let valid:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM cycles WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>now())").bind(cycle).bind(id).fetch_one(&mut **tx).await.map_err(db)?;
     if !valid {
         return Err(Error::Stale);
@@ -488,6 +515,12 @@ async fn transition(
     let to = serde_json::to_value(next).map_err(|_| Error::Invalid)?;
     sqlx::query("INSERT INTO lifecycle_transitions(agent_id,from_state,to_state,reason,actor) VALUES($1,$2,$3,$4,$5)").bind(a.id).bind(from.as_str()).bind(to.as_str()).bind(reason).bind(actor).execute(&mut **tx).await.map_err(db)?;
     a.lifecycle = next;
+    if next != Lifecycle::Active {
+        let changed=sqlx::query("UPDATE agent_schedules SET enabled=false,revision=revision+1,updated_at=now() WHERE agent_id=$1").bind(a.id).execute(&mut **tx).await.map_err(db)?.rows_affected();
+        if changed > 0 {
+            a.config.scheduler_enabled = false;
+        }
+    }
     save(tx, a).await?;
     event(
         tx,
@@ -521,6 +554,25 @@ async fn ledger(
             Err(Error::Invalid)
         };
     }
+    if amount < 0
+        && let Some(cycle) = cycle
+    {
+        let managed: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1)")
+                .bind(id)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(db)?;
+        if managed {
+            let consumed:i64=sqlx::query_scalar("SELECT COALESCE(-sum(amount_microusd),0)::bigint FROM simulated_ledger WHERE agent_id=$1 AND cycle_id=$2 AND amount_microusd<0").bind(id).bind(cycle).fetch_one(&mut **tx).await.map_err(db)?;
+            if consumed
+                .checked_sub(amount)
+                .is_none_or(|total| total > 1100)
+            {
+                return Err(Error::ResourceBudget);
+            }
+        }
+    }
     let n=sqlx::query("UPDATE agents SET simulated_balance_microusd=simulated_balance_microusd+$2 WHERE id=$1 AND simulated_balance_microusd::numeric+$2::bigint BETWEEN 0 AND 9000000000000000").bind(id).bind(amount).execute(&mut **tx).await.map_err(db)?.rows_affected();
     if n != 1 {
         return Err(if amount < 0 {
@@ -548,6 +600,24 @@ async fn events_tx(tx: &mut Tx<'_>, id: Uuid) -> Result<Vec<Event>> {
 }
 async fn recover_agent(tx: &mut Tx<'_>, id: Uuid) -> Result<()> {
     let cycles:Vec<Uuid>=sqlx::query_scalar("UPDATE cycles SET status='interrupted',failure_code='lease_expired',finished_at=now() WHERE agent_id=$1 AND status='running' AND lease_until<=now() RETURNING id").bind(id).fetch_all(&mut **tx).await.map_err(db)?;
+    if !cycles.is_empty() {
+        let mut agent = locked(tx, id).await?;
+        let managed: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1)")
+                .bind(id)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(db)?;
+        if managed {
+            scheduling::disable(
+                tx,
+                &mut agent,
+                Lifecycle::Suspended,
+                "lease_expired_review_required",
+            )
+            .await?;
+        }
+    }
     for cycle in cycles {
         sqlx::query("UPDATE inference_calls SET status='unknown',failure_code='lease_expired',finished_at=now() WHERE cycle_id=$1 AND status='reserved'").bind(cycle).execute(&mut **tx).await.map_err(db)?;
         sqlx::query("UPDATE actions SET status='failed',failure_code='lease_expired',finished_at=now() WHERE cycle_id=$1 AND status IN ('running','proposed')").bind(cycle).execute(&mut **tx).await.map_err(db)?;
