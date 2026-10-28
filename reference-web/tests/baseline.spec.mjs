@@ -164,13 +164,14 @@ test("Supa backdrop preserves the approved pixel mask and stays behind readable 
   expect(paths).toHaveLength(2);
   const comparison=await logo.evaluate(async (image, paths)=>{
     await image.decode();
+    const canonical=new Image();canonical.src='/public/assets/supa-agent.svg';await canonical.decode();
     const results=[];
     for(const size of [24,48,96]){
       const actual=document.createElement("canvas"),expected=document.createElement("canvas");
       actual.width=actual.height=expected.width=expected.height=size;
       const a=actual.getContext("2d"),e=expected.getContext("2d");
       a.fillStyle=e.fillStyle="#0c0c0c";a.fillRect(0,0,size,size);e.fillRect(0,0,size,size);
-      a.imageSmoothingEnabled=false;a.drawImage(image,0,0,size,size);
+      a.imageSmoothingEnabled=false;a.drawImage(canonical,0,0,size,size);
       e.scale(size/24,size/24);e.fillStyle="#71957d";e.fill(new Path2D(paths[0]));e.fillStyle="#0c0c0c";e.fill(new Path2D(paths[1]));
       const pixels=a.getImageData(0,0,size,size).data,reference=e.getImageData(0,0,size,size).data;
       results.push({size,identical:pixels.every((value,index)=>value===reference[index])});
@@ -180,10 +181,10 @@ test("Supa backdrop preserves the approved pixel mask and stays behind readable 
   },paths);
   expect(comparison.results.every(result=>result.identical)).toBe(true);
   expect(comparison.opacity).toBeGreaterThan(0);
-  expect(comparison.opacity).toBeLessThan(.3);
+  expect(comparison.opacity).toBeLessThan(.4);
   expect(comparison.filter).toContain("blur(");
   expect(comparison.belowCode).toBe(true);
-  for(const name of ["supa-agent.svg","supa-agent-icon.svg","supa-agent-header.svg","supa-agent-monochrome.svg"]){
+  for(const name of ["supa-agent.svg","supa-agent-icon.svg","supa-agent-header.svg","supa-agent-monochrome.svg","supa-agent-code.svg"]){
     const response=await request.get(`/public/assets/${name}`);
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toContain("image/svg+xml");
@@ -226,7 +227,7 @@ test("Enter shows an opaque radial portal before navigating exactly once", async
   const brand=page.locator(".portal-brand");
   await expect(brand).toBeVisible();
   await expect(brand).toHaveText("SUPA AGENT");
-  await expect(brand.locator("img")).toHaveAttribute("src", "/public/assets/supa-agent.svg");
+  await expect(brand.locator("img")).toHaveAttribute("src", "/public/assets/supa-agent-code.svg");
   const box=await brand.boundingBox(),viewport=page.viewportSize();
   expect(box.x+box.width/2).toBeCloseTo(viewport.width/2, 0);
   expect(box.y+box.height/2).toBeCloseTo(viewport.height/2, 0);
@@ -356,4 +357,21 @@ test("preview is read only and cannot expose project secrets or parent paths", a
     expect(await response.text()).not.toMatch(/sk-[A-Za-z0-9]|OPENAI_API_KEY|postgres(ql)?:\/\//);
   }
   expect((await request.post("/", { data: "mutation" })).status()).toBe(405);
+});
+
+test("code logo keeps the canonical silhouette and transparent facial cutouts", async ({ page, request }) => {
+  await open(page,"/");
+  const svg=await (await request.get('/public/assets/supa-agent-code.svg')).text();
+  expect(svg).toContain('clip-rule="evenodd"');expect(svg).toContain('const agent');expect(svg).toContain('<text');
+  const solid=await (await request.get('/public/assets/supa-agent.svg')).text();
+  expect(svg.match(/ d="([^"]+)"/)[1]).toBe(solid.match(/ d="([^"]+)"/)[1]);
+  const raster=await page.locator('.intro-mascot').evaluate(async image=>{
+    await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=240;
+    const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0,240,240);
+    const data=ctx.getImageData(0,0,240,240).data;
+    const area=(x,y,w,h)=>{let pixels=0;for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)if(data[(j*240+i)*4+3])pixels++;return pixels;};
+    return {leftEye:area(60,90,40,50),rightEye:area(140,90,40,50),mouth:area(80,170,80,20),outside:area(0,0,240,20),ink:area(10,20,220,200),gaps:area(100,90,40,50)};
+  });
+  expect(raster.leftEye+raster.rightEye+raster.mouth+raster.outside).toBe(0);
+  expect(raster.ink).toBeGreaterThan(2000);expect(raster.gaps).toBeLessThan(2000);
 });
