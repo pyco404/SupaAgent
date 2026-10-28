@@ -64,7 +64,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [open]);
 
   const links = [["/", "00", "Overview"], ...sections];
-  const navigationLinks = () => links.map(([href, number, name]) => <Link key={href} href={href} aria-current={(href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`)) ? "page" : undefined} onClick={closeMenu}><span>{number}</span> {name}</Link>);
+  const navigationLinks = () => [links.slice(0, 5), links.slice(5)].map((group, i) => <div className="nav-group" role="group" aria-label={i ? "Planned capabilities" : "Available records"} key={i}>{group.map(([href, number, name]) => <Link key={href} href={href} aria-current={(href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`)) ? "page" : undefined} onClick={closeMenu}><span>{number}</span> {name}{i === 1 && <small className="planned-tag">Planned</small>}</Link>)}</div>);
+
 
   return <><a href="#content" className="skip-link">Skip to content</a>
     <header className="site-header">
@@ -109,5 +110,5 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <p className="mobile-navigation-footer">LOCAL / DEVNET <span>READ-ONLY CONSOLE</span></p>
       </div>
     </dialog>
-    <main id="content"><PageMotion path={pathname}>{children}</PageMotion></main><footer className="site-footer"><div><PixelMark/><span>SUPA AGENT</span><span className="muted">An experiment in autonomous survival.</span></div><p>READ-ONLY CONSOLE <span className="mint">/</span> SIMULATION + DEVNET TEST TOKENS</p><p className="muted">Signing, trading, publishing and agent creation are disabled.</p></footer></>;
+    <main id="content"><PageMotion path={pathname}>{children}</PageMotion></main><footer className="site-footer"><div><PixelMark/><span>SUPA AGENT</span><span className="muted">An experiment in autonomous survival.</span></div><p>READ-ONLY CONSOLE <span className="mint">/</span> SIMULATION + DEVNET TEST TOKENS</p><p className="muted">Creation, payments, trading and X publishing are planned. This preview cannot execute them.</p></footer></>;
 }
