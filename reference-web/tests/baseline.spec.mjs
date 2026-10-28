@@ -435,3 +435,20 @@ test('decorative branches flow, pause and respect reduced motion and visibility'
   const still=await pixels();await page.waitForTimeout(180);expect(await pixels()).toBe(still);
   await expect(diagram).toHaveAttribute('aria-label',/not live agent activity/);
 });
+
+test('intro pointer follows the mouse from the code mascot and survives entry', async ({ page }) => {
+  await open(page,'/');const tether=page.locator('.pointer-tether');
+  for(const reducedMotion of ['reduce','no-preference']){
+    await page.emulateMedia({reducedMotion});await page.mouse.move(280,200);await page.mouse.move(300,220);
+    await expect(tether).toHaveAttribute('data-active','true');
+    await expect.poll(async()=>{const p=(await tether.getAttribute('data-endpoints')).split(',').map(Number);return Math.abs(p[2]-300)+Math.abs(p[3]-220);}).toBeLessThan(.01);
+    const anchor=await page.locator('.intro-mascot').boundingBox();
+    const [x,y]= (await tether.getAttribute('data-endpoints')).split(',').map(Number);
+    expect(x).toBeCloseTo(anchor.x+anchor.width*.5);expect(y).toBeCloseTo(anchor.y+anchor.height*.4);
+    expect(await tether.evaluate(canvas=>canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data.some((value,i)=>i%4===3&&value>0))).toBe(true);
+  }
+  await page.locator('.enter').click();await expect(page.locator('.transition')).toHaveClass(/active/);await expect(tether).toHaveAttribute('data-active','false');
+  await expect(page.locator('body')).toHaveAttribute('data-view','projects');await page.mouse.move(310,230);await expect(tether).toHaveAttribute('data-active','true');
+  await page.locator('.brand').click();await expect(page.locator('body')).toHaveAttribute('data-view','intro');await page.mouse.move(320,240);await expect(tether).toHaveAttribute('data-active','true');
+  await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointermove',{clientX:100,clientY:200,pointerType:'touch'})));await expect(tether).toHaveAttribute('data-active','false');
+});
