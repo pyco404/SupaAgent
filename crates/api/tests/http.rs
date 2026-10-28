@@ -21,6 +21,33 @@ async fn authenticated_http_workflow_and_safe_errors() {
     let token = "test-token-with-at-least-32-characters";
     let app =
         router(AppState::new(s.clone(), Runtime::new(s, Arc::new(Offline)), token.into()).unwrap());
+    let ready = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/ready")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ready.status(), StatusCode::OK);
+    let body = to_bytes(ready.into_body(), 1024).await.unwrap();
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&body).unwrap(),
+        serde_json::json!({"status":"ready"})
+    );
+    let private_health = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(private_health.status(), StatusCode::UNAUTHORIZED);
     let response = app
         .clone()
         .oneshot(
@@ -162,6 +189,7 @@ async fn wallet_routes_authenticate_hide_keys_and_reject_signing() {
         Arc::new(NoNetwork),
         operator,
     ));
+    let mut read_state = state.clone();
     let app = router(state);
     let request = |method: &str, path: &str, authenticated: bool, body: &str| {
         let mut b = Request::builder()
@@ -264,4 +292,82 @@ async fn wallet_routes_authenticate_hide_keys_and_reject_signing() {
             .iter()
             .any(|v| v["operation"] == "sign")
     );
+    // Saved observations remain available after removing both the service and its vault files.
+    drop(app);
+    drop(dir);
+    read_state.wallets = None;
+    read_state.wallet_read_operator = Some(operator);
+    let reader = router(read_state.clone());
+    for route in ["", "/balances", "/payments", "/payment-checks", "/treasury"] {
+        let response = reader
+            .clone()
+            .oneshot(request("GET", route, true, ""))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "read-only scope {route}");
+        let body = String::from_utf8(
+            to_bytes(response.into_body(), 20000)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(
+            !body.contains("ciphertext")
+                && !body.contains("private_key")
+                && !body.contains("nonce")
+        );
+        assert_eq!(
+            reader
+                .clone()
+                .oneshot(request("GET", route, false, ""))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::UNAUTHORIZED
+        );
+    }
+    for route in [
+        "",
+        "/recover",
+        "/sync",
+        "/payments",
+        "/policy",
+        "/reservations",
+        "/sign",
+    ] {
+        assert_eq!(
+            reader
+                .clone()
+                .oneshot(request("POST", route, true, "{}"))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::FORBIDDEN,
+            "write scope {route}"
+        );
+    }
+    let release = format!("/reservations/{}/release", Uuid::new_v4());
+    assert_eq!(
+        reader
+            .oneshot(request("POST", &release, true, "{}"))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+    read_state.wallet_read_operator = Some(Uuid::new_v4());
+    let wrong_reader = router(read_state);
+    for route in ["", "/balances", "/payments", "/payment-checks", "/treasury"] {
+        assert_eq!(
+            wrong_reader
+                .clone()
+                .oneshot(request("GET", route, true, ""))
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::FORBIDDEN,
+            "wrong owner {route}"
+        );
+    }
 }
