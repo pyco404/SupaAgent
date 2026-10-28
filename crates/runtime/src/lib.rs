@@ -17,6 +17,11 @@ impl Runtime {
         Self { store, reasoner }
     }
     pub async fn cycle(&self, id: Uuid, scheduled: bool) -> Result<Uuid> {
+        if self.store.schedule_status(id).await?.policy.is_some() {
+            // A configured live/manual provider is never selected for managed schedules.
+            let offline = Runtime::new(self.store.clone(), Arc::new(supa_providers::Offline));
+            return offline.cycle_inner(id, scheduled, None).await;
+        }
         self.cycle_inner(id, scheduled, None).await
     }
     /// Operator-driven draft evaluation, not an autonomous planning result. Uses the same policy/execution path.
@@ -110,7 +115,16 @@ impl Runtime {
         Ok(cycle)
     }
     async fn context(&self, id: Uuid) -> Result<(Agent, Context)> {
-        let a = self.store.get(id).await?;
+        let mut a = self.store.get(id).await?;
+        if let Some(policy) = self.store.schedule_status(id).await?.policy {
+            a.goals.retain(|goal| policy.goal_ids.contains(&goal.id));
+            a.capabilities.retain(|cap| {
+                matches!(
+                    cap,
+                    Capability::ReadMemory | Capability::Remember | Capability::EvaluateGoal
+                )
+            });
+        }
         let mut goals: Vec<_> = a.goals.iter().filter(|g| !g.completed).cloned().collect();
         goals.sort_by_key(|g| std::cmp::Reverse(g.priority));
         let query = goals
