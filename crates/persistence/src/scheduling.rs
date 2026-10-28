@@ -2,6 +2,9 @@
 use super::*;
 
 impl Store {
+    pub async fn authorization_history(&self, id: Uuid) -> Result<Vec<Value>> {
+        sqlx::query_scalar("SELECT to_jsonb(x) FROM (SELECT id,approved_by,approved_at,policy,expires_at,closed_at,cycles_started,reserved_microusd,legacy FROM schedule_authorizations WHERE agent_id=$1 ORDER BY approved_at DESC,id LIMIT 100) x").bind(id).fetch_all(&self.pool).await.map_err(db)
+    }
     pub async fn schedule_status(&self, id: Uuid) -> Result<ScheduleStatus> {
         let mut tx = self.pool.begin().await.map_err(db)?;
         let agent = locked(&mut tx, id).await?;
@@ -14,18 +17,55 @@ impl Store {
         id: Uuid,
         command: &ScheduleCommand,
     ) -> Result<ScheduleStatus> {
+        self.schedule_control_as(id, command, None).await
+    }
+    pub async fn schedule_control_as(
+        &self,
+        id: Uuid,
+        command: &ScheduleCommand,
+        actor: Option<Uuid>,
+    ) -> Result<ScheduleStatus> {
         command.validate()?;
+        if command.operation == ScheduleOperation::Renew && actor.is_none() {
+            return Err(Error::Denied);
+        }
         let encoded = serde_json::to_value(command).map_err(|_| Error::Invalid)?;
         let mut tx = self.pool.begin().await.map_err(db)?;
         let mut agent = locked(&mut tx, id).await?;
-        if let Some(prior) =
-            sqlx::query("SELECT agent_id,command FROM schedule_commands WHERE request_id=$1")
-                .bind(command.request_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(db)?
+        command.validate()?; // A queued renewal must still carry fresh consent after acquiring the lock.
+        if let Some(actor) = actor {
+            let role: Option<String> = sqlx::query_scalar(
+                "SELECT role FROM agent_access WHERE agent_id=$1 AND principal_id=$2",
+            )
+            .bind(id)
+            .bind(actor)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(db)?;
+            let allowed = match command.operation {
+                ScheduleOperation::Start | ScheduleOperation::Renew => {
+                    role.as_deref() == Some("owner")
+                }
+                _ => matches!(role.as_deref(), Some("owner" | "operator")),
+            };
+            if !allowed {
+                return Err(Error::Denied);
+            }
+        }
+        // Existing lifecycle actor enum remains compatible; concrete identity is in schedule_commands.
+        let actor_name = "operator";
+        if let Some(prior) = sqlx::query(
+            "SELECT agent_id,command,approved_by FROM schedule_commands WHERE request_id=$1",
+        )
+        .bind(command.request_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db)?
         {
-            if prior.get::<Uuid, _>(0) != id || prior.get::<Value, _>(1) != encoded {
+            if prior.get::<Uuid, _>(0) != id
+                || prior.get::<Value, _>(1) != encoded
+                || prior.get::<Option<Uuid>, _>(2) != actor
+            {
                 return Err(Error::Invalid);
             }
             // Return current truth; never replay an old start/resume after a later pause/stop.
@@ -36,9 +76,20 @@ impl Store {
             return Err(Error::Stale);
         }
         match command.operation {
-            ScheduleOperation::Start => {
-                if current.policy.is_some() || agent.lifecycle == Lifecycle::Active {
+            ScheduleOperation::Start | ScheduleOperation::Renew => {
+                let renew = command.operation == ScheduleOperation::Renew;
+                if renew != current.policy.is_some() || agent.lifecycle == Lifecycle::Active {
                     return Err(Error::InvalidTransition);
+                }
+                if sqlx::query_scalar::<_, bool>(
+                    "SELECT EXISTS(SELECT 1 FROM cycles WHERE agent_id=$1 AND status='running')",
+                )
+                .bind(id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db)?
+                {
+                    return Err(Error::Busy);
                 }
                 let policy = command.policy.as_ref().ok_or(Error::Invalid)?;
                 safe_permissions(&agent)?;
@@ -53,19 +104,24 @@ impl Store {
                     max_provider_calls: 1,
                     ..CycleConfig::default()
                 };
-                sqlx::query("INSERT INTO agent_schedules(agent_id,enabled,policy,expires_at) VALUES($1,true,$2,now()+make_interval(secs=>$3))")
-                    .bind(id).bind(serde_json::to_value(policy).map_err(|_|Error::Invalid)?).bind(policy.valid_for_seconds as f64)
-                    .execute(&mut *tx).await.map_err(db)?;
+                // Close the old epoch with its consumed allowance intact before opening another.
+                sqlx::query("UPDATE schedule_authorizations SET closed_at=now() WHERE agent_id=$1 AND closed_at IS NULL").bind(id).execute(&mut *tx).await.map_err(db)?;
+                let authorization = command.request_id;
+                let expiry:chrono::DateTime<Utc>=sqlx::query_scalar("INSERT INTO schedule_authorizations(id,agent_id,approved_by,policy,expires_at,legacy) VALUES($1,$2,$3,$4,now()+make_interval(secs=>$5),$6) RETURNING expires_at")
+                    .bind(authorization).bind(id).bind(actor).bind(serde_json::to_value(policy).map_err(|_|Error::Invalid)?).bind(policy.valid_for_seconds as f64).bind(actor.is_none()).fetch_one(&mut *tx).await.map_err(db)?;
+                sqlx::query("INSERT INTO agent_schedules(agent_id,enabled,policy,expires_at,authorization_id) VALUES($1,true,$2,$3,$4) ON CONFLICT(agent_id) DO UPDATE SET enabled=true,policy=excluded.policy,expires_at=excluded.expires_at,authorization_id=excluded.authorization_id,cycles_started=0,reserved_microusd=0,last_error=NULL")
+                    .bind(id).bind(serde_json::to_value(policy).map_err(|_|Error::Invalid)?).bind(expiry).bind(authorization).execute(&mut *tx).await.map_err(db)?;
                 transition(
                     &mut tx,
                     &mut agent,
                     Lifecycle::Active,
                     &command.reason,
-                    "operator",
+                    actor_name,
                 )
                 .await?;
             }
             ScheduleOperation::Resume => {
+                if actor.is_some() && !sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM schedule_authorizations h JOIN agent_schedules s ON s.authorization_id=h.id WHERE s.agent_id=$1 AND h.approved_by IS NOT NULL)").bind(id).fetch_one(&mut *tx).await.map_err(db)? { return Err(Error::Denied); }
                 let policy = current.policy.as_ref().ok_or(Error::InvalidTransition)?;
                 safe_configuration(&agent)?;
                 validate_goals(&agent, policy)?;
@@ -82,7 +138,7 @@ impl Store {
                     &mut agent,
                     Lifecycle::Active,
                     &command.reason,
-                    "operator",
+                    actor_name,
                 )
                 .await?;
                 sqlx::query(
@@ -101,7 +157,7 @@ impl Store {
                 };
                 agent.lifecycle.transition(target, true)?;
                 agent.config.scheduler_enabled = false;
-                transition(&mut tx, &mut agent, target, &command.reason, "operator").await?;
+                transition(&mut tx, &mut agent, target, &command.reason, actor_name).await?;
                 sqlx::query("UPDATE agent_schedules SET enabled=false WHERE agent_id=$1")
                     .bind(id)
                     .execute(&mut *tx)
@@ -120,10 +176,11 @@ impl Store {
         .execute(&mut *tx)
         .await
         .map_err(db)?;
-        sqlx::query("INSERT INTO schedule_commands(request_id,agent_id,command) VALUES($1,$2,$3)")
+        sqlx::query("INSERT INTO schedule_commands(request_id,agent_id,command,approved_by) VALUES($1,$2,$3,$4)")
             .bind(command.request_id)
             .bind(id)
             .bind(encoded)
+            .bind(actor)
             .execute(&mut *tx)
             .await
             .map_err(db)?;
@@ -210,6 +267,17 @@ pub(super) async fn claim(
     agent: &mut Agent,
     scheduled: bool,
 ) -> Result<Option<Error>> {
+    if scheduled
+        && !sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM agent_access WHERE agent_id=$1 AND role='owner')",
+        )
+        .bind(agent.id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(db)?
+    {
+        return Err(Error::Denied);
+    }
     let view = status(tx, agent).await?;
     let Some(policy) = view.policy else {
         return if scheduled {
@@ -272,6 +340,7 @@ pub(super) async fn claim(
     }
     sqlx::query("UPDATE agent_schedules SET cycles_started=cycles_started+1,reserved_microusd=reserved_microusd+1100,updated_at=now() WHERE agent_id=$1")
         .bind(agent.id).execute(&mut **tx).await.map_err(db)?;
+    sqlx::query("UPDATE schedule_authorizations h SET cycles_started=s.cycles_started,reserved_microusd=s.reserved_microusd FROM agent_schedules s WHERE s.agent_id=$1 AND h.id=s.authorization_id").bind(agent.id).execute(&mut **tx).await.map_err(db)?;
     Ok(None)
 }
 pub(super) async fn disable(
