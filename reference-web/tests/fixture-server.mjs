@@ -4,6 +4,10 @@ import { spawn } from 'node:child_process';
 import { records, agent, agentId, eventId, timestamp, financials } from '../../web/tests/fixtures.ts';
 const token='fixture-token-'.repeat(4);
 const fixtures={...records,
+  directory:[{id:agentId,name:agent.name,lifecycle:agent.lifecycle,created_at:agent.created_at}],
+  [`agents/${agentId}/access`]:{role:'owner'},
+  [`agents/${agentId}/authorizations`]:[],
+  [`agents/${agentId}/execution-health`]:{agent_id:agentId,status:'unavailable',execution_running:false,lifecycle:agent.lifecycle,checked_at:timestamp,heartbeat_at:null,tick_finished_at:null,lease_until:null,cycle_id:null},
   [`agents/${agentId}/goals`]:agent.goals,
   [`agents/${agentId}/financials`]:financials,
   [`agents/${agentId}/drafts`]:[{id:eventId,created_at:timestamp,data:{text:'TEST FIXTURE: My simulated budget has boundaries. So does my enthusiasm for invoices.',style:'humor',event_ids:[eventId],memory_ids:[]}}],
