@@ -71,67 +71,115 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     }
     ctx.globalAlpha = 1;
   }
+  // Procedural tracking illustration: pointer-driven geometry, never webcam data.
   function drawHands(ctx, w, h, time) {
-    const scale = Math.min(1, w / 650), x = w * .5, y = h * .83;
+    const scale = Math.min(1.25, w / 900), x = w * .5, y = h * .785;
     ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
-    ctx.font = '9px Plex,monospace'; ctx.globalAlpha = .18;
-    ['1 2 3 4 5 6 7 8 9 0 - =', ' q w e r t y u i o p [ ]', '  a s d f g h j k l ;', '   z x c v b n m , . /'].forEach((s, i) => ctx.fillText(s, -150, i * 25));
-    ctx.globalAlpha = .55; ctx.lineWidth = .55;
-    for (const sign of [-1, 1]) {
-      const handX = sign * (72 + (pointer.x - .5) * 18), handY = 65 + sign * Math.sin(time / 1100) * 2;
-      const wrist = [handX + sign * 8, handY + 58];
-      for (let finger = 0; finger < 5; finger++) {
-        const tip = [handX + (finger - 2) * 15, handY - 50 + Math.abs(finger - 2) * 7 + Math.sin(time / 700 + finger) * 4];
-        const joint = [(tip[0] + wrist[0]) / 2, handY + 3];
-        ctx.beginPath(); ctx.moveTo(...wrist); ctx.lineTo(...joint); ctx.lineTo(...tip); ctx.stroke();
-        for (const p of [wrist, joint, tip]) { ctx.fillRect(p[0] - 1, p[1] - 1, 2, 2); }
+    ctx.font = '11px Plex,monospace'; ctx.globalAlpha = .2;
+    const keys = ['esc  1 2 3 4 5 6 7 8 9 0 - =', '  q w e r t y u i o p [ ]', '   a s d f g h j k l ;', '    z x c v b n m , . /'];
+    keys.forEach((text, row) => ctx.fillText(text, -150, row * 23));
+    const connections = [[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20],[5,9,13,17]];
+    for (const [hand, sign] of [[0,-1],[1,1]]) {
+      const hx = sign * 67 + (pointer.x - .5) * 18, hy = 65 + (pointer.y - .5) * 9;
+      const points = [[hx,hy+83]];
+      // Thumb and four articulated fingers, each with four visible landmarks.
+      for(let finger=0;finger<5;finger++){
+        const bend = reduced.matches ? 0 : Math.sin(time/1200+finger+hand)*2;
+        const baseX=hx+(finger-2)*17, tipY=hy-40+Math.abs(finger-2)*7;
+        for(let joint=0;joint<4;joint++){
+          const t=joint/3;
+          points.push([baseX+(finger===0?-sign*17*t:sign*2*t),hy+24+(tipY-hy-24)*t+bend*t]);
+        }
+      }
+      ctx.globalAlpha=.42;ctx.lineWidth=.65;
+      for(const path of connections){ctx.beginPath();path.forEach((id,i)=>{if(i)ctx.lineTo(...points[id]);else ctx.moveTo(...points[id]);});ctx.stroke();}
+      ctx.globalAlpha=.72;for(const [px,py] of points)ctx.fillRect(px-1,py-1,2,2);
+      ctx.globalAlpha=.36;ctx.strokeRect(hx-53,hy-45,106,132);
+      ctx.font='8px Plex,monospace';ctx.globalAlpha=.6;
+      ctx.fillText(`hand:${hand} · u ${(pointer.x*.2+.4+sign*.1).toFixed(5)}`,hx-55,hy-51);
+    }
+    ctx.restore();
+  }
+  function drawCodeFace(ctx,x,y,width,height,time) {
+    const columns=48,rows=58,cw=width/columns,ch=height/rows;
+    const lookX=(pointer.x-.5)*.16,lookY=(pointer.y-.5)*.08;
+    ctx.save();ctx.font=`${ch*.88}px Plex,monospace`;
+    for(let row=0;row<rows;row++){
+      const ny=row/(rows-1)*2-1;
+      // Head, cheeks and tapered jaw; glyphs use this implementation's public code.
+      const halfWidth=ny<-.65?Math.sqrt(Math.max(0,1-((ny+.58)/.44)**2))*.75:ny>.36?.83-(ny-.36)*.65:.86;
+      const text=(code[(row*3)%code.length].trim().replace(/\s+/g,' ')||'const frame = pointer.position;');
+      for(let col=0;col<columns;col++){
+        const nx=col/(columns-1)*2-1;
+        if(Math.abs(nx)>halfWidth)continue;
+        const eyes=Math.exp(-(((Math.abs(nx-lookX)-.3)/.15)**2)-((ny+.17-lookY)/.065)**2);
+        const nose=Math.exp(-(((nx-lookX)/.105)**2)-((ny-.07)/.28)**2);
+        const mouth=Math.exp(-(((nx-lookX)/.31)**2)-((ny-.48)/.045)**2);
+        const surface=Math.max(0,1-(nx/Math.max(.1,halfWidth))**2)*(.18+.11*Math.sin(row*.7+col*.22));
+        const blink=!reduced.matches&&Math.sin(time/1900)>.996?.15:1;
+        ctx.globalAlpha=Math.min(.9,.07+surface+eyes*.58*blink+nose*.46+mouth*.38);
+        ctx.fillStyle=col%11===0?'#71957d':ink();
+        ctx.fillText(text[col%text.length],x+col*cw,y+row*ch);
       }
     }
-    ctx.globalAlpha = .5; ctx.fillText(input.slice(-28) || "['input'] · pointer / keys", -145, -18); ctx.restore();
+    const eyeY=y+height*(.415+lookY*.5), eyeX=x+width*(.5+lookX*.5);
+    ctx.strokeStyle=ink();ctx.fillStyle=ink();ctx.lineWidth=.6;ctx.globalAlpha=.55;
+    ctx.strokeRect(eyeX-width*.23,eyeY-height*.045,width*.46,height*.09);
+    ctx.fillRect(eyeX-1,eyeY-1,2,2);
+    if(!reduced.matches){
+      const targetX=pointer.x*innerWidth,targetY=pointer.y*innerHeight;
+      ctx.globalAlpha=.3;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(eyeX,eyeY);ctx.lineTo(targetX,targetY);ctx.stroke();ctx.setLineDash([]);
+      ctx.strokeRect(targetX-9,targetY-6,18,12);
+    }
+    ctx.font='8px Plex,monospace';ctx.globalAlpha=.65;
+    ctx.fillText(`pointer:u ${pointer.x.toFixed(6)}`,x+width*.8,y+height*.07);
+    ctx.fillText(`pointer:v ${pointer.y.toFixed(6)}`,x+width*.8,y+height*.07+10);
+    ctx.restore();
   }
   function drawIntro(time) {
     const view = fit(intro); if (!view) return;
-    const { ctx, w, h } = view, line=13, cell=7.2;
-    const narrow=w<700, onePane=reduced.matches||narrow, width=Math.min(720,w-112), left=(w-width)/2;
-    const rows=Math.max(15,Math.floor((onePane?h-210:h*.58)/line));
-    ctx.font='12px Plex,monospace';
-    // Reveal the same code from the top in both panes, never rotate completed rows.
-    // Pauses between lines are part of the typing budget, not separate timers.
+    const { ctx, w, h } = view, narrow=w<700;
+    const font=narrow?11:Math.min(16,Math.max(12,Math.round(w/110))),line=Math.round(font*1.17),cell=font*.6;
+    const left=narrow?20:w*.18,width=narrow?w-40:w*.66,top=h*.125,first=top+font*3,bottom=h*.7;
+    const rows=Math.max(8,Math.floor((bottom-first)/line));
+    ctx.font=`${font}px Plex,monospace`;
     if(reduced.matches) introProgress=Infinity;
     else if(introTime!==null) introProgress+=Math.max(0,Math.min(100,time-introTime))/30;
     introTime=time;
-    let remaining=introProgress, revealedRows=0, typedCharacters=0;
-    const lines=Array.from({length:rows},(_,row)=>{
-      const value=code[row%code.length];
-      const limit=Math.floor((onePane?width:width/2)/cell)-(narrow?1:0);
-      const full=value.slice(0,limit), count=Math.min(full.length,Math.max(0,Math.floor(remaining)));
-      const started=remaining>=0, complete=remaining>=full.length+8;
+    let remaining=introProgress,revealedRows=0,typedCharacters=0,activeRow=0,activeColumn=0;
+    ctx.save();ctx.beginPath();ctx.rect(left,top,width,bottom-top);ctx.clip();
+    ctx.globalAlpha=.25;ctx.fillText('// — reference-web/app.js —',left+cell*3,top+font);
+    for(let row=0;row<rows;row++){
+      const limit=Math.max(1,Math.floor(width/cell)-5),full=code[row%code.length].slice(0,limit);
+      const count=Math.min(full.length,Math.max(0,Math.floor(remaining))),started=remaining>=0,complete=remaining>=full.length+8;
       remaining-=full.length+8;
       if(complete)revealedRows++;
       typedCharacters+=count;
-      return {value:full.slice(0,count),started,complete,count};
-    });
-    intro.dataset.revealedRows=String(revealedRows);
-    intro.dataset.typedCharacters=String(typedCharacters);
-    intro.dataset.introState=revealedRows===rows?'complete':'typing';
-    ctx.save();ctx.beginPath();ctx.rect(Math.max(0,left-32),110,width+64,rows*line+14);ctx.clip();
-    for(let pane=0;pane<(onePane?1:2);pane++){
-      const gutter=left+(pane*width/2)-(narrow?28:22), textX=left+(onePane&&narrow?14:0)+pane*width/2;
-      for(let row=0;row<rows;row++){
-        const {value,started,complete,count}=lines[row];
-        if(!started)continue;
-        ctx.fillStyle=ink();ctx.globalAlpha=.28;ctx.fillText(String(row+1).padStart(2),gutter,126+row*line);
-        ctx.globalAlpha=.31+(row%5)*.025;
-        if(/^(import|const|export|function|let)/.test(value))ctx.fillStyle='#71957d';
-        ctx.fillText(value,textX,126+row*line);
-        if(!complete&&!reduced.matches&&Math.floor(time/550)%2===0){ctx.fillStyle=ink();ctx.globalAlpha=.6;ctx.fillRect(textX+count*cell,116+row*line,cell,line);}
-      }
+      if(!started)continue;
+      activeRow=row;activeColumn=count;
+      const baseline=first+row*line;
+      if(!complete){ctx.globalAlpha=.7;ctx.fillStyle='#161615';ctx.fillRect(left,baseline-font,width,line);}
+      ctx.fillStyle=ink();ctx.globalAlpha=.28;ctx.fillText(String(row+1).padStart(3),left,baseline);
+      const text=full.slice(0,count),textX=left+cell*4;
+      // Authored source tokens receive the reference's muted terminal palette.
+      const tokens=text.split(/(\b(?:import|from|const|let|function|return|export|if|async|await|try|catch)\b|['"`][^'"`]*['"`]|\b\d+\b)/g);
+      let tx=textX;
+      for(const token of tokens){ctx.globalAlpha=.42;ctx.fillStyle=/^(import|from|const|let|function|return|export|if|async|await|try|catch)$/.test(token)?'#71957d':/^\d+$/.test(token)?'#cd796e':ink();ctx.fillText(token,tx,baseline);tx+=ctx.measureText(token).width;}
+      if(!complete&&!reduced.matches&&Math.floor(time/550)%2===0){ctx.fillStyle=ink();ctx.globalAlpha=.7;ctx.fillRect(textX+count*cell,baseline-font,cell,line);}
     }
-    ctx.restore();ctx.globalAlpha=1;ctx.fillStyle=ink();
-    if(!onePane){
-      ascii(ctx,left+width*.28,70,190,210,time);
-      ctx.save();ctx.translate(left,0);drawHands(ctx,width,h*.94,time);ctx.restore();
-    }
+    ctx.restore();
+    intro.dataset.revealedRows=String(revealedRows);intro.dataset.typedCharacters=String(typedCharacters);intro.dataset.introState=revealedRows===rows?'complete':'typing';
+    const status=document.querySelector('.intro-modes'),label=document.querySelector('.mode-label'),position=document.querySelector('.intro-position');
+    const state=revealedRows===rows?'NORMAL':'INSERT',cursor=`${activeRow+1}:${activeColumn+1}`;
+    if(status)status.dataset.mode=state;
+    if(label&&label.textContent!==state)label.textContent=state;
+    if(position&&position.textContent!==cursor)position.textContent=cursor;
+    // A text-built entity overlays the single editor, with articulated hands below.
+    const faceWidth=narrow?Math.min(145,w*.38):Math.min(290,w*.17);
+    const faceX=left+width*.32-faceWidth/2+(pointer.x-.5)*width*.12,faceY=top+font*2+(pointer.y-.5)*h*.06;
+    drawCodeFace(ctx,faceX,faceY,faceWidth,faceWidth*1.35,time);
+    drawHands(ctx,w,h,time);
+    ctx.globalAlpha=1;
   }
   function drawBlueprint() {
     const view = fit(blueprint); if (!view) return;
