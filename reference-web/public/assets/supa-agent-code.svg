@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Supa Agent pixel robot formed from source code">
+  <defs>
+    <clipPath id="supa-silhouette"><path transform="scale(10)" clip-rule="evenodd" d="M7 2h10v2h4v4h2v10h-4v4H5v-4H1V8h2V4h4zM6 9h4v5H6zm8 0h4v5h-4zM8 17h8v2H8z"/></clipPath>
+    <pattern id="source-code" width="240" height="42" patternUnits="userSpaceOnUse">
+      <g fill="#71957d" font-family="monospace" font-size="5.5" xml:space="preserve">
+        <text x="0" y="6">const agent = { think, learn, survive }; const agent = { think, learn, survive }; </text>
+        <text x="0" y="13">async function reason(memory) { return plan; } async function reason(memory) { return plan; } </text>
+        <text x="0" y="20">if (policy.allows(action)) await execute(action); if (policy.allows(action)) await execute(action); </text>
+        <text x="0" y="27">const events = await store.verified(); const events = await store.verified(); </text>
+        <text x="0" y="34">goal.priority += experience; // SUPA goal.priority += experience; // SUPA </text>
+        <text x="0" y="41">await memory.remember(event); // bounded await memory.remember(event); // bounded </text>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="240" height="240" fill="url(#source-code)" clip-path="url(#supa-silhouette)"/>
+</svg>
