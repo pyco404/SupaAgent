@@ -1,0 +1,930 @@
+{
+  "date": "2026-10-28",
+  "target": "reference-web",
+  "site": "http://127.0.0.1:3200",
+  "auth": "Public browser context; private views intentionally require operator authentication.",
+  "screenshots": [
+    {
+      "section": "agents",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-agents-mobile.png",
+      "evidence_id": "ev_af80e7ac9ef0a91eb1c05b0215b7431989e4778cded28b6b56ce2d8c3cfd9ac7",
+      "sha256": "84f3edd5653de2e7e3ca358751a32efca56ef43062544f2b8f6eaa84e2bf3fc3",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "intelligence",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-intelligence-mobile.png",
+      "evidence_id": "ev_0a02b41b5465a687a4fc8b03fba53031de233b052bb4c554f40204ced17a654d",
+      "sha256": "d40a61425b6da629c5d1adf01fc632c7ea7538d71fe47576e5ad185d3e0974d9",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "memory",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-memory-mobile.png",
+      "evidence_id": "ev_af94a4fa177c4808db4634e9e816c9b06485c23d784af120196a3d4986219d6a",
+      "sha256": "8f3113556f4b6125380825e9c14530720db6dc16899fac4966936b610c392495",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "economy",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-economy-mobile.png",
+      "evidence_id": "ev_edea456f75f0c1c4decb73af5d0bda2b44c057c65d464d2fedeab59b54bff5c5",
+      "sha256": "503f501ab654ad0e71b144f22e4de0f569b7261dbe5cb787d16a9b2d1a441d9e",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "social",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-social-mobile.png",
+      "evidence_id": "ev_55b22c499259498f9c966df62040f490acae436eb808c77da07bc508d11f1836",
+      "sha256": "f5e39a2609818d72f8145271a74708d427eff4faba28ae7b81f3ecaeb534e26c",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "trading",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-trading-mobile.png",
+      "evidence_id": "ev_80db7ff1ddac90dd90f70df25008285ae00c8e3f80abe3241c1f6f56bbfc2ccc",
+      "sha256": "12046c95f0ab6859b31360ad7726411df4df92efba1b8849883aa75b98060e92",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "token-launch",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-token-launch-mobile.png",
+      "evidence_id": "ev_967cec99b50e84ca9375b15df85911c3b43ca8e8084acfc2ed2af23788be3c6c",
+      "sha256": "b86eed2fb60b40a1172786826daf7daf1226870f69bd324489a21c2709df2281",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "factory",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-factory-mobile.png",
+      "evidence_id": "ev_88d6d799364de8f0e4687ebc805fc0dd27931de2dcfcde3751d53fad993b8c18",
+      "sha256": "d9c498e51b7447fe620c52d290ff85d9b32f8b01e382b3221c3cb5aa6e06db51",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "about",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-about-mobile.png",
+      "evidence_id": "ev_7aa18a45901f8108508546232459a258b3f098c1c439547c817b19d5c9f2a194",
+      "sha256": "e8eaf60d10941d9308e9140b3b51e7fe543ab73033cb17a56c8e6bcb0eb88d56",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "home",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-home-desktop.png",
+      "evidence_id": "ev_83fa3eb5ec4858348021f5687cb1041722e78c815026f064d79e33908a0585f5",
+      "sha256": "e135741a41971eb9d4c042cdaab26abbfe95f9371d779eca9a471fff6a45030d",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "agents",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-agents-desktop.png",
+      "evidence_id": "ev_73bc8852456a48ccd546027bb639986da0d5b85a2ce83cf2433f008c36180679",
+      "sha256": "aefa2f7ab6fbef869889dc51e4a24473e1243250e9b0a4d4d71b8034481f6b71",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "intelligence",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-intelligence-desktop.png",
+      "evidence_id": "ev_030730f1a61898524ad3e60da9d0ba2213ec194f3c39da6c76b74014515ea881",
+      "sha256": "b384f648a109c1480cebb151d348232213bfb924629dd68aaa49d669a9671645",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "memory",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-memory-desktop.png",
+      "evidence_id": "ev_69e9ab47e7d18dcc36b6413c92bcb5d2340c07a97a65515c91d3b89b35e416c6",
+      "sha256": "9840fc71257ca824f39ca213a3bb6fb122f78404b144e769e26addc9f7911c9b",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "economy",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-economy-desktop.png",
+      "evidence_id": "ev_6134c94ee2506da7dbbb446fe5b74e06597afb94886864ed5c433182e14dfdda",
+      "sha256": "f85d3d6ab7b4267e83f30abce996e0275b1354e411e321e045fad5b0bbe5ece8",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "social",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-social-desktop.png",
+      "evidence_id": "ev_b6a52c685c97a739db6499901a1e2784417140edd794903d1b52a77cb8a45e7b",
+      "sha256": "d1727f1fa7019f34e492864e45b54aefab2a7183c9ec2672d89a20c145af5ee2",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "trading",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-trading-desktop.png",
+      "evidence_id": "ev_9af85bd0a4af849da017f10c123e9c3882471565b5a0f61f53146e88d02a0254",
+      "sha256": "9153258b7c3a0ef62bb600b37bedb23970f179e907fd819d2d87a780b60eedf3",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "token-launch",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-token-launch-desktop.png",
+      "evidence_id": "ev_1122fc46001729837431da73283938d0ff1ff315ed03fe588c866e4d25c54d0d",
+      "sha256": "37537fc7e52b8d4a94fa455dd32a54001549132931fe51ed656174d4babb2f4d",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "factory",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-factory-desktop.png",
+      "evidence_id": "ev_e5bd8462ae3c9b0a8045c3e04ce9a1a5b8a7184277f749224ba64c262e6d92ed",
+      "sha256": "78ed6fcb94ee97066c2057d5b5b3bcce5f947b4399deecefff3756347fc256c7",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "about",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-about-desktop.png",
+      "evidence_id": "ev_88e7c0d8ddf5bdec9c3db3d97ea22ce7ca616bb81fa88db0ee0981c472a1908e",
+      "sha256": "325d9410d562f3bdc6bbf4ada75adf190399600d5c17c2985da402edac964664",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "home",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-home-mobile.png",
+      "evidence_id": "ev_11c37c87bea7e1070e9fc922dfa8a7b89795f9263080a5adfe2a81105f775c32",
+      "sha256": "fff2e96aa651f23eb1d65556685245df77d3aca073e85cc3a51254a1c5a7436c",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "menu",
+      "size": "mobile",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-menu-mobile.png",
+      "evidence_id": "ev_297162caf9ba0cc54abf7323f17c098d5d937ce2bb211b8ce2dd31b0942571b6",
+      "sha256": "dd3f8f571cd781ccc4a2e1d6d7f6b3aa9737704024a4fcbdd765644fdbb7f30b",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "click",
+          "status": "completed"
+        },
+        {
+          "action": "press",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "intro",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": false
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-intro-desktop.png",
+      "evidence_id": "ev_f92fe9a06299a0b3204168b4412db0a1c0c256d84435abf9d5802cbe8c50b267",
+      "sha256": "a54021e28cfdd603a503f3c8c360243675f45f0ad3192424fca472096152aa0c",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "portal",
+      "size": "desktop",
+      "measured_before_capture": {
+        "url": "http://127.0.0.1:3200/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": false
+      },
+      "file": "reference-web/evidence/2026-10-28/supa-portal-desktop.png",
+      "evidence_id": "ev_50e1fd9411d7a77213dd98011f3ba8b1f10884ffcaf55ffcf9bc4c543c79f388",
+      "sha256": "96b482d1a5554c8cc1b2281b2207b5f119b8e0ba899737d76db13da83af6278f",
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "click",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "command",
+      "size": "desktop",
+      "file": "reference-web/evidence/2026-10-28/supa-command-desktop.png",
+      "evidence_id": "ev_e0530c92b84dfc0d35112e10063358b836a41a0fd61b0930652835da6f21a7b4",
+      "sha256": "cd3fdcf5ac2ad097d1b96b690b6988a1d1703cf20b854c8f9913d7a1cd8dfe5f",
+      "measured_before_capture": {
+        "width": 1440,
+        "height": 1000
+      },
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "click",
+          "status": "completed"
+        },
+        {
+          "action": "fill",
+          "status": "completed"
+        },
+        {
+          "action": "press",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "section": "disconnected",
+      "size": "desktop",
+      "file": "reference-web/evidence/2026-10-28/supa-disconnected-desktop.png",
+      "evidence_id": "ev_1d35d3c58c2b1195e5e51149356c46187470b980dc194011fa08665b89316570",
+      "sha256": "9441ef07eb03f7a41e3e15c92ff1cc72f810b19ca447ec185203d6d32b7d1418",
+      "measured_before_capture": {
+        "width": 1440,
+        "height": 1000
+      },
+      "coverage": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "action": "goto_start",
+          "status": "completed"
+        },
+        {
+          "action": "wait_for_timeout",
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "id": "ev_711d9caee460b0104e4396e975e3b6dd3cd87795a411ba39c913a6087d70f039",
+    "result": {
+      "before": {
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "width": 1440,
+        "height": 1000
+      },
+      "channel_threshold": 0,
+      "limitations": [
+        "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+        "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+        "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+      ],
+      "status": "different",
+      "compared_pixels": 1440000,
+      "changed_pixels": 178308,
+      "changed_ratio": 0.123825,
+      "maximum_channel_delta": 220,
+      "mean_absolute_channel_delta": 3.384567013888889
+    },
+    "limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+      "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+      "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+    ]
+  },
+  "validation": {
+    "browser_full_suite": {
+      "passed": 78,
+      "failed": 0,
+      "skipped": 0,
+      "retries": 0
+    },
+    "final_focused_suite": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "retries": 0
+    },
+    "adapter_unit_tests": {
+      "passed": 9,
+      "failed": 0
+    },
+    "syntax": "passed",
+    "static_build": "passed",
+    "detector": {
+      "findings": 0,
+      "advisories": 0,
+      "old_demo_ignore_removed": true
+    },
+    "live_backend": {
+      "health": 200,
+      "agents": 1,
+      "resources": {
+        "goals": 0,
+        "memory": 0,
+        "activity": 5,
+        "cycles": 0,
+        "actions": 0,
+        "financials": "validated",
+        "simulated_ledger": 0,
+        "social": 0,
+        "drafts": 0,
+        "wallet": "validated",
+        "balances": "validated",
+        "treasury": "validated",
+        "payments": 0
+      },
+      "methods": "GET only"
+    }
+  },
+  "limitations": [
+    "REA capture completeness is incomplete: events unavailable. No runtime equality or complete console/network coverage is claimed.",
+    "Physical viewport was measured before each final capture because REA disconnect restores browser metrics.",
+    "Final mobile Home/Menu include the last 44px native-select refinement; other section screenshots precede that small control-height change.",
+    "Screenshots are public views, not private evaluation artifacts; populated private records are covered with synthetic fixture tests.",
+    "Chromium only; no screen-reader certification, production performance benchmark or new chain verification.",
+    "Pixel differences include new content, card previews and diagram/readability adjustments; they are not a semantic fidelity score."
+  ]
+}
+
