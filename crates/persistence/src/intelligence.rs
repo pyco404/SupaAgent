@@ -16,6 +16,15 @@ impl Store {
         let reservation = policy.reservation()?;
         let mut tx = self.pool.begin().await.map_err(db)?;
         let a = live(&mut tx, id, cycle).await?;
+        let managed: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1)")
+                .bind(id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db)?;
+        if managed && (policy.live || purpose != "plan" || simulated_cost != 1000) {
+            return Err(Error::Denied);
+        }
         let rows = sqlx::query("SELECT policy,usage,status FROM inference_calls WHERE cycle_id=$1")
             .bind(cycle)
             .fetch_all(&mut *tx)
