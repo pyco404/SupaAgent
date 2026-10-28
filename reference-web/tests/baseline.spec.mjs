@@ -460,3 +460,21 @@ test('intro pointer follows the mouse from the code mascot and survives entry', 
   await page.locator('.brand').click();await expect(page.locator('body')).toHaveAttribute('data-view','intro');await page.mouse.move(320,240);await expect(tether).toHaveAttribute('data-active','true');
   await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointermove',{clientX:100,clientY:200,pointerType:'touch'})));await expect(tether).toHaveAttribute('data-active','false');
 });
+
+test('hands switch between mouse and typing while a second tether follows screen text', async ({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});await open(page,'/');
+  const intro=page.locator('.intro-canvas'),tether=page.locator('.pointer-tether');
+  await page.mouse.move(150,300);await expect(intro).toHaveAttribute('data-right-hand','mouse');await expect(intro).toHaveAttribute('data-left-hand','keyboard');
+  await expect(tether).toHaveAttribute('data-typing-active','true');await expect(tether).toHaveAttribute('data-active','true');
+  const keyboardBounds=await intro.getAttribute('data-keyboard-bounds');
+  await expect(intro).toHaveAttribute('data-right-hand','keyboard');expect(await intro.getAttribute('data-keyboard-bounds')).toBe(keyboardBounds);await expect(intro).toHaveAttribute('data-hand-state','typing');
+  await open(page,'/site/#about');const hands=page.locator('.workspace-hands');
+  await expect(hands).toBeVisible();await expect(hands).toHaveAttribute('data-hand-state','typing');
+  await expect(tether).toHaveAttribute('data-typing-active','true');
+  const target=await tether.evaluate(canvas=>canvas.dataset.typingEndpoints.split(',').map(Number));const buffer=await page.locator('.buffer').boundingBox();
+  expect(target[2]).toBeGreaterThanOrEqual(buffer.x);expect(target[2]).toBeLessThanOrEqual(buffer.x+buffer.width);expect(target[3]).toBeGreaterThan(buffer.y);expect(target[3]).toBeLessThan(buffer.y+buffer.height);
+  await page.mouse.move(170,310);await expect(hands).toHaveAttribute('data-right-hand','mouse');await expect(hands).toHaveAttribute('data-right-hand','keyboard');
+  await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointermove',{clientX:180,clientY:320,pointerType:'touch'})));await expect(hands).toHaveAttribute('data-right-hand','keyboard');
+  await page.emulateMedia({reducedMotion:'reduce'});await expect(hands).toHaveAttribute('data-hand-state','idle');
+  expect(await hands.evaluate(canvas=>getComputedStyle(canvas).pointerEvents)).toBe('none');
+});
