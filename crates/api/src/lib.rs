@@ -23,6 +23,8 @@ pub struct AppState {
     token: Arc<String>,
     pub gate: Arc<Semaphore>,
     pub wallets: Option<supa_runtime::wallet::WalletService>,
+    /// Identity-only scope for persisted wallet observations; grants no RPC, vault or write access.
+    pub wallet_read_operator: Option<Uuid>,
 }
 impl AppState {
     pub fn new(store: Store, runtime: Runtime, token: String) -> Result<Self> {
@@ -39,6 +41,7 @@ impl AppState {
             token: Arc::new(token),
             gate: Arc::new(Semaphore::new(1)),
             wallets: None,
+            wallet_read_operator: None,
         })
     }
 }
@@ -98,6 +101,7 @@ pub fn router(state: AppState) -> Router {
         .route("/agents/{id}/simulated-ledger", get(ledger))
         .layer(DefaultBodyLimit::max(16 * 1024))
         .route_layer(middleware::from_fn_with_state(state.clone(), auth))
+        .route("/ready", get(ready))
         .with_state(state)
 }
 pub struct ApiError(Error);
@@ -129,6 +133,17 @@ impl IntoResponse for ApiError {
     }
 }
 type ApiResult = std::result::Result<Json<Value>, ApiError>;
+// Separate, unauthenticated readiness endpoint: no agent/configuration data.
+async fn ready(State(s): State<AppState>) -> (StatusCode, Json<Value>) {
+    if s.store.ping().await.is_ok() {
+        (StatusCode::OK, Json(json!({"status":"ready"})))
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"status":"unavailable"})),
+        )
+    }
+}
 async fn health(State(s): State<AppState>) -> ApiResult {
     s.store.ping().await?;
     Ok(Json(
