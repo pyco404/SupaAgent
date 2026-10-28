@@ -1,4 +1,5 @@
 import "server-only";
+import { operatorToken } from "./auth";
 import { schemas } from "./contracts";
 import { z } from "zod";
 
@@ -23,11 +24,11 @@ export function resolveResource(parts: string[]): { path: string; schema: z.ZodT
   return null;
 }
 
-export async function readBackend(parts: string[]): Promise<Response> {
+export async function readBackend(parts: string[], authorization:string|null=null): Promise<Response> {
   const resource = resolveResource(parts);
   const fail = (error: string, status: number) => Response.json({ error }, { status, headers: noCache });
   if (!resource) return fail("read_not_permitted", 403);
-  const raw = process.env.SUPA_BACKEND_URL, token = process.env.SUPA_API_TOKEN;
+  const raw = process.env.SUPA_BACKEND_URL, token = operatorToken(authorization);
   if (!raw || !token) return fail("backend_not_configured", 503);
   let base: URL;
   try {
