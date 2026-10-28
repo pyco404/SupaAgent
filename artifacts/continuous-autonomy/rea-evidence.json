@@ -1,0 +1,521 @@
+{
+  "scenario": {
+    "evidence_id": "ev_f6a1e41112005ac5f3d9c181f4ebe434742c51c4765f101982618813702310de",
+    "subject": null,
+    "provider": {
+      "id": "rea-playwright-browser-scenario",
+      "name": "REA Playwright browser scenario capture provider",
+      "version": "1"
+    },
+    "analysis_profile": null,
+    "predicate_type": "rea.browser-scenario-capture",
+    "operation": "capture_browser_scenario",
+    "parameters": {
+      "browser": {
+        "mode": "connect",
+        "cdp_endpoint": "http://127.0.0.1:9243",
+        "target_id": "30595A191958BA023217A5E7BF5901F2"
+      },
+      "start_url": {
+        "url": "http://127.0.0.1:42235/site/#intelligence",
+        "query": []
+      },
+      "environment": {
+        "viewport": {
+          "width": 1440,
+          "height": 1000,
+          "device_scale_factor": 1
+        },
+        "locale": "en-US",
+        "timezone": "UTC",
+        "color_scheme": "dark",
+        "reduced_motion": "reduce",
+        "service_workers": "block"
+      },
+      "actions": [
+        {
+          "step_id": "wait-saved-lifecycle",
+          "action": "wait_for",
+          "locator": {
+            "kind": "css",
+            "selector": ".schedule-panel summary"
+          },
+          "state": "visible"
+        },
+        {
+          "step_id": "expand-lifecycle",
+          "action": "click",
+          "locator": {
+            "kind": "css",
+            "selector": ".schedule-panel summary"
+          },
+          "button": "left",
+          "click_count": 1
+        },
+        {
+          "step_id": "reload-saved-status",
+          "action": "click",
+          "locator": {
+            "kind": "role",
+            "role": "button",
+            "name": "Reload saved schedule"
+          },
+          "button": "left",
+          "click_count": 1
+        },
+        {
+          "step_id": "wait-reloaded-status",
+          "action": "wait_for",
+          "locator": {
+            "kind": "css",
+            "selector": ".schedule-panel summary"
+          },
+          "state": "visible"
+        },
+        {
+          "step_id": "inspect-reloaded-lifecycle",
+          "action": "click",
+          "locator": {
+            "kind": "css",
+            "selector": ".schedule-panel summary"
+          },
+          "button": "left",
+          "click_count": 1
+        }
+      ],
+      "storage": {
+        "cookies": [],
+        "local_storage": [],
+        "session_storage": []
+      },
+      "secrets": [],
+      "capture": {
+        "after_each_step": [],
+        "at_end": [
+          "url"
+        ],
+        "events": [],
+        "network": {
+          "request_body": false,
+          "response_body": false,
+          "header_values": false
+        },
+        "limits": {
+          "max_events": 10000,
+          "max_event_allocation_bytes": 4194304,
+          "max_total_event_allocation_bytes": 16777216,
+          "max_network_transactions": 1024,
+          "max_network_body_bytes": 65536,
+          "max_network_body_allocation_bytes": 1048576,
+          "max_network_header_allocation_bytes": 1048576,
+          "max_network_metadata_allocation_bytes": 1048576
+        }
+      },
+      "scenario_sha256": "8f19d2d8d3ec1e383601cb9563fa440d37fc630da66b2add652d2e428496388a"
+    },
+    "raw_result": null,
+    "normalized_result": {
+      "browser": {
+        "mode": "connect",
+        "process_ownership": "external",
+        "cleanup": "disconnected-external",
+        "product": "Chromium",
+        "version": "146.0.7680.177"
+      },
+      "scenario": {
+        "start_origin": "http://127.0.0.1:42235",
+        "action_count": 5,
+        "secret_references": [],
+        "network_content": {
+          "request_body": false,
+          "response_body": false,
+          "header_values": false
+        },
+        "event_families": [],
+        "limits": {
+          "max_events": 10000,
+          "max_event_allocation_bytes": 4194304,
+          "max_total_event_allocation_bytes": 16777216,
+          "max_network_transactions": 1024,
+          "max_network_body_bytes": 65536,
+          "max_network_body_allocation_bytes": 1048576,
+          "max_network_header_allocation_bytes": 1048576,
+          "max_network_metadata_allocation_bytes": 1048576
+        }
+      },
+      "duration_ms": 2167,
+      "steps": [
+        {
+          "step_index": 0,
+          "step_id": "scenario_start",
+          "action": "goto_start",
+          "elapsed_ms": 1020,
+          "before_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "not_requested"
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_index": 1,
+          "step_id": "wait-saved-lifecycle",
+          "action": "wait_for",
+          "elapsed_ms": 212,
+          "before_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "not_requested"
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_index": 2,
+          "step_id": "expand-lifecycle",
+          "action": "click",
+          "elapsed_ms": 130,
+          "before_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "not_requested"
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_index": 3,
+          "step_id": "reload-saved-status",
+          "action": "click",
+          "elapsed_ms": 157,
+          "before_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "not_requested"
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_index": 4,
+          "step_id": "wait-reloaded-status",
+          "action": "wait_for",
+          "elapsed_ms": 176,
+          "before_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "not_requested"
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_index": 5,
+          "step_id": "inspect-reloaded-lifecycle",
+          "action": "click",
+          "elapsed_ms": 101,
+          "before_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:42235/site#intelligence",
+            "origin": "http://127.0.0.1:42235",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "captured",
+              "value": {
+                "url": "http://127.0.0.1:42235/site#intelligence",
+                "origin": "http://127.0.0.1:42235",
+                "query_parameter_names": [],
+                "redacted": false
+              }
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "events": {
+        "retained": 0,
+        "dropped": 0,
+        "items": [],
+        "omissions": {
+          "by_kind": [],
+          "network_transactions": [],
+          "network_transaction_range": null
+        }
+      },
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "limitations": [
+        "Event sequence records provider receipt order; simultaneous browser causality is not inferred.",
+        "Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.",
+        "Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.",
+        "Network content reads settle within 5 seconds each and the observer does not request bodies from unfinished responses.",
+        "Playwright scenario events do not expose request initiator stacks; receipt order does not prove causality.",
+        "Storage values are hashed only after declared-secret redaction.",
+        "CDP attachment cannot recover pre-attach events or guarantee launch-time context options.",
+        "Attached locale en-US applies to Intl formatting only; navigator.language(s) and Accept-Language remain caller-controlled. Use launch mode for matching page and request languages.",
+        "Detaching a CDP page session may clear caller-owned navigator.platform emulation. REA cannot snapshot the caller's complete user-agent/client-hint state before attachment; use launch mode to avoid mutating that external browser."
+      ]
+    },
+    "confidence": "observed",
+    "authority": "controlled-replay",
+    "environment": {
+      "id": "Chromium@146.0.7680.177",
+      "platform": "unknown",
+      "architecture": "unknown",
+      "isolation": "none"
+    },
+    "limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "Event sequence records provider receipt order; simultaneous browser causality is not inferred.",
+      "Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.",
+      "Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.",
+      "Network content reads settle within 5 seconds each and the observer does not request bodies from unfinished responses.",
+      "Playwright scenario events do not expose request initiator stacks; receipt order does not prove causality.",
+      "Storage values are hashed only after declared-secret redaction.",
+      "CDP attachment cannot recover pre-attach events or guarantee launch-time context options.",
+      "Attached locale en-US applies to Intl formatting only; navigator.language(s) and Accept-Language remain caller-controlled. Use launch mode for matching page and request languages.",
+      "Detaching a CDP page session may clear caller-owned navigator.platform emulation. REA cannot snapshot the caller's complete user-agent/client-hint state before attachment; use launch mode to avoid mutating that external browser.",
+      "Browser host platform and architecture were not observed."
+    ],
+    "relationship_coverage": null,
+    "locations": [],
+    "evidence_links": []
+  },
+  "screenshots": [
+    {
+      "evidence_id": "ev_8cc452175bbbab622db0fd81b04a12e7ae0b268e1c268fda61431a4b33762aa5",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "62d78fa5959c23c26ca4f2a2a2b48207eae9ef36a09f173a97fdc04f03387b94",
+      "filename": "rea-desktop.png",
+      "captured_at": "2026-10-28T21:56:05.417Z"
+    },
+    {
+      "evidence_id": "ev_c0e9798661f763b88bb2703ce88f01cb4f028198e5647021d2fc1a0490001bdd",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "06ef70c025058f5728eaf5cc192dacf0cce5dd60f581c486a2b8ac4f8992b497",
+      "filename": "rea-mobile.png",
+      "captured_at": "2026-10-28T21:56:51.601Z"
+    }
+  ],
+  "scope": "Real isolated scheduler test data. REA navigated, expanded controls and reloaded saved state; authorized lifecycle mutations were performed by the real end-to-end browser harness. No live inference or transactions."
+}
