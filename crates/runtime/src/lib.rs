@@ -1,4 +1,5 @@
 pub mod evaluation;
+pub mod health;
 pub mod wallet;
 use std::{sync::Arc, time::Duration};
 use supa_capabilities::{REGISTRY, audit_name, authorize};
@@ -11,15 +12,25 @@ use uuid::Uuid;
 pub struct Runtime {
     pub store: Store,
     reasoner: Arc<dyn Reasoner>,
+    worker: Option<Uuid>,
 }
 impl Runtime {
     pub fn new(store: Store, reasoner: Arc<dyn Reasoner>) -> Self {
-        Self { store, reasoner }
+        Self {
+            store,
+            reasoner,
+            worker: None,
+        }
+    }
+    pub fn with_worker(mut self, worker: Uuid) -> Self {
+        self.worker = Some(worker);
+        self
     }
     pub async fn cycle(&self, id: Uuid, scheduled: bool) -> Result<Uuid> {
         if self.store.schedule_status(id).await?.policy.is_some() {
             // A configured live/manual provider is never selected for managed schedules.
-            let offline = Runtime::new(self.store.clone(), Arc::new(supa_providers::Offline));
+            let mut offline = Runtime::new(self.store.clone(), Arc::new(supa_providers::Offline));
+            offline.worker = self.worker;
             return offline.cycle_inner(id, scheduled, None).await;
         }
         self.cycle_inner(id, scheduled, None).await
@@ -96,7 +107,10 @@ impl Runtime {
         scheduled: bool,
         requested: Option<Plan>,
     ) -> Result<Uuid> {
-        let cycle = self.store.begin_cycle(id, scheduled).await?;
+        let cycle = self
+            .store
+            .begin_cycle_for(id, scheduled, self.worker)
+            .await?;
         tracing::info!(agent_id=%id,cycle_id=%cycle,"cycle_started");
         let outcome =
             tokio::time::timeout(Duration::from_secs(180), self.run(id, cycle, requested))
@@ -310,8 +324,21 @@ impl Runtime {
     /// Restarts recover only expired work; persisted lifecycle state is never changed.
     /// Sequential scheduling bounds provider concurrency to one autonomous call per process.
     pub async fn tick(&self) -> Result<()> {
+        if let Some(worker) = self.worker {
+            self.store.worker_tick(worker, false, None).await?;
+        }
+        let result = self.tick_inner().await;
+        if let Some(worker) = self.worker {
+            self.store
+                .worker_tick(worker, true, result.as_ref().err())
+                .await?;
+        }
+        result
+    }
+    async fn tick_inner(&self) -> Result<()> {
         self.store.recover().await?;
-        for id in self.store.due_agents().await? {
+        // One cycle per tick bounds progress reporting; due-time ordering preserves fairness.
+        for id in self.store.due_agents().await?.into_iter().take(1) {
             if let Err(e) = self.cycle(id, true).await {
                 tracing::warn!(agent_id=%id,error_code=%e,"scheduled_cycle_failed");
             }
