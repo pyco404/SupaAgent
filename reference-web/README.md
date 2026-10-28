@@ -277,3 +277,32 @@ Evidence IDs: `ev_d570b8980a82cea3c3b2b5d17c94d9be433337cccab67f69f6e8847b84dc31
 and `ev_241c4f433207faf60ee7c42adfc6cec87ac6c31b5273042060fd6c5359f20660`.
 The mouse capture uses controlled CDP movement; the keyboard capture follows its
 cessation. Screenshots establish appearance; automated browser tests verify timing.
+
+### Illustrated navigation wheel
+
+Nine section-specific vector schematics replace the repeated truncated text
+marks. Agents shows identity records; Intelligence shows branching reasoning;
+Memory shows indexed layers; Economy separates SIM and DEVNET; Social shows a
+draft; planned Trading, Token Launch and Factory use gated/paused diagrams;
+About shows Rust/PostgreSQL/API architecture. Home retains the approved code
+mascot. These are navigation illustrations, not captured activity or metrics.
+All art is authored locally in one SVG symbol sheet; no reference artwork is used.
+
+Full section names appear below the previews. Planned destinations retain their
+accessible full labels and get a separate visible “planned” line. The tilted
+wheel keeps scroll, drag, keyboard selection, focus behavior and reduced motion.
+Clustered branch fibers replace uniform branchlets, with fine connectors to each
+card's transformed edge. Branchwork redraws only during navigation/resize, not
+on a new idle animation loop. Mobile centers the wheel within its full-screen
+navigation overlay while preserving close/Escape/focus controls.
+
+Syntax/build and 21 focused desktop/tablet/mobile browser tests passed. After the
+mobile centering adjustment, four focused mobile checks and an explicit centered
+selection assertion passed. Tests cover local symbol loading, nine distinct
+previews, full names, planned labels, scrolling, focus and overflow.
+REA inspected actual calibrated viewports (1440×1000 / 390×844):
+[desktop](evidence/2026-10-28/supa-illustrated-wheel-desktop.png) /
+[mobile menu](evidence/2026-10-28/supa-illustrated-wheel-mobile.png).
+Evidence IDs: `ev_4302d7507dbedb5480b5f11d3efabe89cc9392d24faaf1a86ff39992c374f65b`
+and `ev_564b30ec4bed9e697e6c40da61255bfe1cb4c6c34b52c032c56d543916c140d5`.
+Screenshots establish appearance; automated browser checks verify interaction.
