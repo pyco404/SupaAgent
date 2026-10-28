@@ -478,3 +478,20 @@ test('hands switch between mouse and typing while a second tether follows screen
   await page.emulateMedia({reducedMotion:'reduce'});await expect(hands).toHaveAttribute('data-hand-state','idle');
   expect(await hands.evaluate(canvas=>getComputedStyle(canvas).pointerEvents)).toBe('none');
 });
+
+test('wheel uses distinct section schematics and full planned labels',async({page,request})=>{
+  await open(page,'/site/#about');
+  if(page.viewportSize().width<=700)await page.locator('.tabline').click();
+  const source=await request.get('/public/assets/navigation-previews.svg');expect(source.status()).toBe(200);expect(source.headers()['content-type']).toContain('image/svg+xml');
+  const previews=page.locator('.wheel-preview use');await expect(previews).toHaveCount(9);
+  const references=await previews.evaluateAll(nodes=>nodes.map(node=>node.getAttribute('href')));expect(new Set(references).size).toBe(9);
+  expect(references.every(value=>value.startsWith('/public/assets/navigation-previews.svg#'))).toBe(true);
+  await expect(page.locator('.wheel-item[data-index="2"] .wheel-name')).toHaveText('Intelligence');
+  await expect(page.locator('.wheel-item[data-index="7"] .wheel-name')).toHaveText('Token Launch');
+  await expect(page.locator('.wheel-planned')).toHaveCount(3);
+  for(const index of [6,7,8])await expect(page.locator(`.wheel-item[data-index="${index}"] .wheel-planned`)).toHaveText('planned');
+  await expect.poll(()=>page.locator('.wheel-item[data-index="9"] use').evaluate(use=>use.getBBox().width)).toBeGreaterThan(0);
+  await expect(page.locator('.wheel-item[data-index="9"]')).toHaveAttribute('aria-selected','true');
+  if(page.viewportSize().width<=700){const selected=await page.locator('.wheel-item[data-index="9"]').boundingBox();expect(Math.abs(selected.x+selected.width/2-page.viewportSize().width/2)).toBeLessThan(5);}
+  const name=page.locator('.wheel-item[data-index="9"] .wheel-name');expect(await name.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+});
