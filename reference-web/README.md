@@ -210,3 +210,24 @@ captured the real local viewport after Playwright moved the mouse:
 Screenshot evidence IDs: `ev_82a9679c4f85dc421a408991370fa36dee5b9ce3e7a53e48f5c5158a169dd033`
 and `ev_b3ed94db5acd6b0a59dbc2f03382d614fbe5e70cafeb5002f14ff0818b23cbbb`.
 REA screenshots establish appearance; automated browser assertions verify behavior.
+
+### Animated decorative branches
+
+The architecture canvas now gently sways around its fixed root, with small
+highlights following the existing cubic branches. The warm terminal palette,
+shape, statistics and explicit “not runtime activity” label remain intact.
+This is decorative motion, independent of transactions, balances or agent events.
+The footer command panel includes a keyboard-accessible Pause/Play diagram toggle.
+Reduced motion renders a stable diagram; animation time freezes offscreen, during
+portal transitions and in hidden tabs, without catching up on return. It reuses
+the existing capped canvas frame loop and adds no animation dependency.
+
+Syntax/build and 15 focused browser tests passed across desktop, tablet and mobile.
+Tests compare actual painted pixels, verify pause/resume and offscreen freezing,
+and confirm reduced motion remains static. Command access, clean workspace,
+pointer interaction and responsive fit also pass. REA screenshots of the local
+running animation: [desktop](evidence/2026-10-28/supa-animated-branches-desktop.png) /
+[mobile](evidence/2026-10-28/supa-animated-branches-mobile.png).
+Evidence IDs: `ev_fa5cff7184049adec7499deb8a52ddcc57308a75c321a31c9ffa52279a9dd2a1`
+and `ev_d2b78c22bb05680b24dad08fddbd1e8cb617e16c2c9866e43c0cdea23410a228`.
+Screenshots establish appearance; browser pixel comparisons establish motion.
