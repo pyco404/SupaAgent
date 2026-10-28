@@ -40,3 +40,10 @@ test('schedule controls enforce operator scope revisions and offline response co
   assert.equal(calls,0);const ok=await runAutonomy(path,headers,JSON.stringify(command),fetcher);assert.equal(ok.status,200);assert.deepEqual(ok.body,view);
   assert.equal((await runAutonomy(path,headers,JSON.stringify(command),async()=>Response.json({...view,paid_requests_enabled:true}))).status,502);
 });
+test('renewal requires fresh finite goals and consent; unknown actor claims cannot be forwarded',async()=>{
+  const path=`/api/agents/${id}/schedule`,command={request_id:id,expected_revision:9,operation:'renew',authorize_offline:true,consented_at:new Date().toISOString(),reason:'Fresh renewal approval',policy:{goal_ids:[id],interval_seconds:5,max_cycles:2,simulated_budget_microusd:2200,valid_for_seconds:60}};
+  const view={agent_id:id,lifecycle:'active',revision:10,enabled:true,policy:command.policy,cycles_started:0,reserved_microusd:0,expires_at:'2026-10-28T23:00:00Z',next_cycle_at:'2026-10-28T22:00:00Z',last_error:null,mode:'offline',simulated:true,paid_requests_enabled:false};
+  let calls=0;const fetcher=async(url,options)=>{calls++;assert.deepEqual(JSON.parse(options.body),command);assert.equal(options.headers['x-supa-role'],undefined);return Response.json(view);};
+  for(const bad of [{...command,policy:null},{...command,authorize_offline:false},{...command,approved_by:id},{...command,role:'owner'},{...command,policy:{...command.policy,goal_ids:[]}}])assert.equal((await runAutonomy(path,headers,JSON.stringify(bad),fetcher)).status,400);
+  assert.equal(calls,0);assert.equal((await runAutonomy(path,headers,JSON.stringify(command),fetcher)).status,200);assert.equal(calls,1);
+});
