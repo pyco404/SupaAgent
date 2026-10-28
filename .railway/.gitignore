@@ -1,0 +1,5 @@
+/node_modules/
+.env*
+*.local
+*-plan.json
+railway-plan.json
