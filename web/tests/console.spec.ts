@@ -46,6 +46,7 @@ test("loading, sanitized error and recovery states are explicit", async ({ page 
   await expect(page.getByRole("heading", { name: "Reading the record…" })).toBeVisible();
   release();
   await expect(page.getByRole("heading", { name: "This record is unavailable" })).toBeVisible();
+  await page.getByText("Connection details", { exact: true }).click();
   await expect(page.getByText("backend_contract_invalid", { exact: true })).toBeVisible();
 });
 
@@ -91,7 +92,9 @@ test.describe("fixture API components (synthetic, not Devnet evidence)", () => {
     await expect(page.getByText("Authorization / allowed")).toBeVisible();
   });
   test("social renders exact draft text separately from provenance and rejection codes", async ({ page }) => {
+    const savedDecisions = page.waitForResponse(response => response.url().endsWith(`/agents/${agentId}/social`) && response.ok());
     await page.goto("/social");
+    await savedDecisions;
     await expect(page.locator(".draft-text")).toHaveText("TEST FIXTURE: My simulated budget has boundaries. So does my enthusiasm for invoices.");
     await expect(page.getByText("Supa chose not to post.")).toBeVisible();
     await expect(page.getByText("Rejected fixture text must not be shown", { exact: false })).toHaveCount(0);
@@ -107,7 +110,8 @@ for (const route of ["trading", "launch", "factory"]) {
     const mutations: string[] = [];
     page.on("request", request => { if (!["GET", "HEAD"].includes(request.method())) mutations.push(request.method()); });
     await page.goto(`/${route}`);
-    await expect(page.getByText("NON-EXECUTABLE PLACEHOLDER.")).toBeVisible();
+    await expect(page.getByText("PLANNED CAPABILITY.")).toBeVisible();
+    await page.getByText("Explore the non-executable concept", { exact: true }).click();
     for (const input of await page.locator("main input, main select, main textarea, main button").all()) await expect(input).toBeDisabled();
     expect(mutations).toEqual([]);
   });
