@@ -2,7 +2,11 @@
 // No reference scripts, filmed portrait or tracking code are included.
 export function createScenes({ intro, blueprint, entity, transition, spark, reduced, data }) {
   let mode = 'intro', frame = 0, previous = 0, warpStart = 0, warpResolve, input = '', selected = 0, worm = false;
-  const pointer = { x: .5, y: .5 };
+  const pointer = { x: .5, y: .5, visible: false };
+  const tether = document.createElement('canvas');
+  tether.className='pointer-tether';tether.setAttribute('aria-hidden','true');
+  tether.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:8';
+  document.body.append(tether);
   let introProgress = 0, introTime = null, handBeat = -1, handKey = "";
   const contexts = new Map();
   const portalBrand = document.querySelector('.portal-brand');
@@ -196,6 +200,17 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     view.ctx.font = '7px Plex,monospace'; view.ctx.globalAlpha = .6;
     view.ctx.fillText(`${worm ? 'worm: awake' : 'eye: tracking'} · ${input.slice(-8)}`, 12, view.h - 10); view.ctx.globalAlpha = 1;
   }
+  function drawPointer() {
+    const view=fit(tether);if(!view)return;
+    tether.dataset.active=String(pointer.visible&&mode==='projects'&&!warpStart);
+    if(tether.dataset.active!=='true')return;
+    const box=entity.getBoundingClientRect(),x=pointer.x*innerWidth,y=pointer.y*innerHeight;
+    const startX=box.left+box.width*.5,startY=box.top+box.height*.4;
+    const {ctx}=view;ctx.globalAlpha=.6;ctx.lineWidth=1;
+    ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(startX,startY);ctx.lineTo(x,y);ctx.stroke();
+    ctx.setLineDash([]);ctx.strokeRect(x-9,y-6,18,12);
+    tether.dataset.endpoints=[startX,startY,x,y].join(',');
+  }
   function drawSpark() {
     const view = fit(spark); if (!view) return;
     const rows = data.days.slice(-56), max = Math.max(1, ...rows.map(d => d.count ?? 0));
@@ -239,16 +254,18 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   }
   function draw(time = performance.now()) {
     if (mode === 'intro') drawIntro(time); else { drawEntity(time); if (worm) { const p = fit(spark); if (p) { p.ctx.fillStyle = ink(); p.ctx.fillRect(((time / 20) % p.w), 8, 3, 3); } } }
+    drawPointer();
     if (warpStart) drawWarp(time);
   }
   function tick(time) { frame = 0; if (document.hidden) return; if(document.documentElement.dataset.motion!==(reduced.matches?'still':'running')){motionChange();return;} if (time - previous > 33) { draw(time); previous = time; } if (!reduced.matches || warpStart) frame = requestAnimationFrame(tick); }
   function schedule() { if (document.hidden) return; if (reduced.matches && !warpStart) draw(); else if (!frame) frame = requestAnimationFrame(tick); }
   function resize() { drawBlueprint(); drawSpark(); draw(); schedule(); }
-  function pointerMove(e) { pointer.x = e.clientX / innerWidth; pointer.y = e.clientY / innerHeight; schedule(); }
+  function pointerMove(e) { pointer.x = e.clientX / innerWidth; pointer.y = e.clientY / innerHeight; pointer.visible=e.pointerType!=='touch';schedule(); }
+  function pointerLeave() { pointer.visible=false;schedule(); }
   function visibility() { introTime=null; if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
   function motionChange() { document.documentElement.dataset.motion = reduced.matches ? 'still' : 'running'; if (reduced.matches) { cancelAnimationFrame(frame); frame = 0; if (warpResolve) finishWarp(true); } resize(); }
   const observer = new ResizeObserver(resize); [intro, blueprint, entity, spark].forEach(c => observer.observe(c));
-  window.addEventListener('pointermove', pointerMove, { passive: true }); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
+  window.addEventListener('pointermove', pointerMove, { passive: true });document.documentElement.addEventListener('pointerleave',pointerLeave);window.addEventListener('blur',pointerLeave); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
     setMode(value) { mode = value; if(value==='intro'){introProgress=0;handBeat=-1;handKey='';}introTime=null;resize(); },
     setCode(text) { code=String(text).split('\n').slice(0,500);introProgress=0;introTime=null;handBeat=-1;handKey='';resize(); },
@@ -258,7 +275,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     redraw: resize,
     warp() { if (reduced.matches) return Promise.resolve(true); if (warpResolve) return Promise.resolve(false); return new Promise(resolve => { warpResolve = resolve; warpStart = performance.now(); transition.dataset.progress='0';drawWarp(warpStart);transition.classList.add('active');schedule(); }); },
     cancelWarp() { finishWarp(false); },
-    destroy() { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('pointermove', pointerMove); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); finishWarp(false); },
+    destroy() { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('pointermove', pointerMove);document.documentElement.removeEventListener('pointerleave',pointerLeave);window.removeEventListener('blur',pointerLeave);tether.remove(); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); finishWarp(false); },
   };
 }
 function format(value) { return Number(value).toLocaleString('en-US').replaceAll(',', "'"); }
