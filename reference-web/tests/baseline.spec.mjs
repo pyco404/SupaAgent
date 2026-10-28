@@ -1,8 +1,10 @@
 import { test, expect } from "../../web/node_modules/@playwright/test/index.mjs";
+import { readFileSync } from "node:fs";
 
 const navigationFocus = page => page.locator(page.viewportSize().width <= 700 ? "button.tabline" : ".wheel");
 async function open(page, path) {
-  await page.goto(path);
+  // Remote preview art is optional; interaction readiness comes from the local app.
+  await page.goto(path, { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
 }
 
@@ -77,7 +79,7 @@ test("project hashes restore direct and nested project selections", async ({ pag
   await expect(page).toHaveURL(/\/site\/#GitHub-Traffic-Board$/i);
   await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("aria-label", "more/");
   await expect(page.locator(".buffer")).toContainText("open GitHub-Traffic-Board");
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
   await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("aria-label", "more/");
   await expect(page.locator(".buffer")).toContainText("open GitHub-Traffic-Board");
@@ -90,7 +92,7 @@ test("dark palette survives reload and live motion preference changes are respec
   await page.locator(".theme-key").click();
   await expect.poll(background).not.toBe(original);
   const chosen = await background();
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
   expect(await background()).toBe(chosen);
   const rgb = await page.locator("body").evaluate(element => getComputedStyle(element).backgroundColor);
@@ -156,6 +158,44 @@ test("opening uses one file status bar and keeps it inside the viewport", async 
   await page.locator(".enter").click();
   await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
   await expect(status).toBeHidden();
+});
+
+test("Supa backdrop preserves the approved pixel mask and stays behind readable code", async ({ page, request }) => {
+  await open(page, "/");
+  const logo=page.locator(".intro-mascot");
+  await expect(logo).toBeVisible();
+  const source=readFileSync(new URL("../../web/src/components/visuals.tsx", import.meta.url),"utf8");
+  const original=source.slice(source.indexOf("export function PixelMark"),source.indexOf("const stages"));
+  const paths=[...original.matchAll(/<path d="([^"]+)"/g)].map(match=>match[1]);
+  expect(paths).toHaveLength(2);
+  const comparison=await logo.evaluate(async (image, paths)=>{
+    await image.decode();
+    const results=[];
+    for(const size of [24,48,96]){
+      const actual=document.createElement("canvas"),expected=document.createElement("canvas");
+      actual.width=actual.height=expected.width=expected.height=size;
+      const a=actual.getContext("2d"),e=expected.getContext("2d");
+      a.fillStyle=e.fillStyle="#0c0c0c";a.fillRect(0,0,size,size);e.fillRect(0,0,size,size);
+      a.imageSmoothingEnabled=false;a.drawImage(image,0,0,size,size);
+      e.scale(size/24,size/24);e.fillStyle="#71957d";e.fill(new Path2D(paths[0]));e.fillStyle="#0c0c0c";e.fill(new Path2D(paths[1]));
+      const pixels=a.getImageData(0,0,size,size).data,reference=e.getImageData(0,0,size,size).data;
+      results.push({size,identical:pixels.every((value,index)=>value===reference[index])});
+    }
+    const style=getComputedStyle(image),canvas=getComputedStyle(document.querySelector(".intro-canvas"));
+    return {results,opacity:Number(style.opacity),filter:style.filter,belowCode:Number(style.zIndex)<Number(canvas.zIndex)};
+  },paths);
+  expect(comparison.results.every(result=>result.identical)).toBe(true);
+  expect(comparison.opacity).toBeGreaterThan(0);
+  expect(comparison.opacity).toBeLessThan(.3);
+  expect(comparison.filter).toContain("blur(");
+  expect(comparison.belowCode).toBe(true);
+  for(const name of ["supa-agent.svg","supa-agent-icon.svg","supa-agent-header.svg","supa-agent-monochrome.svg"]){
+    const response=await request.get(`/public/assets/${name}`);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("image/svg+xml");
+  }
+  await page.locator(".enter").click();
+  await expect(logo).toBeHidden();
 });
 
 test("centered keyboard animates during typing and rests under reduced motion", async ({ page }) => {
