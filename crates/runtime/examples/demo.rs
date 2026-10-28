@@ -71,7 +71,7 @@ async fn cycles(r: &Runtime, id: Uuid, target: i64) -> Result<()> {
         if tokio::time::Instant::now() > deadline {
             return Err(Error::Timeout);
         }
-        match r.cycle(id, true).await {
+        match r.cycle(id, false).await {
             Ok(_) => {}
             Err(Error::Busy) => {}
             Err(e) => return Err(e),
@@ -141,7 +141,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             snapshot(&s, id, "ten-cycles").await?;
         }
         "crash" => {
-            let cycle = s.begin_cycle(id, true).await?;
+            let cycle = s.begin_cycle(id, false).await?;
             s.reserve_inference(id, cycle, "plan", 0, &InferencePolicy::default(), 1000)
                 .await?;
             write_json(
@@ -191,7 +191,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             }
             if !matches!(
                 Runtime::new(s.clone(), Arc::new(Offline))
-                    .cycle(id, true)
+                    .cycle(id, false)
                     .await,
                 Err(Error::Inactive)
             ) {
