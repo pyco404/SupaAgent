@@ -158,6 +158,30 @@ test("opening uses one file status bar and keeps it inside the viewport", async 
   await expect(status).toBeHidden();
 });
 
+test("centered keyboard animates during typing and rests under reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await open(page, "/");
+  const intro=page.locator(".intro-canvas");
+  await expect(intro).toHaveAttribute("data-hand-state", "typing");
+  const bounds=(await intro.getAttribute("data-keyboard-bounds")).split(",").map(Number);
+  expect(bounds[0]+bounds[2]/2).toBeCloseTo(page.viewportSize().width/2, 1);
+  expect(bounds[2]).toBeGreaterThan(page.viewportSize().width<500?270:500);
+  expect(bounds[1]+bounds[3]).toBeLessThan(page.viewportSize().height-25);
+  const fingerprint=()=>intro.evaluate(canvas=>{
+    const [x,y,w,h]=canvas.dataset.keyboardBounds.split(",").map(Number),scale=canvas.width/innerWidth;
+    const pixels=canvas.getContext("2d").getImageData(Math.floor(x*scale),Math.floor(y*scale),Math.floor(w*scale),Math.floor(h*scale)).data;
+    let hash=0;for(let i=0;i<pixels.length;i+=4)hash=(Math.imul(hash,31)+pixels[i])>>>0;
+    return hash;
+  });
+  const first=await fingerprint();
+  await expect.poll(fingerprint).not.toBe(first);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(intro).toHaveAttribute("data-hand-state", "idle");
+  const resting=await fingerprint();
+  await page.waitForTimeout(200);
+  expect(await fingerprint()).toBe(resting);
+});
+
 test("Enter shows an opaque radial portal before navigating exactly once", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await open(page, "/");
