@@ -38,7 +38,8 @@ not current trading availability. SUPA notation does not imply a launched token.
 Scroll, drag, touch or use arrows/j/k on the wheel. In the terminal these keys
 scroll saved content; Escape returns to navigation. The mobile menu remains open
 while browsing options and closes on activation, Escape or history navigation.
-Its background is inert while open. Reduced motion bypasses intro/portal motion.
+Its background is inert while open. Reduced motion bypasses intro/portal motion
+and reveals complete section text immediately.
 
 Click Command or type `:`. UI-only commands:
 
@@ -128,3 +129,29 @@ Evidence IDs: `ev_2258aacc694b5ba8a3d5f7b4529303428b853c0b2b39ef63acdadec0272ccb
 and `ev_29a92d8811fe5966e30a1a59a91f57b93892f4f9e97e303b74bf05bb2cff896d`.
 Physical viewports were calibrated before each capture. REA reported missing
 event coverage; screenshots do not establish complete runtime equivalence.
+
+
+## Typing on every visit
+
+Every section types its full content from top to bottom on each visit, return,
+agent selection or saved-record reload. Shared navigation/controls stay usable.
+Text follows the saved DOM order, including headings, record metadata, draft
+wording and planned-feature explanations; no content is invented by the effect.
+The terminal follows the typing cursor when already scrolled to the bottom and
+respects readers scrolling back up.
+
+**Show all text** completes the current section immediately and restores terminal
+focus. Reduced-motion preference does the same, including a change made during
+playback. Live announcements pause during typing; incomplete controls remain
+inert until their row finishes. Switching pages cancels obsolete animation so
+previous-page text cannot reappear. This user-requested behavior supersedes the
+prompt-only typing described in the earlier transformation report.
+
+Validation for page-wide typing: syntax/build passed, 12 focused checks passed,
+and the full Chromium suite passed **87/87** with no failures. REA captures:
+[desktop](evidence/2026-10-28/supa-page-typing-desktop.png) /
+[mobile](evidence/2026-10-28/supa-page-typing-mobile.png).
+Evidence: `ev_fdfc22538adb5b9e1dc7f95692dbc0f949ac43a2252ca4e40aa218d44176dc9f`
+and `ev_31756c552d143fbe63ba2f35ae3063e5ec729393de2e86d77292960f2224b5a7`.
+Physical viewports were calibrated before capture; REA's missing event coverage
+means these captures are not a complete runtime-equivalence claim.
