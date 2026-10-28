@@ -42,3 +42,15 @@ test("disconnected proxy never forwards arbitrary targets", async ({ request }) 
   const response = await request.get("/api/console/health"); expect(response.status()).toBe(503);
   expect(await response.json()).toEqual({ error: "backend_not_configured" });
 });
+
+
+test("public agent records strip raw personality instructions", async ({ request }) => {
+  for (const path of ["agents", `agents/${agentId}`]) {
+    const response = await request.get(`${protectedOrigin}/api/console/${path}`, { headers: { authorization } });
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    const agents = Array.isArray(data) ? data : [data.agent];
+    for (const agent of agents) expect(agent.personality).toEqual({ traits: ["curious", "witty"] });
+    expect(await response.text()).not.toContain("A synthetic identity used only by browser tests.");
+  }
+});
