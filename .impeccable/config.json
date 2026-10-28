@@ -1,3 +1,18 @@
 {
-  "buildPath": "comp"
+  "buildPath": "comp",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "undersized-ui-text",
+        "value": "*",
+        "files": [
+          "reference-web/index.html"
+        ],
+        "createdAt": "2026-10-28T13:15:09.228Z",
+        "reason": "User confirmed: reproduce the current live hancore.dev faithfully. Agent review: nine findings belong to the isolated terminal-demo footer (keyboard hints, REPOS/STARS/FOLLOWERS/WORM/EYE/GHOST status labels, WORM control, dated snapshot label). Preserve its reference-scale presentation; this exception does not apply to the Supa frontend."
+      }
+    ]
+  }
 }
