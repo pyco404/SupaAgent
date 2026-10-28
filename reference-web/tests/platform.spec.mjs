@@ -2,6 +2,10 @@ import { test, expect } from '../../web/node_modules/@playwright/test/index.mjs'
 const id='11111111-1111-4111-8111-111111111111';
 const connected='http://127.0.0.1:3202';
 const signIn={username:'fixture',password:'fixture-password-'.repeat(3)};
+async function openUtilities(page){if(await page.locator('.command').isHidden())await page.locator('.command-toggle').click();}
+async function showAll(page){await openUtilities(page);await page.locator('.skip-typing').click();}
+async function reloadSaved(page){await openUtilities(page);await page.locator('.reload-records').click();}
+
 
 async function go(page,section){await page.goto(`${connected}/site/#${section}`,{waitUntil:'domcontentloaded'});await expect(page.locator('html')).toHaveAttribute('data-ready','true');await expect(page.locator('#agent-select')).toHaveValue(id);}
 
@@ -40,14 +44,14 @@ test.describe('authorized saved records',()=>{
     await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa memory');await page.keyboard.press('Enter');await expect(page).toHaveURL(/#memory$/);
     await page.locator('.command-toggle').click();await page.keyboard.press('ArrowUp');await expect(page.locator('.command-input')).toHaveValue('supa memory');await page.keyboard.press('Escape');
     await page.route('**/api/agents/*/memory',route=>route.fulfill({json:[{id,lesson:'<img src=x onerror=alert(1)>',kind:'hypothesis',source_event_ids:[],cycle_id:null,created_at:'fixture'}]}));
-    await page.locator('.reload-records').click();await expect(page.locator('.buffer')).toContainText('<img src=x');expect(await page.locator('.buffer img').count()).toBe(0);
+    await reloadSaved(page);await expect(page.locator('.buffer')).toContainText('<img src=x');expect(await page.locator('.buffer img').count()).toBe(0);
   });
   test('record retrieval has loading, empty, error and recovery states',async({page})=>{
     await go(page,'agents');
     await page.route('**/api/agents',async route=>{await new Promise(resolve=>setTimeout(resolve,350));await route.fulfill({json:[]});});
-    await page.locator('.reload-records').click();await expect(page.locator('.reload-records')).toBeDisabled();await expect(page.locator('.buffer')).toContainText('No saved agents');
-    await page.unroute('**/api/agents');await page.locator('.reload-records').click();await expect(page.locator('.buffer')).toContainText('Fixture Supa');
-    await page.route('**/api/agents',route=>route.fulfill({status:503,json:{error:'sanitized'}}));await page.locator('.reload-records').click();await expect(page.locator('.buffer')).toContainText('Saved records are unavailable');
+    await reloadSaved(page);await expect(page.locator('.reload-records')).toBeDisabled();await expect(page.locator('.buffer')).toContainText('No saved agents');
+    await page.unroute('**/api/agents');await reloadSaved(page);await expect(page.locator('.buffer')).toContainText('Fixture Supa');
+    await page.route('**/api/agents',route=>route.fulfill({status:503,json:{error:'sanitized'}}));await reloadSaved(page);await expect(page.locator('.buffer')).toContainText('Saved records are unavailable');
   });
   test('mobile menu traps focus, keeps selection browsing open and closes on activation',async({page})=>{
     await page.setViewportSize({width:390,height:844});await go(page,'agents');
@@ -70,7 +74,7 @@ test('every section types in document order and replays on return',async({page})
     expect(await buffer.locator(':scope > [hidden]').count()).toBeGreaterThan(0);
     const order=await buffer.evaluate(el=>{let hidden=false;return [...el.children].every(row=>{if(row.hidden)hidden=true;return row.hidden||!hidden;});});expect(order).toBe(true);
     const before=(await buffer.textContent()).length;await page.waitForTimeout(180);expect((await buffer.textContent()).length).toBeGreaterThanOrEqual(before);
-    await page.locator('.skip-typing').click();await expect(buffer).toHaveAttribute('data-typing-state','complete');
+    await showAll(page);await expect(buffer).toHaveAttribute('data-typing-state','complete');
     expect(await buffer.locator('[hidden],[inert]').count()).toBe(0);await expect(page.locator('.skip-typing')).toBeHidden();await expect(buffer).toBeFocused();
     await expect(page).toHaveURL(new RegExp(`#${section}$`));
   }
@@ -78,12 +82,24 @@ test('every section types in document order and replays on return',async({page})
 
 test('reloading restarts typing and navigation cancels old text safely',async({page})=>{
   await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/site/#about');
-  await expect(page.locator('.skip-typing')).toBeVisible();await page.locator('.skip-typing').click();
-  await page.locator('.reload-records').click();await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+  await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');await showAll(page);
+  await reloadSaved(page);await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
   await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa trading');await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/#trading$/);await page.locator('.skip-typing').click();
+  await expect(page).toHaveURL(/#trading$/);await showAll(page);
   await expect(page.locator('.buffer')).toContainText('strict maximum of $5');await page.waitForTimeout(300);
   await expect(page.locator('.buffer')).not.toContainText('six-crate Rust runtime');
-  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.reload-records').click();
+  await page.emulateMedia({reducedMotion:'reduce'});await reloadSaved(page);
   await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','complete');await expect(page.locator('.skip-typing')).toBeHidden();
+});
+
+
+test('workspace stays clear and Home uses the latest source-code logo',async({page})=>{
+  await page.goto('/site/#home');await expect(page.locator('html')).toHaveAttribute('data-ready','true');
+  await expect(page.locator('.workspace-controls button,.workspace-controls a')).toHaveCount(0);
+  await expect(page.locator('.wheel-item[data-index="0"] img')).toHaveAttribute('src','/public/assets/supa-agent-code.svg');
+  await expect(page.locator('.reload-records')).toBeHidden();await expect(page.getByRole('link',{name:'Operator sign-in'})).toBeHidden();
+  await page.getByRole('button',{name:'Open terminal commands'}).click();
+  await expect(page.locator('.reload-records')).toBeVisible();await expect(page.getByRole('link',{name:'Operator sign-in'})).toBeVisible();
+  await expect(page.locator('.command-input')).toBeFocused();await page.getByRole('button',{name:'Close terminal commands'}).click();await expect(page.locator('.command')).toBeHidden();
+  await page.getByRole('button',{name:'Open terminal commands'}).click();await page.keyboard.press('Escape');await expect(page.locator('.command')).toBeHidden();
 });
