@@ -1,0 +1,565 @@
+{
+  "date": "2026-10-28",
+  "commands": [
+    {
+      "command": "npm run check",
+      "result": "passed"
+    },
+    {
+      "command": "npm run build",
+      "result": "passed"
+    },
+    {
+      "command": "npm test",
+      "result": "passed"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-10-28T12:57:12.531Z",
+    "duration": 89591.591,
+    "expected": 39,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "name": "intro enters the project browser and browser back restores intro",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4719,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project browser supports keyboard selection and Escape focus",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2196,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "terminal scrolling keys preserve the selected project",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1721,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "command input is keyboard accessible and does not navigate externally",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1727,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project hashes restore direct and nested project selections",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2506,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "dark palette survives reload and live motion preference changes are respected",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2671,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "normal terminal boot restores complete accessible text when motion is reduced",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1359,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "changing projects cancels the previous terminal boot without restoring stale text",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1374,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "mobile drawer toggles and Escape restores its trigger focus",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1521,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project wheel responds to pointer scrolling and card selection",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1832,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "reference preview has no backend, analytics or paid API requests",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1745,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "responsive scenes fit all supported widths with reduced motion",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 4982,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "preview is read only and cannot expose project secrets or parent paths",
+      "project": "desktop",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 134,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "intro enters the project browser and browser back restores intro",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1973,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project browser supports keyboard selection and Escape focus",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1669,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "terminal scrolling keys preserve the selected project",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1530,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "command input is keyboard accessible and does not navigate externally",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1678,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project hashes restore direct and nested project selections",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2643,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "dark palette survives reload and live motion preference changes are respected",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3034,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "normal terminal boot restores complete accessible text when motion is reduced",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1965,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "changing projects cancels the previous terminal boot without restoring stale text",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1551,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "mobile drawer toggles and Escape restores its trigger focus",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1589,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project wheel responds to pointer scrolling and card selection",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1899,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "reference preview has no backend, analytics or paid API requests",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1684,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "responsive scenes fit all supported widths with reduced motion",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5559,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "preview is read only and cannot expose project secrets or parent paths",
+      "project": "tablet",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 191,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "intro enters the project browser and browser back restores intro",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2440,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project browser supports keyboard selection and Escape focus",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1788,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "terminal scrolling keys preserve the selected project",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1687,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "command input is keyboard accessible and does not navigate externally",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2306,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project hashes restore direct and nested project selections",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2692,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "dark palette survives reload and live motion preference changes are respected",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2279,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "normal terminal boot restores complete accessible text when motion is reduced",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1071,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "changing projects cancels the previous terminal boot without restoring stale text",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1401,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "mobile drawer toggles and Escape restores its trigger focus",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1540,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "project wheel responds to pointer scrolling and card selection",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1759,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "reference preview has no backend, analytics or paid API requests",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1467,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "responsive scenes fit all supported widths with reduced motion",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 5067,
+          "retry": 0
+        }
+      ]
+    },
+    {
+      "name": "preview is read only and cannot expose project secrets or parent paths",
+      "project": "mobile",
+      "status": "expected",
+      "attempts": 1,
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 146,
+          "retry": 0
+        }
+      ]
+    }
+  ],
+  "source_sha256": {
+    "index.html": "6bf66384ea37787607436a51acf210aaf9e277f5df06a4f4bf4dfcf2ec1c99a5",
+    "style.css": "51e95d9f48767a8cb652e2eda6f749b0320bca4cb54a853c7c290d48bd2662fe",
+    "app.js": "4cb7101835514db10c98d0bece4486313e083c9758c57579e45d67b1048d0b94",
+    "scene.js": "56cfa222aca0f25767bfbe0e25e2308563cd8a344e236e43698767622ccec028",
+    "wheel.js": "ac287f4a7978d7ab58238ea79dddbba84d252cffc269d796dbaacba06ca14082",
+    "reference-data.json": "25e643c97a0ba32c5ac2eabedc420b21bbadb5215a9d385a02fba13b8d89bb0c",
+    "package.json": "d0c7471909dabda119c424db52a95daabcf03c902c512782a2042bb09cc0131b",
+    "server.mjs": "f2ba2be1c881325acbf96f67a09d60fb4212fd4b264ac28c9013dbeaa9249581",
+    "build.mjs": "1fcfe881edeb736a34845feb0e0503aa60b9ebc50fa75447d1dfb08c7e58a4d8",
+    "playwright.config.mjs": "8d7bcfb10c9b4ff576be30ef8b937831b1de8730e53cbf8f5674f8248c9e40db",
+    "tests/baseline.spec.mjs": "ac12d25226ed0f6419f2c6c793e54ba26d67f2f9eec2ed3fa3058829392a209c",
+    "public/fonts/IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+    "public/fonts/OFL.txt": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+  },
+  "capture_integrity": {
+    "verified": 12,
+    "all_hashes_match": true
+  },
+  "preservation": {
+    "task_start_sha": "d915d2d70798d2517a807643f5532c0fac1826d4",
+    "existing_tracked_changes": [
+      ".gitignore (pre-existing; excluded)"
+    ],
+    "existing_frontend_backend_unchanged": true
+  },
+  "limits": [
+    "Chromium emulation only; no physical-device or screen-reader certification.",
+    "No paid model, financial, publishing, deployment or Supa backend operations.",
+    "REA event completeness is limited; exact visual/runtime equivalence is not established."
+  ]
+}
