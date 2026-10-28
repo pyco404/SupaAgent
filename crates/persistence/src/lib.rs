@@ -1,4 +1,7 @@
+mod access;
 mod intelligence;
+pub use access::Role;
+mod health;
 mod scheduling;
 mod social;
 mod wallet;
@@ -50,6 +53,15 @@ impl Store {
         Ok(())
     }
     pub async fn create(&self, a: &Agent) -> Result<()> {
+        self.create_with_owner(a, None).await
+    }
+    pub async fn create_owned(&self, a: &Agent, owner: Uuid) -> Result<()> {
+        if owner.is_nil() {
+            return Err(Error::Invalid);
+        }
+        self.create_with_owner(a, Some(owner)).await
+    }
+    async fn create_with_owner(&self, a: &Agent, owner: Option<Uuid>) -> Result<()> {
         let mut tx = self.pool.begin().await.map_err(db)?;
         sqlx::query("INSERT INTO agents(id,data) VALUES($1,$2)")
             .bind(a.id)
@@ -58,6 +70,9 @@ impl Store {
             .await
             .map_err(db)?;
         sqlx::query("INSERT INTO lifecycle_transitions(agent_id,to_state,reason,actor) VALUES($1,'created','operator_created','operator')").bind(a.id).execute(&mut *tx).await.map_err(db)?;
+        if let Some(owner) = owner {
+            access::assign(&mut tx, a.id, owner, Role::Owner, owner).await?;
+        }
         event(&mut tx, a.id, None, "lifecycle", "created", false).await?;
         tx.commit().await.map_err(db)
     }
@@ -78,7 +93,7 @@ impl Store {
         values.into_iter().map(decode).collect()
     }
     pub async fn due_agents(&self) -> Result<Vec<Uuid>> {
-        sqlx::query_scalar("SELECT a.id FROM agents a JOIN agent_schedules s ON s.agent_id=a.id WHERE a.data->>'lifecycle'='active' AND a.data->'config'->>'scheduler_enabled'='true' AND s.enabled AND (a.next_cycle_at<=now() OR s.expires_at<=now()) ORDER BY a.next_cycle_at LIMIT 100").fetch_all(&self.pool).await.map_err(db)
+        sqlx::query_scalar("SELECT a.id FROM agents a JOIN agent_schedules s ON s.agent_id=a.id WHERE a.data->>'lifecycle'='active' AND a.data->'config'->>'scheduler_enabled'='true' AND s.enabled AND EXISTS(SELECT 1 FROM schedule_authorizations h WHERE h.id=s.authorization_id AND h.approved_by IS NOT NULL) AND EXISTS(SELECT 1 FROM agent_access o WHERE o.agent_id=a.id AND o.role='owner') AND (a.next_cycle_at<=now() OR s.expires_at<=now()) ORDER BY a.next_cycle_at LIMIT 100").fetch_all(&self.pool).await.map_err(db)
     }
     pub async fn transition(
         &self,
@@ -161,6 +176,14 @@ impl Store {
         tx.commit().await.map_err(db)
     }
     pub async fn begin_cycle(&self, id: Uuid, scheduled: bool) -> Result<Uuid> {
+        self.begin_cycle_for(id, scheduled, None).await
+    }
+    pub async fn begin_cycle_for(
+        &self,
+        id: Uuid,
+        scheduled: bool,
+        worker: Option<Uuid>,
+    ) -> Result<Uuid> {
         let mut tx = self.pool.begin().await.map_err(db)?;
         let mut a = locked(&mut tx, id).await?;
         if a.lifecycle != Lifecycle::Active {
@@ -197,9 +220,12 @@ impl Store {
                 return Err(Error::Busy);
             }
         }
+        if let Some(worker) = worker {
+            health::live_worker(&mut tx, worker).await?;
+        }
         let cycle = Uuid::new_v4();
         // Maximum runtime is 180s, shorter than this lease. A stale worker is fenced on writes.
-        sqlx::query("INSERT INTO cycles(id,agent_id,status,lease_until) VALUES($1,$2,'running',now()+interval '240 seconds')").bind(cycle).bind(id).execute(&mut *tx).await.map_err(db)?;
+        sqlx::query("INSERT INTO cycles(id,agent_id,status,lease_until,worker_id,authorization_id) VALUES($1,$2,'running',now()+interval '240 seconds',$3,(SELECT authorization_id FROM agent_schedules WHERE agent_id=$2))").bind(cycle).bind(id).bind(worker).execute(&mut *tx).await.map_err(db)?;
         sqlx::query("UPDATE agents SET next_cycle_at=now()+make_interval(secs => $2) WHERE id=$1")
             .bind(id)
             .bind(a.config.interval_seconds as f64)
@@ -330,6 +356,18 @@ impl Store {
     pub async fn finish(&self, id: Uuid, cycle: Uuid, failure: Option<&Error>) -> Result<()> {
         let mut tx = self.pool.begin().await.map_err(db)?;
         let mut a = locked(&mut tx, id).await?;
+        if let Some(worker) = sqlx::query_scalar::<_, Option<Uuid>>(
+            "SELECT worker_id FROM cycles WHERE id=$1 AND agent_id=$2",
+        )
+        .bind(cycle)
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db)?
+        .flatten()
+        {
+            health::live_worker(&mut tx, worker).await?;
+        }
         let code = failure.map(ToString::to_string);
         let n=sqlx::query("UPDATE cycles SET status=$3,finished_at=now(),failure_code=$4 WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>now()").bind(cycle).bind(id).bind(if failure.is_some(){"failed"}else{"completed"}).bind(&code).execute(&mut *tx).await.map_err(db)?.rows_affected();
         if n != 1 {
@@ -476,9 +514,18 @@ async fn live(tx: &mut Tx<'_>, id: Uuid, cycle: Uuid) -> Result<Agent> {
     if !permitted {
         return Err(Error::Stale);
     }
-    let valid:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM cycles WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>now())").bind(cycle).bind(id).fetch_one(&mut **tx).await.map_err(db)?;
+    let valid:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM cycles WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>now() AND (worker_id IS NULL OR EXISTS(SELECT 1 FROM worker_health w WHERE w.id=worker_id AND w.stopped_at IS NULL AND w.heartbeat_at>now()-interval '15 seconds')))").bind(cycle).bind(id).fetch_one(&mut **tx).await.map_err(db)?;
     if !valid {
         return Err(Error::Stale);
+    }
+    if let Some(worker) =
+        sqlx::query_scalar::<_, Option<Uuid>>("SELECT worker_id FROM cycles WHERE id=$1")
+            .bind(cycle)
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(db)?
+    {
+        health::live_worker(tx, worker).await?;
     }
     Ok(a)
 }
