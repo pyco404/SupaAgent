@@ -158,6 +158,50 @@ test("opening uses one file status bar and keeps it inside the viewport", async 
   await expect(status).toBeHidden();
 });
 
+test("Enter shows an opaque radial portal before navigating exactly once", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await open(page, "/");
+  const historyLength = await page.evaluate(() => history.length);
+  await page.locator(".enter").click();
+  const portal = page.locator(".transition");
+  await expect(portal).toHaveClass(/active/);
+  await expect(page.locator("body")).toHaveAttribute("data-view", "intro");
+  await expect(page).toHaveURL(/\/$/);
+  const pixels = await portal.evaluate(canvas => {
+    const ctx = canvas.getContext("2d");
+    return { center: Array.from(ctx.getImageData(Math.floor(canvas.width/2), Math.floor(canvas.height/2), 1, 1).data), corner: Array.from(ctx.getImageData(0, 0, 1, 1).data) };
+  });
+  expect(pixels.center).toEqual([0, 0, 0, 255]);
+  expect(pixels.corner[3]).toBe(255);
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
+  await expect(portal).not.toHaveClass(/active/);
+  expect(await page.evaluate(() => history.length)).toBe(historyLength + 1);
+  await page.goBack();
+  await expect(page.locator("body")).toHaveAttribute("data-view", "intro");
+});
+
+test("reducing motion completes a portal and navigation changes cancel stale entry", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await open(page, "/");
+  await page.locator(".enter").click();
+  await expect(page.locator(".transition")).toHaveClass(/active/);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
+  await expect(page.locator(".transition")).not.toHaveClass(/active/);
+  await page.goBack();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.locator(".enter").click();
+  await expect(page.locator(".transition")).toHaveClass(/active/);
+  // A popstate while the promise is pending must invalidate that entry attempt.
+  await page.evaluate(() => window.dispatchEvent(new PopStateEvent("popstate")));
+  await expect(page.locator(".transition")).not.toHaveClass(/active/);
+  await page.waitForTimeout(2600);
+  await expect(page.locator("body")).toHaveAttribute("data-view", "intro");
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test("changing projects cancels the previous terminal boot without restoring stale text", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/site/", { waitUntil: "domcontentloaded" });
