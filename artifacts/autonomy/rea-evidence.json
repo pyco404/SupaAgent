@@ -1,0 +1,362 @@
+{
+  "scenario": {
+    "evidence_id": "ev_30f3c6b7f86975e263bcc1a496978855e6b89f5eef5c63073328dc4f83ea1da7",
+    "subject": null,
+    "provider": {
+      "id": "rea-playwright-browser-scenario",
+      "name": "REA Playwright browser scenario capture provider",
+      "version": "1"
+    },
+    "analysis_profile": null,
+    "predicate_type": "rea.browser-scenario-capture",
+    "operation": "capture_browser_scenario",
+    "parameters": {
+      "browser": {
+        "mode": "connect",
+        "cdp_endpoint": "http://127.0.0.1:9242",
+        "target_id": "97F4844535719F3458B270F2F2AA054A"
+      },
+      "start_url": {
+        "url": "http://127.0.0.1:39775/site/#intelligence",
+        "query": []
+      },
+      "environment": {
+        "viewport": {
+          "width": 1440,
+          "height": 1000,
+          "device_scale_factor": 1
+        },
+        "locale": "en-US",
+        "timezone": "UTC",
+        "color_scheme": "dark",
+        "reduced_motion": "reduce",
+        "service_workers": "block"
+      },
+      "actions": [
+        {
+          "step_id": "wait-offline-control",
+          "action": "wait_for",
+          "locator": {
+            "kind": "css",
+            "selector": ".autonomy-panel summary"
+          },
+          "state": "visible"
+        },
+        {
+          "step_id": "expand-offline-control",
+          "action": "click",
+          "locator": {
+            "kind": "css",
+            "selector": ".autonomy-panel summary"
+          },
+          "button": "left",
+          "click_count": 1
+        }
+      ],
+      "storage": {
+        "cookies": [],
+        "local_storage": [],
+        "session_storage": []
+      },
+      "secrets": [],
+      "capture": {
+        "after_each_step": [],
+        "at_end": [
+          "url"
+        ],
+        "events": [],
+        "network": {
+          "request_body": false,
+          "response_body": false,
+          "header_values": false
+        },
+        "limits": {
+          "max_events": 10000,
+          "max_event_allocation_bytes": 4194304,
+          "max_total_event_allocation_bytes": 16777216,
+          "max_network_transactions": 1024,
+          "max_network_body_bytes": 65536,
+          "max_network_body_allocation_bytes": 1048576,
+          "max_network_header_allocation_bytes": 1048576,
+          "max_network_metadata_allocation_bytes": 1048576
+        }
+      },
+      "scenario_sha256": "c53195003f025eddb4b86a0e981ae04b293161543796ce2685372cd6bbadf9f4"
+    },
+    "raw_result": null,
+    "normalized_result": {
+      "browser": {
+        "mode": "connect",
+        "process_ownership": "external",
+        "cleanup": "disconnected-external",
+        "product": "Chromium",
+        "version": "146.0.7680.177"
+      },
+      "scenario": {
+        "start_origin": "http://127.0.0.1:39775",
+        "action_count": 2,
+        "secret_references": [],
+        "network_content": {
+          "request_body": false,
+          "response_body": false,
+          "header_values": false
+        },
+        "event_families": [],
+        "limits": {
+          "max_events": 10000,
+          "max_event_allocation_bytes": 4194304,
+          "max_total_event_allocation_bytes": 16777216,
+          "max_network_transactions": 1024,
+          "max_network_body_bytes": 65536,
+          "max_network_body_allocation_bytes": 1048576,
+          "max_network_header_allocation_bytes": 1048576,
+          "max_network_metadata_allocation_bytes": 1048576
+        }
+      },
+      "duration_ms": 4016,
+      "steps": [
+        {
+          "step_index": 0,
+          "step_id": "scenario_start",
+          "action": "goto_start",
+          "elapsed_ms": 3548,
+          "before_url": {
+            "url": "http://127.0.0.1:39775/site#social",
+            "origin": "http://127.0.0.1:39775",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:39775/site#intelligence",
+            "origin": "http://127.0.0.1:39775",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "not_requested"
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_index": 1,
+          "step_id": "wait-offline-control",
+          "action": "wait_for",
+          "elapsed_ms": 178,
+          "before_url": {
+            "url": "http://127.0.0.1:39775/site#intelligence",
+            "origin": "http://127.0.0.1:39775",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:39775/site#intelligence",
+            "origin": "http://127.0.0.1:39775",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "not_requested"
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_index": 2,
+          "step_id": "expand-offline-control",
+          "action": "click",
+          "elapsed_ms": 89,
+          "before_url": {
+            "url": "http://127.0.0.1:39775/site#intelligence",
+            "origin": "http://127.0.0.1:39775",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "after_url": {
+            "url": "http://127.0.0.1:39775/site#intelligence",
+            "origin": "http://127.0.0.1:39775",
+            "query_parameter_names": [],
+            "redacted": false
+          },
+          "event_sequence_start": 1,
+          "event_sequence_end": 0,
+          "artifacts": {
+            "screenshot": {
+              "state": "not_requested"
+            },
+            "dom": {
+              "state": "not_requested"
+            },
+            "accessibility": {
+              "state": "not_requested"
+            },
+            "url": {
+              "state": "captured",
+              "value": {
+                "url": "http://127.0.0.1:39775/site#intelligence",
+                "origin": "http://127.0.0.1:39775",
+                "query_parameter_names": [],
+                "redacted": false
+              }
+            },
+            "history": {
+              "state": "not_requested"
+            },
+            "storage": {
+              "state": "not_requested"
+            }
+          },
+          "completeness": {
+            "status": "complete",
+            "equality_eligible": true,
+            "missing_sections": [],
+            "truncated_sections": []
+          },
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "events": {
+        "retained": 0,
+        "dropped": 0,
+        "items": [],
+        "omissions": {
+          "by_kind": [],
+          "network_transactions": [],
+          "network_transaction_range": null
+        }
+      },
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "limitations": [
+        "Event sequence records provider receipt order; simultaneous browser causality is not inferred.",
+        "Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.",
+        "Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.",
+        "Network content reads settle within 5 seconds each and the observer does not request bodies from unfinished responses.",
+        "Playwright scenario events do not expose request initiator stacks; receipt order does not prove causality.",
+        "Storage values are hashed only after declared-secret redaction.",
+        "CDP attachment cannot recover pre-attach events or guarantee launch-time context options.",
+        "Attached locale en-US applies to Intl formatting only; navigator.language(s) and Accept-Language remain caller-controlled. Use launch mode for matching page and request languages.",
+        "Detaching a CDP page session may clear caller-owned navigator.platform emulation. REA cannot snapshot the caller's complete user-agent/client-hint state before attachment; use launch mode to avoid mutating that external browser."
+      ]
+    },
+    "confidence": "observed",
+    "authority": "controlled-replay",
+    "environment": {
+      "id": "Chromium@146.0.7680.177",
+      "platform": "unknown",
+      "architecture": "unknown",
+      "isolation": "none"
+    },
+    "limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "Event sequence records provider receipt order; simultaneous browser causality is not inferred.",
+      "Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.",
+      "Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.",
+      "Network content reads settle within 5 seconds each and the observer does not request bodies from unfinished responses.",
+      "Playwright scenario events do not expose request initiator stacks; receipt order does not prove causality.",
+      "Storage values are hashed only after declared-secret redaction.",
+      "CDP attachment cannot recover pre-attach events or guarantee launch-time context options.",
+      "Attached locale en-US applies to Intl formatting only; navigator.language(s) and Accept-Language remain caller-controlled. Use launch mode for matching page and request languages.",
+      "Detaching a CDP page session may clear caller-owned navigator.platform emulation. REA cannot snapshot the caller's complete user-agent/client-hint state before attachment; use launch mode to avoid mutating that external browser.",
+      "Browser host platform and architecture were not observed."
+    ],
+    "relationship_coverage": null,
+    "locations": [],
+    "evidence_links": []
+  },
+  "captures": [
+    {
+      "evidence_id": "ev_7c21aa055a6e16b89f52f1c6416ae52007ed184715d647066575ff5308fa0f34",
+      "operation": "capture_web_screenshot",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "2fe22da12bbfc12dace16cc4b7166a75a5eaa5c0277d98d1f5d5088d28c0e57e",
+      "captured_at": "2026-10-28T21:20:14.008Z",
+      "filename": "rea-desktop.png"
+    },
+    {
+      "evidence_id": "ev_26ab5b18f974b100f11a35ea508bfc2112846c449ada3680f93c0d923cf26d14",
+      "operation": "capture_web_screenshot",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "9c24076a8825d47763d042085177c504d6a8f62ba4c24dce309b7afd511035ac",
+      "captured_at": "2026-10-28T21:20:53.494Z",
+      "filename": "rea-mobile.png"
+    }
+  ],
+  "inspection": {
+    "evidence_id": "ev_7e1fed52b198131feb17064f01e3f7909e62b777f94f9571e63ecc7c2a0434f2",
+    "limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "Observation starts when REA attaches; prior network and console activity is unavailable.",
+      "Worker targets are a final inventory snapshot, not worker-session observation. Their attached flag describes any debugging client; this page-session collector does not observe worker network, console, or script events, and short-lived workers may be absent from the snapshot.",
+      "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
+      "Source maps are reported only as declarative URLs and are not fetched.",
+      "URL-less scripts and console events without an allowed source URL are excluded because their origin cannot be proven.",
+      "CDP discovery omitted the target attachment state; attached is reported as unknown.",
+      "Browser host platform and architecture were not observed."
+    ]
+  },
+  "scope": "Offline isolated test database; screenshots contain actual persisted rehearsal records. No inference or authorization submitted through REA."
+}
