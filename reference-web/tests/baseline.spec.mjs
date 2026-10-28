@@ -121,6 +121,25 @@ test("normal terminal boot restores complete accessible text when motion is redu
   await expect(page.locator(".entity-state b").nth(1)).toHaveText("idle");
 });
 
+test("opening code types slowly from the top and reduced motion completes it", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await open(page, "/");
+  const intro = page.locator(".intro-canvas");
+  await page.waitForTimeout(1200);
+  await expect(intro).toHaveAttribute("data-intro-state", "typing");
+  const first = await intro.evaluate(canvas => ({ rows: Number(canvas.dataset.revealedRows), characters: Number(canvas.dataset.typedCharacters) }));
+  expect(first.characters).toBeGreaterThan(0);
+  expect(first.rows).toBeLessThan(8);
+  await page.waitForTimeout(1400);
+  const next = await intro.evaluate(canvas => ({ rows: Number(canvas.dataset.revealedRows), characters: Number(canvas.dataset.typedCharacters) }));
+  expect(next.characters).toBeGreaterThan(first.characters);
+  expect(next.rows).toBeGreaterThanOrEqual(first.rows);
+  expect(next.rows).toBeLessThan(15);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(intro).toHaveAttribute("data-intro-state", "complete");
+  expect(Number(await intro.getAttribute("data-revealed-rows"))).toBeGreaterThan(next.rows);
+});
+
 test("changing projects cancels the previous terminal boot without restoring stale text", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/site/", { waitUntil: "domcontentloaded" });
