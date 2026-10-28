@@ -10,6 +10,18 @@ async fn owner(s: &AppState, id: Uuid) -> Result<Uuid> {
     }
     Ok(actor)
 }
+// This scope permits saved observations without importing wallet encryption material.
+// Mutating endpoints continue to use owner(), which requires the full service.
+async fn read_owner(s: &AppState, id: Uuid) -> Result<Uuid> {
+    let actor = match s.wallet_read_operator {
+        Some(actor) => actor,
+        None => service(s)?.operator(),
+    };
+    if s.store.wallet(id).await?.owner_id != actor {
+        return Err(Error::Denied);
+    }
+    Ok(actor)
+}
 pub(super) fn routes() -> Router<AppState> {
     Router::new()
         .route("/agents/{id}/wallet", get(identity).post(create))
@@ -36,7 +48,7 @@ async fn create(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
     Ok(Json(json!(service.create(id, service.operator()).await?)))
 }
 async fn identity(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
-    owner(&s, id).await?;
+    read_owner(&s, id).await?;
     Ok(Json(json!(s.store.wallet(id).await?)))
 }
 async fn recover(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
@@ -50,11 +62,11 @@ async fn sync(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
     Ok(Json(service(&s)?.sync(id, actor).await?))
 }
 async fn balances(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
-    owner(&s, id).await?;
+    read_owner(&s, id).await?;
     Ok(Json(json!(s.store.wallet_balance(id).await?)))
 }
 async fn treasury(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
-    owner(&s, id).await?;
+    read_owner(&s, id).await?;
     Ok(Json(json!(s.store.treasury(id).await?)))
 }
 async fn policy(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
@@ -125,14 +137,14 @@ async fn sign(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
     Err(Error::Denied.into())
 }
 macro_rules! history {
-    ($name:ident,$kind:literal) => {
+    ($name:ident,$kind:literal,$authorization:ident) => {
         async fn $name(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
-            owner(&s, id).await?;
+            $authorization(&s, id).await?;
             Ok(Json(json!(s.store.wallet_history(id, $kind).await?)))
         }
     };
 }
-history!(payments, "payments");
-history!(checks, "checks");
-history!(reservations, "reservations");
-history!(audit, "audit");
+history!(payments, "payments", read_owner);
+history!(checks, "checks", read_owner);
+history!(reservations, "reservations", owner);
+history!(audit, "audit", owner);
