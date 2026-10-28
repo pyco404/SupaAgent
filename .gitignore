@@ -42,3 +42,5 @@ id.json
 /web/playwright-report/
 *.tsbuildinfo
 /web/.browser-profile/
+
+/note.txt
