@@ -100,6 +100,7 @@ async function select(index){
 }
 // Every visit reveals complete sections in document order, using saved text only.
 function cancelTyping(){
+  scenes?.stopTyping(true);
   typing++;clearTimeout(typingTimer);revealTyping=null;
   $('.skip-typing').hidden=true;
 }
@@ -109,13 +110,14 @@ function typeTerminal() {
   const buffer=$('.buffer'),token=++typing,rows=[...buffer.children],skip=$('.skip-typing');
   const ghost=document.querySelectorAll('.entity-state b')[1];
   const originals=[];
-  let rowIndex=0,textIndex=0,character=0;
+  let rowIndex=0,textIndex=0,character=0,totalTyped=0;
   function finish(){
     if(token!==typing)return;
     clearTimeout(typingTimer);
     originals.forEach(({text,value})=>{text.textContent=value;});
     rows.forEach(row=>{row.hidden=false;row.inert=false;});
     buffer.setAttribute('aria-busy','false');buffer.setAttribute('aria-live','polite');buffer.dataset.typingState='complete';
+    scenes?.stopTyping();
     if(ghost)ghost.textContent='idle';
     const restoreFocus=document.activeElement===skip;
     skip.hidden=true;revealTyping=null;
@@ -141,6 +143,7 @@ function typeTerminal() {
     if(character<record.value.length){
       character++;record.text.textContent=record.value.slice(0,character);
       if(follow)buffer.scrollTop=buffer.scrollHeight;
+      scenes?.onTyping(record.text,character,record.value[character-1],++totalTyped);
       typingTimer=setTimeout(tick,row.classList.contains('terminal-command')?26:16);
     }else{character=0;textIndex++;typingTimer=setTimeout(tick,8);}
   }
