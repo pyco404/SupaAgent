@@ -229,6 +229,14 @@ test("Enter shows an opaque radial portal before navigating exactly once", async
   await page.locator(".enter").click();
   const portal = page.locator(".transition");
   await expect(portal).toHaveClass(/active/);
+  const brand=page.locator(".portal-brand");
+  await expect(brand).toBeVisible();
+  await expect(brand).toHaveText("SUPA AGENT");
+  await expect(brand.locator("img")).toHaveAttribute("src", "/public/assets/supa-agent.svg");
+  const box=await brand.boundingBox(),viewport=page.viewportSize();
+  expect(box.x+box.width/2).toBeCloseTo(viewport.width/2, 0);
+  expect(box.y+box.height/2).toBeCloseTo(viewport.height/2, 0);
+  expect(Math.hypot(box.width/2,box.height/2)).toBeLessThan(Math.min(viewport.width,viewport.height)*.29);
   await expect(page.locator("body")).toHaveAttribute("data-view", "intro");
   await expect(page).toHaveURL(/\/$/);
   const pixels = await portal.evaluate(canvas => {
@@ -241,6 +249,7 @@ test("Enter shows an opaque radial portal before navigating exactly once", async
   await page.keyboard.press("Enter");
   await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
   await expect(portal).not.toHaveClass(/active/);
+  await expect(brand).toBeHidden();
   expect(await page.evaluate(() => history.length)).toBe(historyLength + 1);
   await page.goBack();
   await expect(page.locator("body")).toHaveAttribute("data-view", "intro");
@@ -254,6 +263,7 @@ test("reducing motion completes a portal and navigation changes cancel stale ent
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
   await expect(page.locator(".transition")).not.toHaveClass(/active/);
+  await expect(page.locator(".portal-brand")).toBeHidden();
   await page.goBack();
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.locator(".enter").click();
@@ -261,6 +271,7 @@ test("reducing motion completes a portal and navigation changes cancel stale ent
   // A popstate while the promise is pending must invalidate that entry attempt.
   await page.evaluate(() => window.dispatchEvent(new PopStateEvent("popstate")));
   await expect(page.locator(".transition")).not.toHaveClass(/active/);
+  await expect(page.locator(".portal-brand")).toBeHidden();
   await page.waitForTimeout(2600);
   await expect(page.locator("body")).toHaveAttribute("data-view", "intro");
   await expect(page).toHaveURL(/\/$/);
