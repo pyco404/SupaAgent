@@ -65,6 +65,8 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   let height = 680;
   let frame = 0;
   let destroyed = false;
+  let branchVisible=false,branchPaused=false,branchTime=0,branchPrevious=null,lastBranchPaint=0,needsRender=true;
+  const branchControl=document.querySelector('.branch-motion');
   let wheelDelta = 0;
   let lastWheel = 0;
   let pointer = null;
@@ -91,6 +93,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   function drawBranch() {
     if (!context) return;
     const gutter = 110;
+    const phase=motion?.matches?0:branchTime/1000;canvas.dataset.motionPhase=String(phase);
     const ink = getComputedStyle(host).color || "#ebe6db";
     context.clearRect(0, 0, width + gutter, height);
     context.save();
@@ -105,13 +108,14 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       if (y === 0) context.moveTo(x, y); else context.lineTo(x, y);
     }
     context.stroke();
-    // Clustered fibers and junctions grow from the same spine; no idle redraws.
+    // Only fiber tips sway; spine/card attachments remain stable.
     for(let stem=0;stem<420;stem++){
       const seed=stem+Math.floor(position)*19,cluster=stem%5;
       const center=[.07,.29,.55,.76,.96][cluster]*height;
       const y=Math.max(0,Math.min(height,center+(random(seed+1)-.5)*height*.11));
       const x=spine(y),direction=random(seed+4)>.87?1:-1;
-      const length=12+random(seed+3)**.65*(65+random(cluster+21)*45),tipX=x+direction*length,tipY=y-(random(seed+5)-.2)*90;
+      const sway=Math.sin(phase*.65+stem*.19)*3;
+      const length=12+random(seed+3)**.65*(65+random(cluster+21)*45),tipX=x+direction*length+sway,tipY=y-(random(seed+5)-.2)*90+sway*.6;
       context.globalAlpha=.18+random(seed+6)*.45;context.lineWidth=.45;
       context.beginPath();context.moveTo(x,y);context.bezierCurveTo(x+direction*length*.15,y-5,x+direction*length*.5,tipY+20,tipX,tipY);context.stroke();
       if(stem%3===0){context.fillStyle=ink;context.globalAlpha=.65;context.fillRect(tipX,tipY,1.7,1.7);}
@@ -152,18 +156,32 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
     drawBranch();
   }
 
-  function animate() {
-    frame = 0;
-    if (destroyed || document.hidden) return;
-    const difference = target - position;
-    position = motion?.matches || Math.abs(difference) < 0.002 ? target : position + difference * 0.18;
-    render();
-    if (position !== target) frame = requestAnimationFrame(animate);
+  function animate(time) {
+    frame=0;if(destroyed||document.hidden)return;
+    const flowing=branchVisible&&!branchPaused&&!motion?.matches;
+    canvas.dataset.motionState=motion?.matches?'reduced':branchPaused?'paused':branchVisible?'running':'offscreen';
+    if(flowing&&branchPrevious!==null)branchTime+=Math.max(0,Math.min(100,time-branchPrevious));
+    branchPrevious=flowing?time:null;
+    const difference=target-position;
+    const navigating=Math.abs(difference)>0;
+    position=motion?.matches||Math.abs(difference)<.002?target:position+difference*.18;
+    if(needsRender||navigating){render();needsRender=false;lastBranchPaint=time;}
+    else if(flowing&&time-lastBranchPaint>=33){drawBranch();lastBranchPaint=time;}
+    if(position!==target||flowing)frame=requestAnimationFrame(animate);
   }
 
   function schedule() {
-    if (!frame && !destroyed && !document.hidden) frame = requestAnimationFrame(animate);
+    needsRender=true;
+    if(!frame&&!destroyed&&!document.hidden)frame=requestAnimationFrame(animate);
   }
+  function updateBranchControl(){
+    if(!branchControl)return;
+    branchControl.disabled=!!motion?.matches;
+    branchControl.textContent=motion?.matches?'Branch motion reduced':branchPaused?'Play branches':'Pause branches';
+    branchControl.setAttribute('aria-pressed',String(!branchPaused&&!motion?.matches));
+  }
+  function toggleBranches(){branchPaused=!branchPaused;branchPrevious=null;updateBranchControl();schedule();}
+  function motionChange(){branchPrevious=null;updateBranchControl();schedule();}
 
   function select(index) {
     if (!count || !Number.isFinite(index) || destroyed) return;
@@ -270,12 +288,15 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   }
 
   function visibility() {
+    branchPrevious=null;
     if (document.hidden && frame) {
       cancelAnimationFrame(frame);
       frame = 0;
     } else if (!document.hidden) schedule();
   }
 
+  const branchObserver=new IntersectionObserver(entries=>{branchVisible=entries[0].isIntersecting;branchPrevious=null;schedule();});branchObserver.observe(host);
+  branchControl?.addEventListener('click',toggleBranches);updateBranchControl();
   const observer = new ResizeObserver(resize);
   observer.observe(host);
   host.addEventListener("click", onClick, true);
@@ -286,7 +307,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   host.addEventListener("pointerup", onPointerEnd);
   host.addEventListener("pointercancel", onPointerEnd);
   document.addEventListener("visibilitychange", visibility);
-  motion?.addEventListener?.("change", schedule);
+  motion?.addEventListener?.("change", motionChange);
   resize();
 
   return {
@@ -298,7 +319,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       if (frame) cancelAnimationFrame(frame);
       if (pointer && host.hasPointerCapture(pointer.id)) host.releasePointerCapture(pointer.id);
       pointer = null;
-      observer.disconnect();
+      observer.disconnect();branchObserver.disconnect();branchControl?.removeEventListener('click',toggleBranches);
       host.removeEventListener("click", onClick, true);
       host.removeEventListener("keydown", onKey);
       host.removeEventListener("wheel", onWheel);
@@ -307,7 +328,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       host.removeEventListener("pointerup", onPointerEnd);
       host.removeEventListener("pointercancel", onPointerEnd);
       document.removeEventListener("visibilitychange", visibility);
-      motion?.removeEventListener?.("change", schedule);
+      motion?.removeEventListener?.("change", motionChange);
       list.remove();
       if (previousRole === null) host.removeAttribute("role");
       else host.setAttribute("role", previousRole);
