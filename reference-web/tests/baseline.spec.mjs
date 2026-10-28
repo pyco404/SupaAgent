@@ -476,7 +476,28 @@ test('hands switch between mouse and typing while a second tether follows screen
   await page.mouse.move(170,310);await expect(hands).toHaveAttribute('data-right-hand','mouse');await expect(hands).toHaveAttribute('data-right-hand','keyboard');
   await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointermove',{clientX:180,clientY:320,pointerType:'touch'})));await expect(hands).toHaveAttribute('data-right-hand','keyboard');
   await page.emulateMedia({reducedMotion:'reduce'});await expect(hands).toHaveAttribute('data-hand-state','idle');
+  await expect(tether).toHaveAttribute('data-typing-active','false');
   expect(await hands.evaluate(canvas=>getComputedStyle(canvas).pointerEvents)).toBe('none');
+});
+
+test('typing tether disappears on completion while mouse tracking remains available',async({page})=>{
+  // Short public source fixture lets the intro finish naturally, without skipping time.
+  await page.route('**/app.js',route=>route.request().resourceType()==='fetch'?route.fulfill({contentType:'text/javascript',body:';'}):route.continue());
+  await page.emulateMedia({reducedMotion:'no-preference'});await open(page,'/');
+  const tether=page.locator('.pointer-tether');
+  await expect(tether).toHaveAttribute('data-typing-active','true');
+  await expect(page.locator('.intro-canvas')).toHaveAttribute('data-intro-state','complete',{timeout:25000});
+  await expect(tether).toHaveAttribute('data-typing-active','false');
+  await page.mouse.move(220,190);await expect(tether).toHaveAttribute('data-active','true');
+  await open(page,'/site/#about');
+  await expect(tether).toHaveAttribute('data-typing-active','true');
+  await page.locator('.command-toggle').click();await page.locator('.skip-typing').click();
+  await expect(tether).toHaveAttribute('data-typing-active','false');
+  await page.mouse.move(230,200);await expect(tether).toHaveAttribute('data-active','true');
+  await page.locator('.brand').click();
+  await expect(tether).toHaveAttribute('data-typing-active','true');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await expect(tether).toHaveAttribute('data-typing-active','false');
 });
 
 test('wheel uses distinct section schematics and full planned labels',async({page,request})=>{
