@@ -158,6 +158,9 @@ test("Supa backdrop preserves the approved pixel mask and stays behind readable 
   await open(page, "/");
   const logo=page.locator(".intro-mascot");
   await expect(logo).toBeVisible();
+  const bounds=await logo.boundingBox(),viewport=page.viewportSize();
+  expect(bounds.width).toBeLessThanOrEqual(220);expect(bounds.x).toBeGreaterThan(viewport.width/2);expect(bounds.y).toBeLessThan(150);
+  expect(bounds.x+bounds.width).toBeLessThanOrEqual(viewport.width-20);
   const source=readFileSync(new URL("../../web/src/components/visuals.tsx", import.meta.url),"utf8");
   const original=source.slice(source.indexOf("export function PixelMark"),source.indexOf("const stages"));
   const paths=[...original.matchAll(/<path d="([^"]+)"/g)].map(match=>match[1]);
@@ -447,8 +450,13 @@ test('intro pointer follows the mouse from the code mascot and survives entry', 
     expect(x).toBeCloseTo(anchor.x+anchor.width*.5);expect(y).toBeCloseTo(anchor.y+anchor.height*.4);
     expect(await tether.evaluate(canvas=>canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data.some((value,i)=>i%4===3&&value>0))).toBe(true);
   }
-  await page.locator('.enter').click();await expect(page.locator('.transition')).toHaveClass(/active/);await expect(tether).toHaveAttribute('data-active','false');
-  await expect(page.locator('body')).toHaveAttribute('data-view','projects');await page.mouse.move(310,230);await expect(tether).toHaveAttribute('data-active','true');
+  await page.evaluate(()=>{
+    window.tetherHiddenDuringPortal=false;
+    const observer=new MutationObserver(()=>{if(document.querySelector('.transition').classList.contains('active')&&document.querySelector('.pointer-tether').dataset.active==='false'){window.tetherHiddenDuringPortal=true;observer.disconnect();}});
+    observer.observe(document.querySelector('.pointer-tether'),{attributes:true,attributeFilter:['data-active']});
+  });
+  await page.locator('.enter').click();await expect(page.locator('body')).toHaveAttribute('data-view','projects');
+  expect(await page.evaluate(()=>window.tetherHiddenDuringPortal)).toBe(true);await page.mouse.move(310,230);await expect(tether).toHaveAttribute('data-active','true');
   await page.locator('.brand').click();await expect(page.locator('body')).toHaveAttribute('data-view','intro');await page.mouse.move(320,240);await expect(tether).toHaveAttribute('data-active','true');
   await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointermove',{clientX:100,clientY:200,pointerType:'touch'})));await expect(tether).toHaveAttribute('data-active','false');
 });
