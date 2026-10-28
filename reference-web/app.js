@@ -8,11 +8,11 @@ import { navigation, overview, sectionView } from './platform.js';
 const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-reduced.addEventListener('change', event => { root.dataset.motion=event.matches?'still':'running'; });
+reduced.addEventListener('change', event => { root.dataset.motion=event.matches?'still':'running';if(event.matches)revealTyping?.(); });
 root.dataset.motion = reduced.matches?'still':'running';
 const node = (tag,className,text) => { const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=String(text);return el; };
 const palettes=[['#0c0c0c','#d8d4b4','#949078'],['#0b0b0b','#ebe6db','#9b968a'],['#11120f','#d9d7c3','#9b9d85']];
-let sceneData;
+let sceneData, revealTyping=null;
 let theme=0,wheel,scenes,itemIndex=0,typing=0,typingTimer=0,leaving=false,entryAttempt=0,worm=false;
 let state={status:{error:'Connecting to local backend…'},agents:{error:'Loading saved agents…'},retrievedAt:'not yet retrieved'},agentId='',renderVersion=0,reloadVersion=0;
 let commandHistory=[],historyIndex=0;
@@ -52,7 +52,7 @@ async function reload(currentScene=sceneData){
 $('.reload-records').addEventListener('click',()=>reload());
 $('#agent-select').addEventListener('change',event=>{agentId=event.target.value;void select(itemIndex);});
 function setView(projects){
-  entryAttempt++;leaving=false;scenes?.cancelWarp();typing++;renderVersion++;clearTimeout(typingTimer);$('.buffer').setAttribute('aria-busy','false');
+  entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
   if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));$('.buffer').focus({preventScroll:true});});}
 }
@@ -76,10 +76,10 @@ $('.tabline').addEventListener('click',()=>setDrawer($('.tabline').getAttribute(
 $('.wheel').addEventListener('click',event=>{if(event.target.closest('.wheel-item')&&matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.buffer').focus({preventScroll:true});}});
 function line(text,className='terminal-line'){const el=node('p',className,text);$('.buffer').append(el);return el;}
 async function select(index){
-  itemIndex=index;typing++;clearTimeout(typingTimer);const version=++renderVersion,item=navigation[index];if(!item)return;
+  itemIndex=index;cancelTyping();const version=++renderVersion,item=navigation[index];if(!item)return;
   if(document.body.dataset.view==='projects')history.replaceState(null,'',`#${item.id}`);
   $('.tab-file').textContent=item.label;$('.winbar').textContent=`supa@local — ${item.label} / read-only`;
-  const buffer=$('.buffer');buffer.replaceChildren();buffer.setAttribute('aria-busy','true');
+  const buffer=$('.buffer');buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
   $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
   line('supa@local ~','prompt');line('Loading saved view…','prompt');
   const rows=await sectionView(item.id,state,agentId);
@@ -98,40 +98,53 @@ async function select(index){
   buffer.scrollTop=0;$('.pane').classList.remove('is-changing');void buffer.offsetWidth;$('.pane').classList.add('is-changing');
   $('.announcement').textContent=`Selected ${item.label}`;$('.key-feedback').textContent='↑↓ navigate · : supa help';typeTerminal();
 }
-// Animate the prompt and command; saved records remain readable immediately.
+// Every visit reveals complete sections in document order, using saved text only.
+function cancelTyping(){
+  typing++;clearTimeout(typingTimer);revealTyping=null;
+  $('.skip-typing').hidden=true;
+}
+$('.skip-typing').addEventListener('click',()=>revealTyping?.());
 function typeTerminal() {
   clearTimeout(typingTimer);
-  const buffer=$('.buffer'), token=++typing;
-  const rows=[...buffer.children].slice(0,2);
+  const buffer=$('.buffer'),token=++typing,rows=[...buffer.children],skip=$('.skip-typing');
   const ghost=document.querySelectorAll('.entity-state b')[1];
-  if(reduced.matches){buffer.setAttribute('aria-busy','false');buffer.setAttribute('aria-live','polite');if(ghost)ghost.textContent='idle';return;}
   const originals=[];
-  rows.forEach(row=>{
-    row.hidden=true;
-    const walker=document.createTreeWalker(row,NodeFilter.SHOW_TEXT);
-    let text;
-    while((text=walker.nextNode())){originals.push({text,value:text.textContent,row});text.textContent='';}
-  });
-  buffer.setAttribute('aria-busy','true');buffer.setAttribute('aria-live','off');
-  if(ghost)ghost.textContent='typing';
-  let rowIndex=0, textIndex=0, character=0;
+  let rowIndex=0,textIndex=0,character=0;
   function finish(){
-    originals.forEach(({text,value})=>{text.textContent=value;});rows.forEach(row=>{row.hidden=false;});
-    buffer.setAttribute('aria-busy','false');buffer.setAttribute('aria-live','polite');if(ghost)ghost.textContent='idle';
+    if(token!==typing)return;
+    clearTimeout(typingTimer);
+    originals.forEach(({text,value})=>{text.textContent=value;});
+    rows.forEach(row=>{row.hidden=false;row.inert=false;});
+    buffer.setAttribute('aria-busy','false');buffer.setAttribute('aria-live','polite');buffer.dataset.typingState='complete';
+    if(ghost)ghost.textContent='idle';
+    const restoreFocus=document.activeElement===skip;
+    skip.hidden=true;revealTyping=null;
+    if(restoreFocus)buffer.focus({preventScroll:true});
   }
+  if(reduced.matches){finish();return;}
+  rows.forEach(row=>{
+    row.hidden=true;row.inert=true;
+    const walker=document.createTreeWalker(row,NodeFilter.SHOW_TEXT);
+    let text;while((text=walker.nextNode())){originals.push({text,value:text.textContent,row});text.textContent='';}
+  });
+  buffer.setAttribute('aria-busy','true');buffer.setAttribute('aria-live','off');buffer.dataset.typingState='typing';
+  if(ghost)ghost.textContent='typing';
+  skip.hidden=false;revealTyping=finish;
   function tick(){
     if(token!==typing)return;
     if(reduced.matches){finish();return;}
     const row=rows[rowIndex];if(!row){finish();return;}
+    const follow=buffer.scrollHeight-buffer.scrollTop-buffer.clientHeight<32;
     row.hidden=false;
     const record=originals[textIndex];
-    if(!record||record.row!==row){rowIndex++;typingTimer=setTimeout(tick,150);return;}
+    if(!record||record.row!==row){row.inert=false;rowIndex++;typingTimer=setTimeout(tick,120);return;}
     if(character<record.value.length){
       character++;record.text.textContent=record.value.slice(0,character);
-      typingTimer=setTimeout(tick,row.classList.contains('terminal-command')?26:12);
+      if(follow)buffer.scrollTop=buffer.scrollHeight;
+      typingTimer=setTimeout(tick,row.classList.contains('terminal-command')?26:16);
     }else{character=0;textIndex++;typingTimer=setTimeout(tick,8);}
   }
-  typingTimer=setTimeout(tick,200);
+  typingTimer=setTimeout(tick,150);
 }
 function openCommand(prefix=''){ $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
 function closeCommand(focus=true){$('.command').hidden=true;if(focus)returnFocus();}
@@ -170,4 +183,4 @@ window.addEventListener('keydown',async event=>{
   else if(event.key==='g')$('.buffer').scrollTo({top:0});
   else if(event.key==='G')$('.buffer').scrollTo({top:$('.buffer').scrollHeight});
 });
-window.addEventListener('pagehide',event=>{if(!event.persisted){typing++;clearTimeout(typingTimer);wheel?.destroy();scenes?.destroy();}});
+window.addEventListener('pagehide',event=>{if(!event.persisted){cancelTyping();wheel?.destroy();scenes?.destroy();}});
