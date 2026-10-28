@@ -95,11 +95,41 @@ test('reloading restarts typing and navigation cancels old text safely',async({p
 
 test('workspace stays clear and Home uses the latest source-code logo',async({page})=>{
   await page.goto('/site/#home');await expect(page.locator('html')).toHaveAttribute('data-ready','true');
-  await expect(page.locator('.workspace-controls button,.workspace-controls a')).toHaveCount(0);
+  await expect(page.locator('.workspace-controls > button,.workspace-controls > a')).toHaveCount(0);
   await expect(page.locator('.wheel-item[data-index="0"] img')).toHaveAttribute('src','/public/assets/supa-agent-code.svg');
   await expect(page.locator('.reload-records')).toBeHidden();await expect(page.getByRole('link',{name:'Operator sign-in'})).toBeHidden();
   await page.getByRole('button',{name:'Open terminal commands'}).click();
   await expect(page.locator('.reload-records')).toBeVisible();await expect(page.getByRole('link',{name:'Operator sign-in'})).toBeVisible();
   await expect(page.locator('.command-input')).toBeFocused();await page.getByRole('button',{name:'Close terminal commands'}).click();await expect(page.locator('.command')).toBeHidden();
   await page.getByRole('button',{name:'Open terminal commands'}).click();await page.keyboard.press('Escape');await expect(page.locator('.command')).toBeHidden();
+});
+
+test('agent picker stays within the viewport and supports keyboard selection and dismissal',async({page})=>{
+  const second='22222222-2222-4222-8222-222222222222',longName='A very long verified agent identity '.repeat(6);
+  await page.route('**/api/agents',route=>route.fulfill({json:[{id,name:'Fixture Supa',lifecycle:'active',created_at:'fixture'},{id:second,name:longName,lifecycle:'paused',created_at:'fixture'}]}));
+  await page.goto('/site/#home');await expect(page.locator('#agent-picker-trigger')).toBeEnabled();
+  const trigger=page.locator('#agent-picker-trigger'),list=page.locator('#agent-options');
+  await expect(page.locator('#agent-select')).toBeHidden();await trigger.click();await expect(list).toBeVisible();
+  const inside=async()=>{const box=await list.boundingBox(),viewport=page.viewportSize();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.y).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(viewport.width);expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);};
+  await inside();expect(await list.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+  await page.locator('.buffer').evaluate(el=>el.dispatchEvent(new Event('scroll')));await expect(list).toBeVisible();
+  await page.keyboard.press('j');await expect(page).toHaveURL(/#home$/);await expect(list).toBeVisible();
+  await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await expect(page.locator('#agent-select')).toHaveValue(second);await expect(list).toBeHidden();await expect(trigger).toBeFocused();await expect(trigger).toContainText(longName);
+  await trigger.click();await page.keyboard.press('Escape');await expect(list).toBeHidden();await expect(trigger).toBeFocused();
+  await trigger.click();await page.locator('.blueprint').click({position:{x:5,y:5}});await expect(list).toBeHidden();
+  await trigger.click();await page.setViewportSize({width:360,height:640});await expect(list).toBeHidden();await trigger.click();await inside();
+  await page.keyboard.press('Escape');await trigger.evaluate(el=>Object.assign(el.style,{position:'fixed',bottom:'8px',left:'20px',width:'calc(100vw - 40px)'}));await trigger.click();await inside();
+  const above=await list.boundingBox(),field=await trigger.boundingBox();expect(above.y+above.height).toBeLessThanOrEqual(field.y);
+});
+
+test('agent popup remains inside a scaled embedded preview',async({page})=>{
+  const original=await page.request.get(`${connected}/site/`);expect(original.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+  // Only this local fixture permits embedding; production framing policy stays intact.
+  await page.route(`${connected}/site/`,async route=>{const response=await route.fetch(),headers=response.headers();delete headers['content-security-policy'];await route.fulfill({response,headers});});
+  await page.setViewportSize({width:800,height:900});await page.goto('about:blank');
+  await page.setContent(`<iframe title="Local Supa preview" src="${connected}/site/#home" style="position:absolute;left:200px;top:40px;width:390px;height:700px;border:0;transform:scale(.75);transform-origin:top left"></iframe>`);
+  const frame=page.frameLocator('iframe');await expect(frame.locator('#agent-picker-trigger')).toBeEnabled();await frame.locator('#agent-picker-trigger').click();
+  const panel=await frame.locator('#agent-options').boundingBox(),preview=await page.locator('iframe').boundingBox();
+  expect(panel.x).toBeGreaterThanOrEqual(preview.x);expect(panel.y).toBeGreaterThanOrEqual(preview.y);expect(panel.x+panel.width).toBeLessThanOrEqual(preview.x+preview.width);expect(panel.y+panel.height).toBeLessThanOrEqual(preview.y+preview.height);
+  await frame.locator('#agent-options [role=option]').last().click();await expect(frame.locator('#agent-options')).toBeHidden();
 });
