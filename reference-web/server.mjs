@@ -3,10 +3,13 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadLocalEnvironment, readResource, operatorAuthorized, localRequest } from './backend.mjs';
+await loadLocalEnvironment();
+
 const root = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? 3200);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Invalid local port");
-const appFiles = new Set(["index.html", "style.css", "app.js", "scene.js", "wheel.js", "reference-data.json"]);
+const appFiles = new Set(["index.html", "style.css", "app.js", "scene.js", "wheel.js", "platform.js"]);
 const media = new Map([
   [".html", "text/html; charset=utf-8"], [".css", "text/css; charset=utf-8"], [".txt", "text/plain; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"], [".json", "application/json; charset=utf-8"], [".woff2", "font/woff2"],
@@ -25,7 +28,7 @@ createServer(async (request, response) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("Referrer-Policy", "no-referrer");
   response.setHeader("Cache-Control", "no-store");
-  response.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://hancore.dev; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
+  response.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
   if (request.method !== "GET" && request.method !== "HEAD") {
     response.setHeader("Allow", "GET, HEAD");
     return finish(response, 405, "Read-only preview");
@@ -36,9 +39,22 @@ createServer(async (request, response) => {
   if (path.includes("\0") || path.includes("\\") || path.split("/").some(part => part === "." || part === "..")) {
     return finish(response, 400, "Invalid path");
   }
+  if (!localRequest(new Request('http://127.0.0.1', { headers:request.headers }))) return finish(response,403,'Local access only');
+  if (path === '/operator') {
+    if (!operatorAuthorized(request.headers.authorization)) {
+      response.setHeader('WWW-Authenticate','Basic realm="Supa local operator", charset="UTF-8"');
+      return finish(response,401,'Operator authentication required');
+    }
+    response.writeHead(302,{Location:'/site/#agents'});return response.end();
+  }
+  if (path.startsWith('/api/')) {
+    const result = await readResource(request.url, request.headers);
+    response.writeHead(result.status, {'Content-Type':'application/json; charset=utf-8'});
+    return response.end(request.method === 'HEAD' ? undefined : JSON.stringify(result.body));
+  }
   if (path === "/healthz") {
     response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    return response.end(request.method === "HEAD" ? undefined : JSON.stringify({ status: "ok", mode: "isolated-reference", host: "127.0.0.1" }));
+    return response.end(request.method === "HEAD" ? undefined : JSON.stringify({ status: "ok", mode: "supa-read-only", host: "127.0.0.1" }));
   }
   const file = path === "/" || path === "/site" || path === "/site/" ? "index.html" : path.slice(1);
   const isPublic = file.startsWith("public/") && file.split("/").every(part => part && !part.startsWith(".")) && (publicExtensions.has(extname(file)) || file === "public/fonts/OFL.txt");
@@ -54,4 +70,4 @@ createServer(async (request, response) => {
     if (error.code === "ENOENT" || error.code === "ENOTDIR" || error.code === "EACCES") return finish(response, 404, "Not found");
     finish(response, 500, "Local asset unavailable");
   }
-}).listen(port, "127.0.0.1", () => console.log(`Isolated reference preview: http://127.0.0.1:${port}`));
+}).listen(port, "127.0.0.1", () => console.log(`Supa Agent local: http://127.0.0.1:${port}`));
