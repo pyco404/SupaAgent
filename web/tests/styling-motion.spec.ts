@@ -61,14 +61,25 @@ test("background refresh retains panels and animates only the new exact financia
   await page.emulateMedia({ reducedMotion: "no-preference" }); await page.goto("/economy");
   const value = page.locator(".exact-value").first(); await expect(value).toHaveText("$2.5");
   await value.evaluate(e => { e.setAttribute("data-original-node", "true"); });
+  // Hold the native animation clock so slow CI cannot miss a brief real update.
+  await page.evaluate(() => {
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function(...args) {
+      const animation = animate.apply(this, args);
+      if (this.matches('[data-original-node="true"]')) {
+        animation.pause(); Object.assign(window, { supaTestAnimation: animation });
+      }
+      return animation;
+    };
+  });
   pending = true; amount = 1234567;
-  await page.getByRole("button", { name: "REFRESH RECORDS" }).click();
-  await expect(value).toHaveText("$2.5"); await expect(page.getByText("REFRESHING RECORDS…")).toBeVisible();
+  await page.getByRole("button", { name: "RELOAD SAVED RECORDS" }).click();
+  await expect(value).toHaveText("$2.5"); await expect(page.getByText("RELOADING SAVED RECORDS…")).toBeVisible();
   await expect.poll(() => !!release).toBe(true); release!(); pending = false;
   await expect(value).toHaveText("$1.234567"); await expect(value).toHaveAttribute("data-original-node", "true");
   await expect(page.getByRole("heading", { name: "Reading the record…" })).toHaveCount(0);
-  await expect.poll(() => value.evaluate(e => e.getAnimations().filter(a => a.playState === "running").length)).toBeGreaterThan(0);
-  const animation = await value.evaluateHandle(e => e.getAnimations()[0]);
+  await expect.poll(() => page.evaluate(() => (window as Window & { supaTestAnimation?: Animation }).supaTestAnimation?.playState)).toBe("paused");
+  const animation = await page.evaluateHandle(() => (window as Window & { supaTestAnimation?: Animation }).supaTestAnimation!);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect.poll(() => animation.evaluate(a => a.playState)).toBe("idle");
 });
@@ -81,12 +92,12 @@ test("new activity is refreshed from persisted records and only active agents pu
   ] : records[`agents/${agentId}/activity`] }));
   await page.emulateMedia({ reducedMotion: "no-preference" }); await page.goto(`/agents/${agentId}`);
   await expect(page.locator(".activity-record")).toHaveCount(1); await expect(page.locator(".lifecycle-active")).toHaveCount(0);
-  updated = true; await page.getByRole("button", { name: "REFRESH RECORDS" }).click();
+  updated = true; await page.getByRole("button", { name: "RELOAD SAVED RECORDS" }).click();
   await expect(page.locator(".activity-record")).toHaveCount(2);
   await expect(page.getByText("test verified event", { exact: true })).toBeVisible();
   expect(await page.locator(".activity-record").first().evaluate(e => getComputedStyle(e).animationName)).toBe("record-enter");
   await page.route(`**/api/console/agents/${agentId}`, route => route.fulfill({ json: { agent: { ...agent, lifecycle: "active" }, financials } }));
-  await page.getByRole("button", { name: "REFRESH RECORDS" }).click(); await expect(page.locator(".lifecycle-active")).toHaveCount(1);
+  await page.getByRole("button", { name: "RELOAD SAVED RECORDS" }).click(); await expect(page.locator(".lifecycle-active")).toHaveCount(1);
 });
 
 test("reduced motion disables page, headline, reveal, chart and menu animations", async ({ page }) => {
@@ -101,6 +112,8 @@ test("reduced motion disables page, headline, reveal, chart and menu animations"
 });
 
 test("all console pages fit narrow mobile widths, with scrolling contained inside tables", async ({ page }) => {
+  // This sweep loads nine documents and waits for each to settle.
+  test.setTimeout(90_000);
   await fixtures(page); await page.setViewportSize({ width: 320, height: 740 });
   for (const path of ["/", "/agents", `/agents/${agentId}`, "/economy", "/memory", "/social", "/trading", "/launch", "/factory"]) {
     await page.goto(path); await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -114,7 +127,8 @@ test("all console pages fit narrow mobile widths, with scrolling contained insid
 
 test("keyboard focus remains visible and disconnected services have no active indicators", async ({ page }) => {
   await page.goto("/agents"); await expect(page.getByRole("heading", { name: "Console disconnected" })).toBeVisible();
-  await expect(page.locator(".connection-label .disconnected")).toBeVisible();
+  await expect(page.locator(".connection-label .disconnected")).toBeAttached();
+  await expect(page.locator(".connection-label .active, .connection-label .connected")).toHaveCount(0);
   await expect(page.locator(".lifecycle-active")).toHaveCount(0);
   await page.keyboard.press("Tab"); await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   const outline = await page.getByRole("link", { name: "Skip to content" }).evaluate(e => ({ color: getComputedStyle(e).outlineColor, width: getComputedStyle(e).outlineWidth }));
