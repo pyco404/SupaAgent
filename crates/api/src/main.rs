@@ -24,7 +24,7 @@ async fn run() -> Result<()> {
         &std::env::var("SUPA_BIND").unwrap_or_else(|_| format!("127.0.0.1:{port}")),
         private_staging,
     )?;
-    let scheduler_enabled = flag("SUPA_API_SCHEDULER_ENABLED", !private_staging)?;
+    let scheduler_enabled = flag("SUPA_API_SCHEDULER_ENABLED", false)?;
     let token = std::env::var("SUPA_API_TOKEN").map_err(|_| Error::Invalid)?;
     let provider = std::env::var("SUPA_PROVIDER").unwrap_or_else(|_| "offline".into());
     let reasoner = configured_provider(&provider, private_staging)?;
