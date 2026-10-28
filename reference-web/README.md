@@ -324,3 +324,28 @@ inspected the running local page (`ev_a40d9a714f29ac8e8016451d663f4785d2399269e7
 An eight-second recording of the actual local page is available:
 [continuous branches](evidence/2026-10-28/supa-continuous-branches-desktop.webm).
 The clip is trimmed from a browser recording; it is not a generated animation.
+
+### Bottom-anchored workspace keyboard and larger architecture
+
+Every workspace view now reserves space for a fixed, non-interactive keyboard
+canvas at the viewport's lower edge. The hand renderer aligns the wrists near
+the canvas bottom instead of leaving empty space beneath them. Saved-record
+status and the desktop safety note stay above the reserved input area; records
+scroll independently and remain unobscured. Mobile respects bottom safe-area
+insets. The opening intro composition remains separate.
+
+The shared architecture canvas is taller wherever it appears (Home and About).
+At 390×844 it grows from 130px to roughly 253px; short phones use a 160px version
+to retain readable record space. Desktop also gets a taller diagram. No diagram
+is added to record pages that previously omitted it, and all existing decorative
+labels, real/simulated distinctions and motion controls remain intact.
+
+Syntax/build and 12 focused desktop/tablet/mobile browser tests passed. The
+layout test checks all ten workspace destinations, keyboard anchoring, content
+clearance, architecture height and a 360×640 viewport. Existing input handoff,
+responsive overflow and mobile focus tests also pass. REA inspected actual
+[mobile](evidence/2026-10-28/supa-bottom-keyboard-mobile.png) and
+[desktop](evidence/2026-10-28/supa-bottom-keyboard-desktop.png) layouts.
+Evidence IDs: `ev_59554dd5f963e44ee988e4e1fbb5616893d4dcc3ccd1465981f5a1753b6e67ef`
+and `ev_011e0ad1e256ef545a326216ed0f042b245b7c8abdf54244e4526d6bea9bde14`.
+Screenshots use reduced motion; browser tests separately exercise hand movement.
