@@ -2,7 +2,8 @@
 // No reference scripts, filmed portrait or tracking code are included.
 export function createScenes({ intro, blueprint, entity, transition, spark, reduced, data }) {
   let mode = 'intro', frame = 0, previous = 0, warpStart = 0, warpResolve, input = '', selected = 0, worm = false;
-  const pointer = { x: .5, y: .5 }, born = performance.now();
+  const pointer = { x: .5, y: .5 };
+  let introProgress = 0, introTime = null;
   const contexts = new Map();
   let code = [
     '// workspace / a small study in motion', '',
@@ -94,17 +95,36 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     const narrow=w<700, onePane=reduced.matches||narrow, width=Math.min(720,w-112), left=(w-width)/2;
     const rows=Math.max(15,Math.floor((onePane?h-210:h*.58)/line));
     ctx.font='12px Plex,monospace';
-    const shift=reduced.matches?0:Math.floor((time-born)/5200)%12;
+    // Reveal the same code from the top in both panes, never rotate completed rows.
+    // Pauses between lines are part of the typing budget, not separate timers.
+    if(reduced.matches) introProgress=Infinity;
+    else if(introTime!==null) introProgress+=Math.max(0,Math.min(100,time-introTime))/30;
+    introTime=time;
+    let remaining=introProgress, revealedRows=0, typedCharacters=0;
+    const lines=Array.from({length:rows},(_,row)=>{
+      const value=code[row%code.length];
+      const limit=Math.floor((onePane?width:width/2)/cell)-(narrow?1:0);
+      const full=value.slice(0,limit), count=Math.min(full.length,Math.max(0,Math.floor(remaining)));
+      const started=remaining>=0, complete=remaining>=full.length+8;
+      remaining-=full.length+8;
+      if(complete)revealedRows++;
+      typedCharacters+=count;
+      return {value:full.slice(0,count),started,complete,count};
+    });
+    intro.dataset.revealedRows=String(revealedRows);
+    intro.dataset.typedCharacters=String(typedCharacters);
+    intro.dataset.introState=revealedRows===rows?'complete':'typing';
     ctx.save();ctx.beginPath();ctx.rect(Math.max(0,left-32),110,width+64,rows*line+14);ctx.clip();
     for(let pane=0;pane<(onePane?1:2);pane++){
       const gutter=left+(pane*width/2)-(narrow?28:22), textX=left+(onePane&&narrow?14:0)+pane*width/2;
       for(let row=0;row<rows;row++){
-        const value=code[(row+shift+pane*3)%code.length];
-        ctx.fillStyle=ink();ctx.globalAlpha=.28;ctx.fillText(String(row+1+shift).padStart(2),gutter,126+row*line);
+        const {value,started,complete,count}=lines[row];
+        if(!started)continue;
+        ctx.fillStyle=ink();ctx.globalAlpha=.28;ctx.fillText(String(row+1).padStart(2),gutter,126+row*line);
         ctx.globalAlpha=.31+(row%5)*.025;
         if(/^(import|const|export|function|let)/.test(value))ctx.fillStyle='#71957d';
-        const limit=Math.floor((onePane?width:width/2)/cell)-(narrow?1:0);
-        ctx.fillText(value.slice(0,limit),textX,126+row*line);
+        ctx.fillText(value,textX,126+row*line);
+        if(!complete&&!reduced.matches&&Math.floor(time/550)%2===0){ctx.fillStyle=ink();ctx.globalAlpha=.6;ctx.fillRect(textX+count*cell,116+row*line,cell,line);}
       }
     }
     ctx.restore();ctx.globalAlpha=1;ctx.fillStyle=ink();
@@ -112,7 +132,6 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       ascii(ctx,left+width*.28,70,190,210,time);
       ctx.save();ctx.translate(left,0);drawHands(ctx,width,h*.94,time);ctx.restore();
     }
-    if(!reduced.matches){const cx=left+width*(.5+(pointer.x-.5)*.2),cy=onePane?h*.3:h*.24;ctx.globalAlpha=.5;ctx.fillRect(Math.round(cx/cell)*cell,Math.round(cy/line)*line,cell,line);ctx.globalAlpha=1;}
   }
   function drawBlueprint() {
     const view = fit(blueprint); if (!view) return;
@@ -172,13 +191,13 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   function schedule() { if (document.hidden) return; if (reduced.matches && !warpStart) draw(); else if (!frame) frame = requestAnimationFrame(tick); }
   function resize() { drawBlueprint(); drawSpark(); draw(); schedule(); }
   function pointerMove(e) { pointer.x = e.clientX / innerWidth; pointer.y = e.clientY / innerHeight; schedule(); }
-  function visibility() { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
+  function visibility() { introTime=null; if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
   function motionChange() { document.documentElement.dataset.motion = reduced.matches ? 'still' : 'running'; if (reduced.matches) { cancelAnimationFrame(frame); frame = 0; if (warpResolve) { warpResolve(); warpResolve = undefined; warpStart = 0; transition.classList.remove('active'); } } resize(); }
   const observer = new ResizeObserver(resize); [intro, blueprint, entity, spark].forEach(c => observer.observe(c));
   window.addEventListener('pointermove', pointerMove, { passive: true }); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
-    setMode(value) { mode = value; resize(); },
-    setCode(text) { code=String(text).split('\n').slice(0,500);resize(); },
+    setMode(value) { mode = value; introTime=null; resize(); },
+    setCode(text) { code=String(text).split('\n').slice(0,500);introProgress=0;introTime=null;resize(); },
     setSelection(index) { selected = index; blueprint.dataset.selection = String(selected); drawBlueprint(); },
     setWorm(value) { worm = value; schedule(); },
     onInput(value) { input = value; schedule(); },
