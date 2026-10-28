@@ -1,0 +1,965 @@
+{
+  "date": "2026-10-28",
+  "method": {
+    "design_review": "/root/design_review",
+    "technical_audit": "/root/technical_audit",
+    "independence": "Separate prompts, contexts/tabs and reports; A completed before detector output entered parent synthesis."
+  },
+  "scope": {
+    "application_changed": false,
+    "source_target": "web/src/app/page.tsx",
+    "routes": [
+      "/",
+      "/agents",
+      "/agents/[id]",
+      "/economy",
+      "/memory",
+      "/social",
+      "/trading",
+      "/launch",
+      "/factory"
+    ],
+    "preview": "http://127.0.0.1:3000",
+    "data": "actual dedicated local API; created verification agent; no fabricated events or financial records",
+    "desktop": [
+      1440,
+      1000
+    ],
+    "mobile": [
+      390,
+      844
+    ]
+  },
+  "scores": {
+    "technical": 17,
+    "technical_max": 20,
+    "usability": 27,
+    "usability_max": 40
+  },
+  "findings": {
+    "P0": 0,
+    "P1": 1,
+    "P1_scope": "conditional gap before public release, not a failed supported operator task",
+    "P2": 5,
+    "P3": 1
+  },
+  "screenshots": [
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/home-desktop.png",
+      "evidence_id": "ev_56953a8e921e5536de69c16e8ec22d69adc27d4b4a1d3b296cdb0b105515f94f",
+      "sha256": "afc9643c457f0e968871012f77249de7721fdc587cd97024860232d4aa775e51",
+      "bytes": 103297,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/economy-desktop.png",
+      "evidence_id": "ev_b72ff096a2079508bc289393b309bfe90f3161f603e6999c501f8cecb7c3a324",
+      "sha256": "4bff9664f1df35784bc195a01a877da4c934db5e5eaf97c442f6c68680bc9d0e",
+      "bytes": 89793,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/memory-desktop.png",
+      "evidence_id": "ev_d092d3f9fdc0aa5bbff49950ba02f184927a40878c147b9318b3b04ad4d67555",
+      "sha256": "21123504025801dca20862e72c2da829a59b62b9f7cd410a4099909d467b7be6",
+      "bytes": 83238,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/trading-desktop.png",
+      "evidence_id": "ev_05631253207094e6d0aa54e89cea282b2ee294c8ffc49c79f1fededb6c193c9d",
+      "sha256": "6e32ba74328289a5f3fbfbb5b5ea21cff29d22c5124120ae42945346a1aee154",
+      "bytes": 85756,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/home-mobile.png",
+      "evidence_id": "ev_1755ac7b6eaab80a21e56ecec59ece30d52e4f14ac57b394c071fe4ecc7ad828",
+      "sha256": "dc3ea0b6ea7bdad927fd471a9cc3e3e87ecc732fbf51ce35b620c70a9ba0a119",
+      "bytes": 52092,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/economy-mobile.png",
+      "evidence_id": "ev_8c72d223ef43a76855a9dd6aa5e62e0389175c5af655869775c953018d39575f",
+      "sha256": "6a368eda7b9e4045a96193bafe87b463bce5a0c38837a1c504d84d8123d8502e",
+      "bytes": 50930,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/diagram-mobile.png",
+      "evidence_id": "ev_311d7ddbe5a70ae33dd67799194de00f225454e42998557d25a9128f879fdd55",
+      "sha256": "2cc396eda0b08ba1dc5a48baa26da4c04ef6bce66e71af0052635f6bdfb5d208",
+      "bytes": 40777,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/economy-mobile-records.png",
+      "evidence_id": "ev_bca614147da33af53ac616153dc88e5b6211b5bf7cee54831a756445c0133f3b",
+      "sha256": "5c2e0a50816f6bc2123a351e42f4f34414061ddbe8ddb9812d0eed827a8f5be7",
+      "bytes": 55192,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completeness": {
+        "status": "complete_within_window",
+        "conditions": [
+          "complete_within_window"
+        ],
+        "policy_filtered_sections": [],
+        "attach_limited_sections": [],
+        "truncated_sections": [],
+        "unavailable_sections": [],
+        "excluded": [],
+        "dropped_events": {
+          "scripts": 0,
+          "network_requests": 0,
+          "console_events": 0,
+          "websocket_connections": 0,
+          "websocket_frames": 0,
+          "webmcp_tools": 0,
+          "timeline_events": 0,
+          "total": 0
+        }
+      },
+      "image_dimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/menu-mobile.png",
+      "evidence_id": "ev_1a8f402fd75367d1cdb352a232fb13bbe57dc77766362ec9e67a098ad2fbe105",
+      "sha256": "34cc3b864587bd2e942a95bfadef9e8dc6ca0a9b12681a0e542ce6fde5e9b031",
+      "bytes": 26826,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      },
+      "image_dimensions": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/agents-desktop.png",
+      "sha256": "cfc1d4a834f444b8dfcf1631c0897bd7ba1037763e11d37df64aed82b83e040e",
+      "bytes": 139702,
+      "image_dimensions": {
+        "width": 1440,
+        "height": 1880
+      },
+      "source": "Independent Assessment A, actual Playwright Chromium full-page capture; real local data",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "path": "artifacts/impeccable-audit/2026-10-28/agents-mobile.png",
+      "sha256": "b24a811f01f7d01b38d1e17d7cc1fd013af6e99d21b57f52c9d92c4878bcfc0f",
+      "bytes": 131110,
+      "image_dimensions": {
+        "width": 390,
+        "height": 2211
+      },
+      "source": "Independent Assessment A, actual Playwright Chromium full-page capture; real local data",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ],
+  "measured_captures": [
+    {
+      "name": "home-desktop",
+      "evidence_id": "ev_56953a8e921e5536de69c16e8ec22d69adc27d4b4a1d3b296cdb0b105515f94f",
+      "measurement": {
+        "page": "home",
+        "path": "/",
+        "actual_viewport": {
+          "width": 1440,
+          "height": 1000,
+          "scroll_width": 1440
+        },
+        "status": 200,
+        "synthetic_data": false
+      }
+    },
+    {
+      "name": "economy-desktop",
+      "evidence_id": "ev_b72ff096a2079508bc289393b309bfe90f3161f603e6999c501f8cecb7c3a324",
+      "measurement": {
+        "page": "economy",
+        "path": "/economy",
+        "actual_viewport": {
+          "width": 1440,
+          "height": 1000,
+          "scroll_width": 1440
+        },
+        "status": 200,
+        "synthetic_data": false
+      }
+    },
+    {
+      "name": "memory-desktop",
+      "evidence_id": "ev_d092d3f9fdc0aa5bbff49950ba02f184927a40878c147b9318b3b04ad4d67555",
+      "measurement": {
+        "page": "memory",
+        "path": "/memory",
+        "actual_viewport": {
+          "width": 1440,
+          "height": 1000,
+          "scroll_width": 1440
+        },
+        "status": 200,
+        "synthetic_data": false
+      }
+    },
+    {
+      "name": "trading-desktop",
+      "evidence_id": "ev_05631253207094e6d0aa54e89cea282b2ee294c8ffc49c79f1fededb6c193c9d",
+      "measurement": {
+        "page": "trading",
+        "path": "/trading",
+        "actual_viewport": {
+          "width": 1440,
+          "height": 1000,
+          "scroll_width": 1440
+        },
+        "status": 200,
+        "synthetic_data": false
+      }
+    },
+    {
+      "name": "home-mobile",
+      "evidence_id": "ev_1755ac7b6eaab80a21e56ecec59ece30d52e4f14ac57b394c071fe4ecc7ad828",
+      "measurement": {
+        "page": "home",
+        "path": "/",
+        "actual_viewport": {
+          "width": 390,
+          "height": 844,
+          "scroll_width": 390
+        },
+        "status": 200,
+        "synthetic_data": false
+      }
+    },
+    {
+      "name": "economy-mobile",
+      "evidence_id": "ev_8c72d223ef43a76855a9dd6aa5e62e0389175c5af655869775c953018d39575f",
+      "measurement": {
+        "page": "economy",
+        "path": "/economy",
+        "actual_viewport": {
+          "width": 390,
+          "height": 844,
+          "scroll_width": 390
+        },
+        "status": 200,
+        "synthetic_data": false
+      }
+    }
+  ],
+  "reference": {
+    "url": "https://aiengineeringfromscratch.com/",
+    "evidence_id": "ev_4442aa3c98d3ab14e61ab587e0ba2208d8fccbc4ffa1dacc7c835180300bdf36",
+    "note": "Inspected reference live; no reference artwork/source/prose retained in repository."
+  },
+  "parent_inspection": {
+    "evidence_id": "ev_f2f6a4f0ac96097d3472d0a5f87dcec84e885461a59d8b8fa8c7c660c343c3d3",
+    "completeness": {
+      "status": "policy_filtered",
+      "conditions": [
+        "attach_limited",
+        "policy_filtered"
+      ],
+      "policy_filtered_sections": [
+        "json_body_shapes",
+        "metadata",
+        "script_sources",
+        "scripts",
+        "storage_keys",
+        "websocket_shapes"
+      ],
+      "attach_limited_sections": [
+        "console_events",
+        "metadata",
+        "network_requests",
+        "websocket_connections",
+        "websocket_frames",
+        "workers"
+      ],
+      "truncated_sections": [],
+      "unavailable_sections": [],
+      "excluded": [
+        {
+          "section": "json_body_shapes",
+          "reason": "not_approved",
+          "count": null
+        },
+        {
+          "section": "metadata",
+          "reason": "disallowed_origin",
+          "count": 1
+        },
+        {
+          "section": "script_sources",
+          "reason": "not_approved",
+          "count": 12
+        },
+        {
+          "section": "scripts",
+          "reason": "unattributed_origin",
+          "count": 19
+        },
+        {
+          "section": "storage_keys",
+          "reason": "not_approved",
+          "count": null
+        },
+        {
+          "section": "websocket_shapes",
+          "reason": "not_approved",
+          "count": null
+        }
+      ],
+      "dropped_events": {
+        "scripts": 0,
+        "network_requests": 0,
+        "console_events": 0,
+        "websocket_connections": 0,
+        "websocket_frames": 0,
+        "webmcp_tools": 0,
+        "timeline_events": 0,
+        "total": 0
+      }
+    }
+  },
+  "parent_menu_interaction": {
+    "evidence_id": "ev_1a8f402fd75367d1cdb352a232fb13bbe57dc77766362ec9e67a098ad2fbe105",
+    "steps": [
+      {
+        "id": "scenario_start",
+        "status": "completed"
+      },
+      {
+        "id": "open-mobile-menu",
+        "status": "completed"
+      },
+      {
+        "id": "menu-shown",
+        "status": "completed"
+      }
+    ],
+    "completeness": {
+      "status": "incomplete",
+      "equality_eligible": false,
+      "missing_sections": [
+        "events"
+      ],
+      "truncated_sections": []
+    }
+  },
+  "limitations": [
+    "Chromium emulation and synthesized CDP touch, not physical-device or cross-engine certification.",
+    "REA attach events are limited; zero retained events does not prove complete error/network coverage.",
+    "Synthetic loading/503 states were browser-only interception; screenshots retain actual local data.",
+    "No new full build/test suite run; historical111test result is not claimed as fresh validation.",
+    "Native text-only zoom and full manual screen-reader verification remain untested.",
+    "Actual Solana network identity/balance was not reverified during this frontend audit."
+  ],
+  "technical_measurements": {
+    "menu": {
+      "open": true,
+      "active": "Close navigation",
+      "scrollLocked": "fixed",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "top": 0,
+        "right": 390,
+        "bottom": 844,
+        "left": 0
+      },
+      "shiftTab": "SUPA / AGENT",
+      "escape": {
+        "open": false,
+        "focus": "MENU +"
+      }
+    },
+    "reduce": {
+      "scroll": "auto",
+      "animations": []
+    },
+    "focus": {
+      "text": "Skip to content",
+      "outline": "rgb(35, 214, 160) solid 2px",
+      "top": 12
+    },
+    "touchMenu": true,
+    "touchDiagram": "true",
+    "width320": {
+      "scrollWidth": 320,
+      "viewport": 320
+    },
+    "perf": {
+      "navigation": [
+        {
+          "domContentLoadedMs": 245,
+          "loadMs": 480,
+          "transferSize": 5309
+        }
+      ],
+      "resources": {
+        "font": {
+          "count": 1,
+          "transferBytes": 17968,
+          "decodedBytes": 17668
+        },
+        "other": {
+          "count": 14,
+          "transferBytes": 21911,
+          "decodedBytes": 54436
+        },
+        "js": {
+          "count": 10,
+          "transferBytes": 178828,
+          "decodedBytes": 588103
+        }
+      }
+    },
+    "contrast": {
+      "f1f3ef/090b0a": 17.68,
+      "a4afa7/141816": 7.91,
+      "87968d/141816": 5.78,
+      "23d6a0/141816": 9.55,
+      "090b0a/23d6a0": 10.53,
+      "64796d/090b0a": 4.23
+    },
+    "scores": {
+      "Accessibility": 3,
+      "Performance": 3,
+      "Theming": 4,
+      "Responsive Design": 3,
+      "Implementation Integrity": 4
+    },
+    "scoreTotal": 17,
+    "textScaling": {
+      "method": "Per-element computed font sizes doubled in own DOM (stress test, not browser text setting)",
+      "viewport": 390,
+      "scrollWidth": 665
+    },
+    "pageErrors": 0,
+    "cleanup": {
+      "browser": "closed",
+      "overlayServer": "stopped with --keep-inject",
+      "sourceChanges": false,
+      "privateScreenshots": "deleted",
+      "reportFiles": "retained in /tmp"
+    },
+    "routes": [
+      {
+        "id": "desktop/",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "scrollWidth": 1440,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 10,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "desktop/agents",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "scrollWidth": 1440,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "desktop/trading",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "scrollWidth": 1440,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "desktop/memory",
+        "viewport": [
+          1440,
+          1000
+        ],
+        "scrollWidth": 1440,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "mobile/",
+        "viewport": [
+          390,
+          844
+        ],
+        "scrollWidth": 390,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 12,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "mobile/agents",
+        "viewport": [
+          390,
+          844
+        ],
+        "scrollWidth": 390,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "mobile/trading",
+        "viewport": [
+          390,
+          844
+        ],
+        "scrollWidth": 390,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "mobile/memory",
+        "viewport": [
+          390,
+          844
+        ],
+        "scrollWidth": 390,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "reduced-motion",
+        "viewport": [
+          390,
+          844
+        ],
+        "scrollWidth": 390,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "zoom-equivalent-200pct",
+        "viewport": [
+          720,
+          500
+        ],
+        "scrollWidth": 720,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      },
+      {
+        "id": "root-text-200pct",
+        "viewport": [
+          390,
+          844
+        ],
+        "scrollWidth": 390,
+        "unlabeled": 0,
+        "images": 0,
+        "animations": 0,
+        "bodyFont": "VT323, \"VT323 Fallback\", monospace, VT323, monospace"
+      }
+    ],
+    "loading": {
+      "delayed_api_ms": 2000,
+      "role_status": true,
+      "skeleton": true,
+      "synthetic_browser_interception": true
+    },
+    "error": {
+      "status": 503,
+      "heading": "Console disconnected",
+      "retry_button_present": true,
+      "synthetic_browser_interception": true
+    },
+    "detector": {
+      "target": "web/src",
+      "findings": 0,
+      "rules": [],
+      "locations": [],
+      "exitCode": 0,
+      "artifact": "detector.json"
+    },
+    "rea_evidence": "ev_102a18d22100676068fb668f457234553dd5dec30dfb1a8ecaefe44b84a2d13f",
+    "overlay": {
+      "preflight": {
+        "title": true,
+        "script": true
+      },
+      "attempts": [
+        {
+          "route": "/",
+          "injection": "blocked",
+          "logs": []
+        },
+        {
+          "route": "/agents",
+          "injection": "blocked",
+          "logs": []
+        },
+        {
+          "route": "/trading",
+          "injection": "blocked",
+          "logs": []
+        }
+      ],
+      "csp_unchanged": true,
+      "user_visible_overlay": false
+    }
+  },
+  "independent_design_evidence": {
+    "economy_inspection": "ev_6316d785b0cdb84970615a83a97e749cea08970c693ba922c9d8635db6b57234",
+    "menu_screenshot": "ev_449a912116335af3158791576b19955be2f4ef928a04258c6c1f03f650c13eee",
+    "target_discovery": "ev_d13a6b2880b515166b3ec83298ec2ec4456a22bbceee13a2c9eb073ce5acb023"
+  },
+  "base_commit": "3078680f03bc9404d67db44ab183f977033f2ac4",
+  "target_slug": "web-src-app-page-tsx",
+  "ignore_list": "absent; no findings suppressed",
+  "independent_design_interactions": [
+    {
+      "stage": "Observe",
+      "caption": "01 / OBSERVE\n\nRead persisted events and retrieve relevant memories. A hypothesis stays a hypothesis.\n\nInteractive explanation \u00b7 does not run an agent",
+      "selectedNode": "EVENTS"
+    },
+    {
+      "stage": "Reason",
+      "caption": "02 / REASON\n\nPropose a bounded plan against current goals. Personality shapes the voice, never the permissions.\n\nInteractive explanation \u00b7 does not run an agent",
+      "selectedNode": "GOALS"
+    },
+    {
+      "stage": "Authorize",
+      "caption": "03 / AUTHORIZE\n\nApplication code checks capabilities, lifecycle, tool limits and available simulated funds.\n\nInteractive explanation \u00b7 does not run an agent",
+      "selectedNode": "POLICY"
+    },
+    {
+      "stage": "Record",
+      "caption": "04 / RECORD\n\nPersist the result, costs and lessons. Rejected actions are recorded too. Publishing and signing stay disabled.\n\nInteractive explanation \u00b7 does not run an agent",
+      "selectedNode": "MEMORY"
+    },
+    {
+      "route": "/",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 4155
+      }
+    },
+    {
+      "route": "/agents",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 2211
+      }
+    },
+    {
+      "route": "/economy",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 4155
+      }
+    },
+    {
+      "route": "/memory",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 2228
+      }
+    },
+    {
+      "route": "/social",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 1799
+      }
+    },
+    {
+      "route": "/trading",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 2329
+      }
+    },
+    {
+      "route": "/launch",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 2365
+      }
+    },
+    {
+      "route": "/factory",
+      "width": {
+        "scroll": 390,
+        "client": 390,
+        "height": 2309
+      }
+    },
+    {
+      "menuOpen": {
+        "open": true,
+        "focus": "Close navigation",
+        "overflow": "hidden"
+      }
+    },
+    {
+      "shiftTabFocus": "Supa Agent home"
+    },
+    {
+      "menuClosed": {
+        "open": false,
+        "focus": "MENU +"
+      }
+    }
+  ],
+  "candidate_scan": {
+    "files": 15,
+    "findings": [],
+    "scanner": "local pattern and known-secret gate; not a comprehensive secret-disclosure guarantee"
+  }
+}
