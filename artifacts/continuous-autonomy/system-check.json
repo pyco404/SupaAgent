@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "real_postgres": true,
+  "real_rust_api": true,
+  "real_worker_process": true,
+  "real_next_host": true,
+  "provider": "offline",
+  "agent_id": "d08aa7fa-b5ee-4a78-ba8d-f79e254c47d1",
+  "approved_goal_ids": [
+    "6af59574-af74-4a8a-b9bb-64196b370620"
+  ],
+  "unapproved_goal_untouched": true,
+  "cycles": 3,
+  "actions": 8,
+  "memories": 6,
+  "inference_calls": 3,
+  "live_inference_calls": 0,
+  "simulated_seed_microusd": 10000,
+  "simulated_expenses_microusd": 3300,
+  "remaining_simulated_microusd": 6700,
+  "lifecycle": "terminated",
+  "api_and_worker_restart_preserved_pause": true,
+  "start_replay_did_not_reactivate": true,
+  "resume_preserved_limits": true,
+  "automatic_limit_pause": true,
+  "default_scheduler_disabled": true,
+  "public_controls_denied": true,
+  "transactions": 0,
+  "browser_errors": [],
+  "viewports": [
+    1440,
+    390
+  ],
+  "screenshots": [
+    "desktop-authorization.png",
+    "mobile-paused.png",
+    "desktop-terminated.png"
+  ]
+}
