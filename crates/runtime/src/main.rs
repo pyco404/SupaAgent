@@ -90,9 +90,13 @@ async fn run() -> Result<()> {
     let listener = tokio::net::TcpListener::bind(bind)
         .await
         .map_err(|_| Error::Invalid)?;
+    let monitor =
+        supa_runtime::health::WorkerMonitor::start(store.clone(), "worker", active, seconds as i64)
+            .await?;
+    let worker_id = monitor.id;
     let (stop_tx, mut stop_rx) = tokio::sync::watch::channel(false);
     let task = reasoner.map(|reasoner| {
-        let runtime = Runtime::new(store.clone(), reasoner);
+        let runtime = Runtime::new(store.clone(), reasoner).with_worker(worker_id);
         tokio::spawn(async move {
             let mut ticks = tokio::time::interval(Duration::from_secs(seconds));
             ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -126,6 +130,7 @@ async fn run() -> Result<()> {
         task.abort();
         let _ = task.await;
     }
+    monitor.shutdown().await?;
     result
 }
 #[cfg(test)]
