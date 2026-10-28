@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readResource, resource } from '../backend.mjs';
 import { records, agent, agentId, financials } from '../../web/tests/fixtures.ts';
 import { units } from '../platform.js';
+import { stagingAuthorized } from '../../web/src/lib/auth.ts';
 
 process.env.SUPA_BACKEND_URL='http://127.0.0.1:18082';
 process.env.SUPA_API_TOKEN='fixture-token-'.repeat(4);
@@ -58,4 +59,25 @@ test('all existing record contracts support authorized reads',async()=>{
 });
 test('token amounts use exact integer scaling and never fabricate unavailable balances',()=>{
   assert.equal(units(9007199254740991),'9007199254.740991');assert.equal(units(-1),'−0.000001');assert.equal(units(1,9),'0.000000001');assert.equal(units(null),'unavailable');assert.equal(units(Number.MAX_SAFE_INTEGER+1),'unavailable');
+});
+
+test('staging visitors cannot read operator records and only exact origins/private upstreams are permitted',async()=>{
+  const keys=['SUPA_SITE_MODE','SUPA_SITE_ORIGIN','SUPA_STAGING_USERNAME','SUPA_STAGING_PASSWORD','SUPA_BACKEND_URL'];
+  const previous=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+  try{
+    Object.assign(process.env,{SUPA_SITE_MODE:'staging',SUPA_SITE_ORIGIN:'https://supa-staging.example',SUPA_STAGING_USERNAME:'viewer',SUPA_STAGING_PASSWORD:'viewer-fixture-'.repeat(3),SUPA_BACKEND_URL:'http://supa-api.railway.internal:8080'});
+    const visitor={host:'supa-staging.example',authorization:'Basic '+Buffer.from(`${process.env.SUPA_STAGING_USERNAME}:${process.env.SUPA_STAGING_PASSWORD}`).toString('base64')};
+    assert.equal(stagingAuthorized(visitor.authorization),true);
+    let requests=0;
+    const fetcher=async()=>{requests++;return response([agent]);};
+    assert.equal((await readResource(`/api/agents/${agentId}/memory`,visitor,fetcher)).status,401);assert.equal(requests,0);
+    assert.equal((await readResource('/api/agents',visitor,fetcher)).status,200);
+    for(const host of ['outside.invalid','supa-staging.example.attacker.invalid'])assert.equal((await readResource('/api/agents',{...visitor,host},fetcher)).status,403);
+    assert.equal((await readResource('/api/agents',{...visitor,origin:'https://outside.invalid'},fetcher)).status,403);
+    for(const upstream of ['http://outside.invalid','http://169.254.169.254','https://supa-api.railway.internal']){
+      process.env.SUPA_BACKEND_URL=upstream;assert.equal((await readResource('/api/agents',visitor,fetcher)).status,503);
+    }
+    process.env.SUPA_SITE_ORIGIN='http://supa-staging.example';assert.equal((await readResource('/api/agents',visitor,fetcher)).status,403);
+    assert.equal(stagingAuthorized(headers.authorization),false);
+  }finally{for(const key of keys){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
 });
