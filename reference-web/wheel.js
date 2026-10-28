@@ -108,16 +108,21 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       if (y === 0) context.moveTo(x, y); else context.lineTo(x, y);
     }
     context.stroke();
-    // Only fiber tips sway; spine/card attachments remain stable.
+    // Fibers lash in uneven gusts; spine/card attachments remain stable.
     for(let stem=0;stem<420;stem++){
       const seed=stem+Math.floor(position)*19,cluster=stem%5;
       const center=[.07,.29,.55,.76,.96][cluster]*height;
       const y=Math.max(0,Math.min(height,center+(random(seed+1)-.5)*height*.11));
       const x=spine(y),direction=random(seed+4)>.87?1:-1;
-      const sway=Math.sin(phase*.65+stem*.19)*3;
-      const length=12+random(seed+3)**.65*(65+random(cluster+21)*45),tipX=x+direction*length+sway,tipY=y-(random(seed+5)-.2)*90+sway*.6;
+      const energy=motion?.matches?0:1;
+      const gust=(.5+.5*Math.sin(phase*1.7+cluster*1.1))**3;
+      const wave=phase*5.8-y*.026+stem*.13;
+      const sway=energy*(Math.sin(wave)*(18+gust*22)+Math.sin(phase*11.7+stem*.37)*9);
+      const lift=energy*(Math.cos(wave*.83)*(14+gust*16)+Math.sin(phase*8.3+stem*.21)*7);
+      const bend=energy*Math.sin(wave-1.1)*(24+gust*30);
+      const length=(12+random(seed+3)**.65*(65+random(cluster+21)*45))*(1+energy*Math.sin(wave*.7)*.16),tipX=x+direction*length+sway,tipY=y-(random(seed+5)-.2)*90+lift;
       context.globalAlpha=.18+random(seed+6)*.45;context.lineWidth=.45;
-      context.beginPath();context.moveTo(x,y);context.bezierCurveTo(x+direction*length*.15,y-5,x+direction*length*.5,tipY+20,tipX,tipY);context.stroke();
+      context.beginPath();context.moveTo(x,y);context.bezierCurveTo(x+direction*length*.15+bend*.35,y-5-lift*.4,x+direction*length*.5+bend,tipY+20-lift*.5,tipX,tipY);context.stroke();
       if(stem%3===0){context.fillStyle=ink;context.globalAlpha=.65;context.fillRect(tipX,tipY,1.7,1.7);}
     }
     const {gap,cardWidth}=dimensions();
@@ -158,6 +163,8 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
 
   function animate(time) {
     frame=0;if(destroyed||document.hidden)return;
+    // Match the rendered preference even before its change event is delivered.
+    if(branchControl&&branchControl.disabled!==!!motion?.matches)updateBranchControl();
     const flowing=branchVisible&&!branchPaused&&!motion?.matches;
     canvas.dataset.motionState=motion?.matches?'reduced':branchPaused?'paused':branchVisible?'running':'offscreen';
     if(flowing&&branchPrevious!==null)branchTime+=Math.max(0,Math.min(100,time-branchPrevious));
