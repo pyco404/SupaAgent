@@ -3,7 +3,10 @@ use std::{
     process::{Child, Command, Stdio},
     time::Duration,
 };
-use supa_domain::{Agent, Capability, CycleConfig, LedgerKind, Lifecycle, Personality};
+use supa_domain::{
+    Agent, Capability, CycleConfig, LedgerKind, Lifecycle, Personality, ScheduleCommand,
+    ScheduleOperation, SchedulePolicy,
+};
 use supa_persistence::Store;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use uuid::Uuid;
@@ -107,12 +110,27 @@ async fn offline_worker_runs_persists_and_restarts_paused_without_reactivation()
         .credit(agent.id, LedgerKind::Seed, 100_000, Uuid::new_v4())
         .await
         .unwrap();
+    let goal = store
+        .add_goal(agent.id, "Review verified worker outcomes".into())
+        .await
+        .unwrap();
     store
-        .transition(
+        .schedule_control(
             agent.id,
-            Lifecycle::Active,
-            "explicit offline test activation",
-            true,
+            &ScheduleCommand {
+                request_id: Uuid::new_v4(),
+                expected_revision: 0,
+                operation: ScheduleOperation::Start,
+                authorize_offline: true,
+                reason: "Explicit bounded worker test".into(),
+                policy: Some(SchedulePolicy {
+                    goal_ids: vec![goal.id],
+                    interval_seconds: 5,
+                    max_cycles: 3,
+                    simulated_budget_microusd: 3300,
+                    valid_for_seconds: 3600,
+                }),
+            },
         )
         .await
         .unwrap();
@@ -137,15 +155,10 @@ async fn offline_worker_runs_persists_and_restarts_paused_without_reactivation()
             >= 3
     );
     assert!(store.financials(agent.id).await.unwrap().balance_microusd < 100_000);
-    store
-        .transition(
-            agent.id,
-            Lifecycle::Paused,
-            "operator pauses offline test",
-            true,
-        )
-        .await
-        .unwrap();
+    assert_eq!(
+        store.get(agent.id).await.unwrap().lifecycle,
+        Lifecycle::Paused
+    );
     worker.terminate().await;
     let before_cycles = store.history(agent.id, "cycles").await.unwrap().len();
     let before_balance = store.financials(agent.id).await.unwrap().balance_microusd;
