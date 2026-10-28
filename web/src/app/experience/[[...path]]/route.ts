@@ -1,11 +1,22 @@
 /** Next.js hosts the approved experience unchanged; secrets stay in the server adapter. */
 import { readFile, realpath } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
-import { readResource } from "../../../../../reference-web/backend.mjs";
+import { readResource, runAutonomy } from "../../../../../reference-web/backend.mjs";
 import { operatorAuthorized } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export async function POST(request: Request, context: { params: Promise<{ path?: string[] }> }) {
+  if(process.env.SUPA_SITE_MODE!=="staging")return new Response("Not found",{status:404});
+  const path='/'+((await context.params).path??[]).join('/');
+  if(path!=="/api/autonomy"||new URL(request.url).search)return new Response("Method not allowed",{status:405});
+  if(!operatorAuthorized(request.headers.get("authorization")))return Response.json({error:"operator_authentication_required"},{status:401});
+  const reader=request.body?.getReader();let size=0;const chunks:Uint8Array[]=[];
+  if(!reader)return new Response("Invalid request",{status:400});
+  try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>4096){await reader.cancel();return new Response("Request too large",{status:413});}chunks.push(value);}}finally{reader.releaseLock();}
+  const result=await runAutonomy(path,request.headers,Buffer.concat(chunks).toString('utf8'));
+  return Response.json(result.body,{status:result.status,headers:{"Cache-Control":"private, no-store"}});
+}
 const files = new Set(["index.html", "style.css", "app.js", "scene.js", "wheel.js", "platform.js"]);
 const mime: Record<string, string> = { ".html":"text/html; charset=utf-8", ".css":"text/css", ".js":"text/javascript", ".svg":"image/svg+xml", ".woff2":"font/woff2", ".ttf":"font/ttf", ".txt":"text/plain" };
 const headers = { "Cache-Control":"private, no-store", "X-Content-Type-Options":"nosniff" };
