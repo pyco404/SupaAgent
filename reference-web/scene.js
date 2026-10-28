@@ -5,6 +5,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   const pointer = { x: .5, y: .5 };
   let introProgress = 0, introTime = null, handBeat = -1, handKey = "";
   const contexts = new Map();
+  const portalBrand = document.querySelector('.portal-brand');
   let code = [
     '// workspace / a small study in motion', '',
     'import { clock, cursor } from "./system.js";',
@@ -231,6 +232,12 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=.65;ctx.lineWidth=1;ctx.strokeStyle=ink();ctx.stroke();ctx.globalAlpha=1;
     transition.dataset.progress=progress.toFixed(3);
+    if(portalBrand){
+      const fadeIn=Math.min(1,progress/.13),fadeOut=Math.max(0,1-Math.max(0,progress-.72)/.18);
+      portalBrand.style.setProperty('--portal-brand-opacity',(fadeIn*fadeOut).toFixed(3));
+      portalBrand.style.setProperty('--portal-brand-scale',(.98+.02*fadeIn).toFixed(3));
+      portalBrand.style.setProperty('--portal-logo-size',`${Math.max(72,Math.min(192,Math.round(Math.min(w,h)*.18/24)*24))}px`);
+    }
     if (progress >= 1) finishWarp(true);
   }
   function finishWarp(completed) {
