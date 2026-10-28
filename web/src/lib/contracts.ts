@@ -8,7 +8,7 @@ export const goalSchema = z.object({ id, description: text, completed: z.boolean
 export const memorySchema = z.object({ id, lesson: text, kind: z.enum(["hypothesis", "verified_observation"]), source_event_ids: z.array(id), cycle_id: id.nullable(), created_at: date });
 export const agentSchema = z.object({
   id, name: text, lifecycle: z.enum(["created", "active", "paused", "suspended", "terminated"]),
-  personality: z.object({ traits: z.array(text), voice: text }), capabilities: z.array(text),
+  personality: z.object({ traits: z.array(text) }), capabilities: z.array(text),
   goals: z.array(goalSchema), memory: z.array(memorySchema), created_at: date,
   config: z.object({ interval_seconds: integer, max_steps: integer }),
 });
