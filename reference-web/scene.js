@@ -78,7 +78,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     const mouseActive=pointer.visible&&performance.now()-pointer.movedAt<700;
     const progress=compact?terminalProgress:introProgress;
     const width=Math.min(700,(w-40)/1.28,compact?h*3.1:h*.8),pitch=width/15,rowPitch=pitch*.68,keyHeight=pitch*.54;
-    const left=(w-width)/2,top=compact?8:h*.755,height=rowPitch*4.65;
+    const left=(w-width)/2,height=rowPitch*4.65,top=compact?Math.max(8,h-height-pitch*.42-8):h*.755;
     const rows=[['esc','`','1','2','3','4','5','6','7','8','9','0','-','=','back'],['tab','q','w','e','r','t','y','u','i','o','p','[',']','\\'],['caps','a','s','d','f','g','h','j','k','l',';',"'",'enter'],['shift','z','x','c','v','b','n','m',',','.','/','shift']];
     const keys=[],byKey=new Map();
     rows.forEach((row,r)=>{
