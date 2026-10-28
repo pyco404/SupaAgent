@@ -81,3 +81,16 @@ test('staging visitors cannot read operator records and only exact origins/priva
     assert.equal(stagingAuthorized(headers.authorization),false);
   }finally{for(const key of keys){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
 });
+test('separate operator accounts forward distinct server-side credentials and reject ambiguity',async()=>{
+  const otherToken='other-fixture-credential-'.repeat(2),password='other-fixture-pass-'.repeat(3);
+  const previous=process.env.SUPA_WEB_OPERATORS;
+  try {
+    process.env.SUPA_WEB_OPERATORS=JSON.stringify([{username:'other',password,api_token:otherToken}]);
+    const other={...publicHeaders,authorization:'Basic '+Buffer.from(`other:${password}`).toString('base64')};
+    let observed;
+    const result=await readResource(`/api/agents/${agentId}/memory`,other,async(url,options)=>{observed=options.headers.Authorization;return response([]);});
+    assert.equal(result.status,200);assert.equal(observed,`Bearer ${otherToken}`);
+    process.env.SUPA_WEB_OPERATORS=JSON.stringify([{username:'fixture',password,api_token:otherToken}]);
+    assert.equal((await readResource(`/api/agents/${agentId}/memory`,headers,async()=>{throw Error('must not reach upstream');})).status,401);
+  } finally {if(previous===undefined)delete process.env.SUPA_WEB_OPERATORS;else process.env.SUPA_WEB_OPERATORS=previous;}
+});
