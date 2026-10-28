@@ -139,6 +139,23 @@ The captures predate only the nonvisual screen-reader description added to clari
 
 Validation for this follow-up passed: syntax checks, static build, whitespace checks, and **45/45 browser tests** across desktop, tablet and mobile, with zero failed, skipped, flaky or retried cases. The focused design detector reports zero failures; the previously documented theme-thumbnail stripe advisory remains unchanged.
 
+## Follow-up: radial scene before entry
+
+Enter now presents an opaque, full-screen procedural radial scene before navigating to the existing `/site/` home/project browser. A centered black disk, thin warm-ivory rim, restrained surrounding light and 1,500 moving streaks reproduce the supplied image's composition. The scene lasts 2.4 seconds; its final phase expands the disk before the destination appears. It is rendered locally in canvas rather than loading or briefly flashing a static external image. The intro cannot show through the transition.
+
+The destination is held until animation completion. Repeated Enter requests are ignored while entry is pending. An explicit view/history change cancels the pending animation and invalidates its navigation attempt, preventing a stale promise from redirecting the user afterward. Reduced-motion users enter immediately; enabling reduced motion during the scene completes entry without waiting for the remaining motion.
+
+REA exercised actual Enter clicks and sampled the intermediate scene at desktop 1440×1000 and mobile 390×844 with normal motion. Both scenarios completed their actions. These are sampled frames, not proof of frame-exact equivalence to the reference. The earlier baseline and editor captures remain historical evidence.
+
+| Transition capture | REA evidence ID | PNG SHA-256 |
+| --- | --- | --- |
+| [Desktop radial scene](evidence/2026-10-28/enter-portal-desktop.png) | `ev_4e09bef2fa5241dad85fd35cd9f3b691d750089bd5b3f2116611cdeb4290ed9e` | `0b9bfb8e1d0860bcabd5ada70ff10fab8307f0f654f39dc70251162dbbd7836f` |
+| [Mobile radial scene](evidence/2026-10-28/enter-portal-mobile.png) | `ev_c68c0b03009589d3cae11c12b6538ef587c890b1394353e7e8360959b3d5fe8d` | `9032a069613b45f26d937d16472528b0be58aec9f8ef44b29f862efeb2d8be18` |
+
+The added regression checks opaque canvas pixels (including a black center), the intro remaining selected before entry finishes, exactly one history entry after repeated Enter, browser-back restoration, immediate completion when reduced motion is enabled, and cancellation when a popstate arrives mid-transition. The popstate cancellation is a controlled browser event test; ordinary back navigation is tested separately.
+
+Validation passed: syntax checks, static build, whitespace checks and **51/51 browser tests**, with zero failed, skipped, flaky or automatically retried cases. The six added viewport cases cover the transition flow and cancellation. Candidate file scans report zero secret findings, and both PNG hashes were verified before committing.
+
 ## Git handling
 
 All new eligible files are committed individually on `main` through `scripts/commit-one`, with one descriptive Conventional Commit per file and hooks enabled. Secret scanning and the one-file history audit are required before completion. The pre-existing root `.gitignore` edit is preserved and excluded from these commits. No archival branch, private evaluation files or credentials are added. No push or deployment is authorized by this task.
