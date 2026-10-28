@@ -11,7 +11,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   const context = canvas.getContext("2d");
   const previousRole = host.getAttribute("role");
   host.setAttribute("role", "listbox");
-  if (!host.hasAttribute("aria-label")) host.setAttribute("aria-label", "Projects, themes and the log");
+  if (!host.hasAttribute("aria-label")) host.setAttribute("aria-label", "Supa Agent sections");
   host.style.touchAction = "pan-x pinch-zoom";
   canvas.setAttribute("aria-hidden", "true");
   canvas.style.pointerEvents = "none";
@@ -40,7 +40,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       const mark = document.createElement("span");
       mark.className = "wheel-thumb wheel-thumb-text";
       mark.setAttribute("aria-hidden", "true");
-      mark.textContent = entry.kind === "directory" ? "~/" : ">_";
+      mark.textContent = entry.mark ?? ">_";
       button.append(mark);
     }
     const label = document.createElement("span");
