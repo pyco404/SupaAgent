@@ -10,7 +10,7 @@ const format = value => Number(value).toLocaleString('en-US').replaceAll(',', "'
 const node = (tag, className, text) => { const el = document.createElement(tag); if (className) el.className = className; if (text !== undefined) el.textContent = String(text); return el; };
 const palettes = [['#0c0c0c','#d8d4b4','#949078'],['#0b0b0b','#ebe6db','#9b968a'],['#11120f','#d9d7c3','#9b9d85']];
 let theme = 0, wheel, scenes, data, itemIndex = 0, shot = 0, typing = 0, leaving = false, worm = false;
-let items = [], selectedProject = null, typingTimer = 0;
+let items = [], selectedProject = null, typingTimer = 0, entryAttempt = 0;
 try { const saved=Number(localStorage.getItem('reference.dark-theme')); if(Number.isInteger(saved)&&saved>=0&&saved<palettes.length)theme=saved; } catch { /* Storage may be disabled. */ }
 function applyTheme() { ['--bg','--ink','--dim'].forEach((name,index)=>root.style.setProperty(name,palettes[theme][index])); }
 applyTheme();
@@ -47,6 +47,7 @@ async function boot() {
 }
 
 function setView(projects) {
+  entryAttempt++;leaving=false;scenes?.cancelWarp();
   typing++;clearTimeout(typingTimer);$('.buffer').setAttribute('aria-busy','false');
   document.body.dataset.view = projects ? 'projects' : 'intro';
   $('.intro').hidden = projects; $('.projects').hidden = !projects;
@@ -55,8 +56,9 @@ function setView(projects) {
   if (projects) { select(itemIndex); requestAnimationFrame(() => { window.dispatchEvent(new Event('resize')); $('.buffer').focus({preventScroll:true}); }); }
 }
 async function enter(event) {
-  event?.preventDefault(); if (leaving || !await ready) return;
-  leaving = true; await scenes.warp();
+  event?.preventDefault(); if (!await ready || leaving || document.body.dataset.view!=='intro') return;
+  leaving = true;const attempt=++entryAttempt,completed=await scenes.warp();
+  if(!completed||attempt!==entryAttempt)return;
   history.pushState({view:'projects'},'', '/site/'); setView(true); leaving = false;
 }
 $('.enter').addEventListener('click', enter);
