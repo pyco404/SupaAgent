@@ -1,12 +1,13 @@
-import { cp, mkdir, readdir, realpath, stat } from "node:fs/promises";
+import { cp, mkdir, readdir, realpath, stat, rm } from "node:fs/promises";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const destination = resolve(root, "dist");
-const appFiles = ["index.html", "style.css", "app.js", "scene.js", "wheel.js", "reference-data.json"];
+const appFiles = ["index.html", "style.css", "app.js", "scene.js", "wheel.js", "platform.js"];
 const extensions = new Set([".woff2", ".woff", ".ttf", ".png", ".jpg", ".jpeg", ".webp", ".avif", ".svg", ".ico"]);
 await mkdir(destination, { recursive: true });
+await rm(join(destination, "reference-data.json"), { force:true });
 for (const file of appFiles) await cp(join(root, file), join(destination, file));
 await mkdir(join(destination, "site"), { recursive: true });
 await cp(join(root, "index.html"), join(destination, "site", "index.html"));
@@ -29,4 +30,4 @@ async function copyPublic(directory, relative = "") {
 }
 try { await copyPublic(join(root, "public")); }
 catch (error) { if (error.code !== "ENOENT") throw error; }
-console.log(`Static reference built: ${appFiles.length} application files, ${assets} local assets`);
+console.log(`Supa static assets built: ${appFiles.length} application files, ${assets} local assets`);
