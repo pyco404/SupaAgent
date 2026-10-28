@@ -31,7 +31,7 @@
       <div class="editor">
         <nav class="wheel" id="project-tree" tabindex="0" aria-label="Supa navigation"><canvas class="wheel-ink" aria-hidden="true"></canvas></nav>
         <div class="pane">
-          <div class="workspace-controls"><label for="agent-select">Agent</label><select id="agent-select"><option value="">Select an agent</option></select></div>
+          <div class="workspace-controls"><label id="agent-label" for="agent-picker-trigger">Agent</label><div class="agent-picker"><select id="agent-select" hidden aria-hidden="true" tabindex="-1"><option value="">Select an agent</option></select><button type="button" id="agent-picker-trigger" class="agent-trigger" disabled aria-haspopup="listbox" aria-expanded="false" aria-controls="agent-options" aria-labelledby="agent-label agent-selected-name"><span id="agent-selected-name">Loading agents…</span><span class="agent-chevron" aria-hidden="true"></span></button><div id="agent-options" class="agent-options" role="listbox" aria-label="Agents" hidden></div></div></div>
           <p class="winbar">supa — read-only workspace</p>
           <canvas class="blueprint" aria-label="Decorative architecture branches; not live agent activity" role="img"></canvas>
           <div class="buffer" tabindex="0" aria-label="Supa terminal" aria-live="polite"></div>
