@@ -349,3 +349,30 @@ responsive overflow and mobile focus tests also pass. REA inspected actual
 Evidence IDs: `ev_59554dd5f963e44ee988e4e1fbb5616893d4dcc3ccd1465981f5a1753b6e67ef`
 and `ev_011e0ad1e256ef545a326216ed0f042b245b7c8abdf54244e4526d6bea9bde14`.
 Screenshots use reduced motion; browser tests separately exercise hand movement.
+
+### Contained agent picker
+
+The visible agent selector now opens an in-page listbox instead of an OS-native
+select popup, avoiding popup coordinate mismatches in scaled previews. The native
+select remains hidden backing state for the existing agent-selection flow; user
+interaction never opens it. Selection still dispatches the same change event,
+and directory/command selection and saved-record reloads synchronize its label.
+
+The panel is clamped to the viewport, flips above the field when necessary, and
+scrolls within a bounded height. Long names wrap in the options. Arrow keys,
+Home/End, initial-letter navigation, Enter, Tab and Escape work without invoking
+workspace navigation shortcuts. Outside clicks, resizing and ancestor scrolling
+close it; independent terminal scrolling does not. Focus returns appropriately.
+Initial loading, unavailable records and empty agent lists disable the picker.
+All names are inserted as text and no API authorization behavior changes.
+
+Syntax/build and 42 affected desktop/tablet/mobile frontend checks passed. Six
+focused checks passed again after scroll-dismissal and keyboard isolation fixes.
+Regression coverage includes selection, long labels, upward opening, resizing,
+Escape, viewport bounds and a scaled iframe. The iframe fixture alone strips its
+response CSP to allow reproduction; a separate assertion verifies the unchanged
+server policy still contains `frame-ancestors 'none'`.
+REA inspected the actual [mobile](evidence/2026-10-28/supa-contained-agent-picker-mobile.png)
+and [desktop](evidence/2026-10-28/supa-contained-agent-picker-desktop.png) popup.
+Evidence IDs: `ev_ae3d2f6b55f6c062f9687a06bd4b64704a8d7494544d4f191b9ab64c29c4e744`
+and `ev_d70d5bbecaf52ab7e5943e809ea39721a54822230a67c9d79c2a6a4f6437fba1`.
