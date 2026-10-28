@@ -147,6 +147,7 @@ async function select(index,background=false){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
     }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
+    else if(row.kind==='schedule')buffer.append(schedulePanel(row.status,row.goals));
     else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
     else if(row.kind==='draft'){const block=node('figure','saved-draft');block.append(node('blockquote','',row.text),node('figcaption','prompt',row.meta));buffer.append(block);}
@@ -241,6 +242,46 @@ function autonomyPanel(policy){
   });
   reset.addEventListener('click',()=>{if(autonomyAttempt?.status==='pending')return;autonomyAttempt=null;goal.value='';consent.checked=false;try{sessionStorage.removeItem('supa.offline-request');}catch{}sync();goal.focus();});
   details.append(form,status,inspect,reset);sync();return details;
+}
+function schedulePanel(view,goals){
+  const details=node('details','calculation autonomy-panel schedule-panel');details.append(node('summary','','Agent lifecycle and bounded scheduling'));
+  const stateText=node('p','terminal-notice');stateText.dataset.scheduleState='';
+  stateText.textContent=`${view.lifecycle} / ${view.enabled?'authorized schedule':'scheduling disabled'} / revision ${view.revision}\nCycles started ${view.cycles_started}${view.policy?' / '+view.policy.max_cycles:''}\nConservative allowance used ${view.reserved_microusd} simulated microUSD${view.policy?' / '+view.policy.simulated_budget_microusd:''}\nNext eligible ${view.next_cycle_at}\nAuthorization expires ${view.expires_at??'not authorized'}${view.last_error?'\nLast outcome / '+view.last_error:''}`;
+  details.append(stateText,node('p','prompt','Offline only. Actual expenses appear in Economy; allowance consumption is a conservative limit, not another charge. An enabled offline scheduler service is also required. Status polls every 15 seconds when idle.'));
+  const form=node('form','autonomy-form schedule-form'),operation=node('select'),operationLabel=node('label','','Lifecycle operation');operation.id='schedule-operation';operationLabel.htmlFor=operation.id;
+  const choices=[];if(!view.policy&&['created','paused','suspended'].includes(view.lifecycle))choices.push(['start','Start scheduling']);
+  if(view.policy&&['paused','suspended'].includes(view.lifecycle))choices.push(['resume','Resume scheduling']);
+  if(view.lifecycle==='active')choices.push(['pause','Pause agent']);if(view.lifecycle!=='terminated')choices.push(['stop','Stop permanently']);
+  form.hidden=!choices.length;if(!choices.length)details.append(node('p','terminal-notice','This identity is permanently terminated. It cannot start or resume. Saved history remains available.'));
+  for(const [value,label]of choices){const option=node('option','',label);option.value=value;operation.append(option);}
+  const setup=node('fieldset','schedule-policy'),legend=node('legend','','New scheduling authorization');setup.append(legend);
+  const selected=[];for(const goal of goals.filter(goal=>!goal.completed)){const label=node('label','autonomy-consent'),check=node('input');check.type='checkbox';check.value=goal.id;check.name='approved-goal';label.append(check,document.createTextNode(goal.description));setup.append(label);selected.push(check);}
+  if(!selected.length)setup.append(node('p','prompt','No unfinished goals are available. Scheduling cannot start.'));
+  const fields={};for(const [key,label,value,min,max]of [['interval_seconds','Cycle interval / seconds',15,5,86400],['max_cycles','Maximum cycles',3,1,100],['simulated_budget_microusd','Simulated expense ceiling / microUSD',3300,1100,110000],['valid_for_seconds','Authorization duration / seconds',3600,60,86400]]){
+    const wrap=node('label','',label),input=node('input');input.type='number';input.name=key;input.value=String(value);input.min=String(min);input.max=String(max);input.step='1';input.required=true;wrap.append(input);setup.append(wrap);fields[key]=input;
+  }
+  const reasonLabel=node('label','','Operator reason'),reason=node('textarea');reason.name='reason';reason.rows=2;reason.maxLength=500;reason.required=true;reasonLabel.append(reason);
+  const consentLabel=node('label','autonomy-consent'),consent=node('input');consent.type='checkbox';consent.required=true;consent.name='schedule-authorization';consentLabel.append(consent,document.createTextNode('I authorize this operation on the selected agent. Start uses only its existing memory/goal tools, 1,100 simulated microUSD per cycle and the limits above. Resume never resets limits. Stop permanently terminates this identity. No paid inference or financial transactions.'));
+  const submit=node('button','','Apply authorized lifecycle operation');submit.type='submit';submit.disabled=!choices.length;
+  const feedback=node('p','terminal-notice');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
+  const refresh=node('button','','Reload saved schedule');refresh.type='button';refresh.addEventListener('click',()=>void select(itemIndex));
+  function updateSetup(){setup.disabled=operation.value!=='start';setup.hidden=setup.disabled;consent.checked=false;}
+  operation.addEventListener('change',updateSetup);form.append(operationLabel,operation,setup,reasonLabel,consentLabel,submit);details.append(form,feedback,refresh);updateSetup();
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();event.stopPropagation();if(submit.disabled||!form.reportValidity()||!consent.checked)return;
+    const policy=operation.value==='start'?{goal_ids:selected.filter(input=>input.checked).map(input=>input.value),...Object.fromEntries(Object.entries(fields).map(([key,input])=>[key,Number(input.value)]))}:null;
+    if(policy&&!policy.goal_ids.length){feedback.textContent='Select at least one unfinished goal to authorize.';return;}
+    const command={request_id:crypto.randomUUID(),expected_revision:view.revision,operation:operation.value,authorize_offline:true,reason:reason.value.trim(),policy};
+    submit.disabled=true;operation.disabled=true;setup.disabled=true;reason.disabled=true;consent.disabled=true;refresh.disabled=true;feedback.textContent='Saving authorized operation…';
+    try{
+      const response=await fetch(`/api/agents/${view.agent_id}/schedule`,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Supa-Action':'offline-autonomy'},body:JSON.stringify(command),signal:AbortSignal.timeout(35000)});
+      const result=await response.json();if(!response.ok||result.agent_id!==view.agent_id||result.mode!=='offline'||result.paid_requests_enabled!==false)throw Error();
+      feedback.textContent=`Saved ${command.operation}. Agent ${result.lifecycle}; ${result.cycles_started} cycles started. Reload saved schedule for current records.`;
+      stateText.textContent=`${result.lifecycle} / ${result.enabled?'authorized schedule':'scheduling disabled'} / revision ${result.revision}\nCycles started ${result.cycles_started}\nAllowance used ${result.reserved_microusd} simulated microUSD`;
+    }catch{feedback.textContent=`Outcome uncertain or operation rejected. Reload saved schedule before another authorization. No automatic retry. Request ${command.request_id}.`;}
+    refresh.disabled=false;$('.announcement').textContent=feedback.textContent;
+  });
+  return details;
 }
 function closeCommand(focus=true){$('.command').hidden=true;if(focus)returnFocus();}
 function returnFocus(){if(document.body.dataset.view==='intro'){$('.enter').focus({preventScroll:true});return;}if(matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.tabline').focus({preventScroll:true});}else $('.wheel').focus({preventScroll:true});}
