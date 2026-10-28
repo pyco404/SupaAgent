@@ -23,7 +23,7 @@ test("navigation covers every page with no horizontal overflow", async ({ page, 
   await page.goto("/");
   for (const [href, heading] of [["/agents", "Agent directory."], ["/economy", "Survival, accounted for."], ["/memory", "Memory & reasoning."], ["/social", "A voice. With receipts."], ["/trading", "Conviction needs limits."], ["/launch", "An idea is not a token."], ["/factory", "Intelligence, eventually²."]] as const) {
     if (isMobile) await page.getByRole("button", { name: "MENU +" }).click();
-    await page.locator(`nav a[href='${href}']`).click();
+    await page.getByRole('navigation', { name: isMobile ? 'Mobile navigation' : 'Main navigation', exact: true }).locator(`a[href='${href}']`).click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
