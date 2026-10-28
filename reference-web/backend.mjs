@@ -6,6 +6,7 @@ import { schemas } from '../web/src/lib/contracts.ts';
 import { operatorAuthorized, localRequest } from '../web/src/lib/auth.ts';
 
 export async function loadLocalEnvironment() {
+  if (process.env.SUPA_SITE_MODE === 'staging') return;
   const path = process.env.SUPA_SITE_ENV_FILE ?? resolve(import.meta.dirname, '../web/.env.local');
   if (!path) return;
   try {
@@ -57,7 +58,8 @@ export async function readResource(path, headers, fetcher = fetch) {
   let base;
   try {
     base = new URL(raw);
-    if (base.protocol !== 'http:' || !['127.0.0.1','[::1]'].includes(base.hostname) || base.username || base.password || base.pathname !== '/' || base.search || base.hash || token.length < 32 || !/^[\x21-\x7e]+$/.test(token)) throw new Error();
+    const privateStaging = process.env.SUPA_SITE_MODE === 'staging' && /^[a-z0-9][a-z0-9-]*\.railway\.internal$/.test(base.hostname);
+    if (base.protocol !== 'http:' || !(['127.0.0.1','[::1]'].includes(base.hostname) || privateStaging) || base.username || base.password || base.pathname !== '/' || base.search || base.hash || token.length < 32 || !/^[\x21-\x7e]+$/.test(token)) throw new Error();
   } catch { return fail('backend_configuration_invalid',503); }
   try {
     const response = await fetcher(new URL(route.path,base), { method:'GET', headers:{ Authorization:`Bearer ${token}`, Accept:'application/json' }, redirect:'error', cache:'no-store', signal:AbortSignal.timeout(5000) });
