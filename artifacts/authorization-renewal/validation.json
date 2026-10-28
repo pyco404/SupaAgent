@@ -1,0 +1,194 @@
+{
+  "generated_at": "2026-10-28T22:59:18.562718+00:00",
+  "passed": true,
+  "rust": {
+    "command": "TEST_DATABASE_URL=<dedicated-local-test-db> cargo test --workspace --all-targets --locked --offline -- --include-ignored",
+    "passed": 115,
+    "failed": 0,
+    "new_postgres_regressions": 6,
+    "lock_wait_expiry_regression": true
+  },
+  "frontend": {
+    "approved_experience_passed": 150,
+    "execution_detail": "147 unchanged cases passed in the full run; three polling cases were corrected to use real time and passed separately at desktop, tablet and mobile widths.",
+    "initial_mocked_clock_failures_resolved": true,
+    "legacy_console_passed": 144,
+    "adapter_unit_passed": 17,
+    "new_lifecycle_browser_cases": [
+      "owner renewal with fresh consent",
+      "viewer-only measured worker status"
+    ],
+    "additional_security_regressions": [
+      "duplicate browser-to-backend identity mappings fail closed",
+      "additional configured credentials are redacted from permitted public text"
+    ]
+  },
+  "checks": {
+    "rust_format": true,
+    "clippy_all_targets_deny_warnings": true,
+    "rust_bins_build": true,
+    "next_production_build": true,
+    "typescript": true,
+    "eslint": true,
+    "experience_syntax": true,
+    "experience_static_build": true,
+    "local_provisioning_example_check": true
+  },
+  "approved_design": {
+    "baseline": "f1e0dad2b663254dcb91626bab343ad1c17b9e2e",
+    "unchanged": true,
+    "files": [
+      {
+        "path": "reference-web/index.html",
+        "sha256": "96bf373fd90647c7d39703f2a713ecd8a78fa2ac3dbc6585420c31227938f097"
+      },
+      {
+        "path": "reference-web/style.css",
+        "sha256": "546d88c9d0a85c2545b1790f15870231f61a4f4b524a1ee0a58b3d0431ecbc21"
+      },
+      {
+        "path": "reference-web/scene.js",
+        "sha256": "768bc36a4ae3127791b70101bc319440ec67d1a26b13afdce9bbac615d482235"
+      },
+      {
+        "path": "reference-web/wheel.js",
+        "sha256": "45979dcc41eaa62d7b642e5df81354509f8251cab9010d58ca796a78feb1f0c6"
+      },
+      {
+        "path": "reference-web/public/assets/navigation-previews.svg",
+        "sha256": "0aefca49c9a321708dc8d26cd1a65bdf4bbb0718af02d2ca9cb0af37682c84b3"
+      },
+      {
+        "path": "reference-web/public/assets/supa-agent-code.svg",
+        "sha256": "ca8f31be6ef350f5d8a42e32766ffa6e44d04742e247580e4414baf56527251c"
+      },
+      {
+        "path": "reference-web/public/assets/supa-agent-header.svg",
+        "sha256": "3e9ab2f3582da359e06afef7d80da3d858d2504e92662d53c8b990bfdcd1456d"
+      },
+      {
+        "path": "reference-web/public/assets/supa-agent-icon.svg",
+        "sha256": "6ec1fe02cf1b88b75402e450aaa391ae24e85c96371ef1eb55c58104ef1ac888"
+      },
+      {
+        "path": "reference-web/public/assets/supa-agent-monochrome.svg",
+        "sha256": "3aa607320fd97019b6959fcd7968a8015ef6a0a8a44221602d5e3d08cfef74f4"
+      },
+      {
+        "path": "reference-web/public/assets/supa-agent.svg",
+        "sha256": "448fb37f8abe26b2ba889f71753af6e0a8972ade6d3e188e138cdf14bde772f8"
+      },
+      {
+        "path": "reference-web/public/fonts/IBMPlexMono-Regular.ttf",
+        "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46"
+      },
+      {
+        "path": "reference-web/public/fonts/OFL.txt",
+        "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+      }
+    ]
+  },
+  "system_evidence": {
+    "passed": true,
+    "real_postgres": true,
+    "real_rust_api": true,
+    "real_frontend_adapter": true,
+    "real_worker_heartbeat": true,
+    "worker_health": "healthy",
+    "verified_running_execution": false,
+    "agents_paused": true,
+    "planning_cycles": 0,
+    "paid_requests": 0,
+    "financial_records_changed": false,
+    "renewal_epochs": 2,
+    "approver_recorded": true,
+    "api_restart_preserved_authorizations": true,
+    "cross_user_denied": true,
+    "viewer_control_denied": true,
+    "fresh_consent_after_limit_change": true,
+    "browser_errors": [],
+    "viewports": [
+      1440,
+      390
+    ],
+    "screenshots": [
+      "desktop-owner.png",
+      "mobile-owner.png",
+      "mobile-viewer.png"
+    ]
+  },
+  "rea_evidence": "rea-evidence.json",
+  "screenshots": [
+    "desktop-owner.png",
+    "mobile-owner.png",
+    "mobile-viewer.png",
+    "rea-desktop.png",
+    "rea-mobile.png"
+  ],
+  "restrictions": {
+    "paid_requests": 0,
+    "planning_cycles_in_browser_demo": 0,
+    "existing_development_agents_changed": false,
+    "existing_development_database_migrated": false,
+    "production_migrations": false,
+    "deployment": false,
+    "push": false,
+    "financial_transactions": false,
+    "publishing": false,
+    "signing_enabled": false
+  },
+  "changed_files": [
+    "README.md",
+    "artifacts/authorization-renewal/desktop-owner.png",
+    "artifacts/authorization-renewal/mobile-owner.png",
+    "artifacts/authorization-renewal/mobile-viewer.png",
+    "artifacts/authorization-renewal/rea-desktop.png",
+    "artifacts/authorization-renewal/rea-evidence.json",
+    "artifacts/authorization-renewal/rea-mobile.png",
+    "artifacts/authorization-renewal/system-check.json",
+    "artifacts/authorization-renewal/validation.json",
+    "crates/api/examples/access_admin.rs",
+    "crates/api/src/access.rs",
+    "crates/api/src/autonomy.rs",
+    "crates/api/src/lib.rs",
+    "crates/api/src/main.rs",
+    "crates/api/src/scheduling.rs",
+    "crates/api/tests/authorization.rs",
+    "crates/api/tests/autonomy.rs",
+    "crates/api/tests/http.rs",
+    "crates/api/tests/scheduling.rs",
+    "crates/domain/src/scheduling.rs",
+    "crates/persistence/src/access.rs",
+    "crates/persistence/src/health.rs",
+    "crates/persistence/src/lib.rs",
+    "crates/persistence/src/scheduling.rs",
+    "crates/runtime/src/health.rs",
+    "crates/runtime/src/lib.rs",
+    "crates/runtime/src/main.rs",
+    "crates/runtime/tests/worker_active.rs",
+    "docs/api.md",
+    "docs/authorization-renewal.md",
+    "migrations/0006_authorization_ownership_health.sql",
+    "reference-web/app.js",
+    "reference-web/backend.mjs",
+    "reference-web/platform.js",
+    "reference-web/tests/autonomy.test.mjs",
+    "reference-web/tests/backend.test.mjs",
+    "reference-web/tests/fixture-server.mjs",
+    "reference-web/tests/live-status.spec.mjs",
+    "reference-web/tests/scheduling.spec.mjs",
+    "scripts/authorization-smoke.mjs",
+    "scripts/scheduling-smoke.mjs",
+    "web/src/app/api/console/[...path]/route.ts",
+    "web/src/lib/auth.ts",
+    "web/src/lib/backend.ts",
+    "web/src/lib/contracts.ts"
+  ],
+  "limitations": [
+    "Existing agents require explicitly reviewed ownership provisioning; the original development stack was not restarted or migrated.",
+    "Static server-side credential registry requires service restart; no public onboarding or SSO.",
+    "Managed scheduling remains offline-only; live GPT requires separate authorization, independent real-API budget enforcement and validation.",
+    "Browser assertions and screenshots do not certify full accessibility or live model intelligence.",
+    "Local targeted secrets scanning is not a third-party security audit."
+  ]
+}
