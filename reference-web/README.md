@@ -155,3 +155,20 @@ Evidence: `ev_fdfc22538adb5b9e1dc7f95692dbc0f949ac43a2252ca4e40aa218d44176dc9f`
 and `ev_31756c552d143fbe63ba2f35ae3063e5ec729393de2e86d77292960f2224b5a7`.
 Physical viewports were calibrated before capture; REA's missing event coverage
 means these captures are not a complete runtime-equivalence claim.
+
+### Dense source-character composition
+
+The large code robot now consists of 60 full, syntax-colored source lines rather
+than a short repeating pattern. The text is sampled exclusively from the public
+frontend's own `app.js`; no environment, private memory or model context is used.
+There is no solid filled mascot underneath. The original even-odd mask preserves
+the exact silhouette and empty eye/mouth areas. The intro treatment is larger,
+clearer and only lightly softened, matching the supplied text-portrait reference
+while retaining the Supa robot shape. Small solid icons remain readable.
+
+Syntax/build and 12 focused desktop/tablet/mobile tests passed. Actual REA intro
+captures: [desktop](evidence/2026-10-28/supa-source-mascot-desktop.png) /
+[mobile](evidence/2026-10-28/supa-source-mascot-mobile.png).
+Evidence IDs: `ev_43f68ad850a393c0c07c45589fde7409cb9b2871c3a4e0f63dd6e7c6a922e287`
+and `ev_064bd67f7ad47146cb32e88edc0a9f9ae53e559e051f29703dc10ba10e550cea`.
+Viewports were calibrated before each capture; event coverage was unavailable.
