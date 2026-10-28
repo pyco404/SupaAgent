@@ -369,7 +369,7 @@ impl Store {
             health::live_worker(&mut tx, worker).await?;
         }
         let code = failure.map(ToString::to_string);
-        let n=sqlx::query("UPDATE cycles SET status=$3,finished_at=now(),failure_code=$4 WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>now()").bind(cycle).bind(id).bind(if failure.is_some(){"failed"}else{"completed"}).bind(&code).execute(&mut *tx).await.map_err(db)?.rows_affected();
+        let n=sqlx::query("UPDATE cycles SET status=$3,finished_at=now(),failure_code=$4 WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>clock_timestamp()").bind(cycle).bind(id).bind(if failure.is_some(){"failed"}else{"completed"}).bind(&code).execute(&mut *tx).await.map_err(db)?.rows_affected();
         if n != 1 {
             return Err(Error::Stale);
         }
@@ -509,12 +509,12 @@ async fn live(tx: &mut Tx<'_>, id: Uuid, cycle: Uuid) -> Result<Agent> {
     if a.lifecycle != Lifecycle::Active {
         return Err(Error::Inactive);
     }
-    let permitted: bool = sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1 AND (NOT enabled OR expires_at<=now()))")
+    let permitted: bool = sqlx::query_scalar("SELECT NOT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1 AND (NOT enabled OR expires_at<=clock_timestamp()))")
         .bind(id).fetch_one(&mut **tx).await.map_err(db)?;
     if !permitted {
         return Err(Error::Stale);
     }
-    let valid:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM cycles WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>now() AND (worker_id IS NULL OR EXISTS(SELECT 1 FROM worker_health w WHERE w.id=worker_id AND w.stopped_at IS NULL AND w.heartbeat_at>now()-interval '15 seconds')))").bind(cycle).bind(id).fetch_one(&mut **tx).await.map_err(db)?;
+    let valid:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM cycles WHERE id=$1 AND agent_id=$2 AND status='running' AND lease_until>clock_timestamp() AND (worker_id IS NULL OR EXISTS(SELECT 1 FROM worker_health w WHERE w.id=worker_id AND w.stopped_at IS NULL AND w.heartbeat_at>clock_timestamp()-interval '15 seconds')))").bind(cycle).bind(id).fetch_one(&mut **tx).await.map_err(db)?;
     if !valid {
         return Err(Error::Stale);
     }
