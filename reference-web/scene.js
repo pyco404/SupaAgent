@@ -221,15 +221,33 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   }
   function drawWarp(time) {
     const view = fit(transition); if (!view) return;
-    const progress = Math.min(1, (time - warpStart) / 1700), { ctx, w, h } = view;
-    ctx.fillStyle = bg(); ctx.globalAlpha = 1 - Math.abs(progress - .5); ctx.fillRect(0, 0, w, h); ctx.strokeStyle = ink();
-    for (let i = 0; i < 220; i++) {
-      const angle = i * 2.399963, radius = (i % 31) / 31 * Math.max(w, h) * (progress + .02);
-      const x = w * pointer.x + Math.cos(angle) * radius, y = h * pointer.y + Math.sin(angle) * radius;
-      ctx.globalAlpha = Math.sin(progress * Math.PI) * .6; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(angle) * progress * 60, y + Math.sin(angle) * progress * 60); ctx.stroke();
+    const progress = Math.min(1, Math.max(0,(time - warpStart) / 2400)), { ctx, w, h } = view;
+    const cx=w/2,cy=h/2,base=Math.min(w,h)*.315,outer=Math.hypot(w,h)*.65;
+    const exit=Math.max(0,(progress-.72)/.28);
+    const radius=base*(.94+.06*Math.min(1,progress/.3))+(outer-base)*exit**2;
+    // Opaque full-screen stage: the editor must never show through the portal.
+    ctx.globalAlpha=1;ctx.fillStyle=bg();ctx.fillRect(0,0,w,h);
+    const field=ctx.createRadialGradient(cx,cy,radius,cx,cy,radius+base*.85);
+    field.addColorStop(0,'rgba(216,212,180,.12)');field.addColorStop(1,'rgba(216,212,180,0)');
+    ctx.fillStyle=field;ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle=ink();ctx.lineWidth=.85;
+    for (let i = 0; i < 1500; i++) {
+      const angle=i*2.3999632297,seed=(i*.754877666+progress*.52)%1;
+      const distance=radius+8+seed**1.45*Math.max(0,outer-radius);
+      const length=4+((i*.56984029)%1)*Math.min(45,h*.035);
+      ctx.globalAlpha=.18+.42*(1-seed);
+      ctx.beginPath();ctx.moveTo(cx+Math.cos(angle)*distance,cy+Math.sin(angle)*distance);
+      ctx.lineTo(cx+Math.cos(angle)*(distance+length),cy+Math.sin(angle)*(distance+length));ctx.stroke();
     }
-    ctx.globalAlpha = 1;
-    if (progress >= 1) { warpStart = 0; transition.classList.remove('active'); warpResolve?.(); warpResolve = undefined; }
+    ctx.globalAlpha=.1;ctx.lineWidth=8;ctx.beginPath();ctx.arc(cx,cy,radius+5,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.beginPath();ctx.arc(cx,cy,radius,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=.65;ctx.lineWidth=1;ctx.strokeStyle=ink();ctx.stroke();ctx.globalAlpha=1;
+    transition.dataset.progress=progress.toFixed(3);
+    if (progress >= 1) finishWarp(true);
+  }
+  function finishWarp(completed) {
+    warpStart=0;transition.classList.remove('active');
+    const resolve=warpResolve;warpResolve=undefined;resolve?.(completed);
   }
   function draw(time = performance.now()) {
     if (mode === 'intro') drawIntro(time); else { drawEntity(time); if (worm) { const p = fit(spark); if (p) { p.ctx.fillStyle = ink(); p.ctx.fillRect(((time / 20) % p.w), 8, 3, 3); } } }
@@ -240,7 +258,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   function resize() { drawBlueprint(); drawSpark(); draw(); schedule(); }
   function pointerMove(e) { pointer.x = e.clientX / innerWidth; pointer.y = e.clientY / innerHeight; schedule(); }
   function visibility() { introTime=null; if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
-  function motionChange() { document.documentElement.dataset.motion = reduced.matches ? 'still' : 'running'; if (reduced.matches) { cancelAnimationFrame(frame); frame = 0; if (warpResolve) { warpResolve(); warpResolve = undefined; warpStart = 0; transition.classList.remove('active'); } } resize(); }
+  function motionChange() { document.documentElement.dataset.motion = reduced.matches ? 'still' : 'running'; if (reduced.matches) { cancelAnimationFrame(frame); frame = 0; if (warpResolve) finishWarp(true); } resize(); }
   const observer = new ResizeObserver(resize); [intro, blueprint, entity, spark].forEach(c => observer.observe(c));
   window.addEventListener('pointermove', pointerMove, { passive: true }); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
@@ -250,8 +268,9 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     setWorm(value) { worm = value; schedule(); },
     onInput(value) { input = value; schedule(); },
     redraw: resize,
-    warp() { if (reduced.matches) return Promise.resolve(); if (warpResolve) return Promise.resolve(); return new Promise(resolve => { warpResolve = resolve; warpStart = performance.now(); transition.classList.add('active'); schedule(); }); },
-    destroy() { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('pointermove', pointerMove); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); warpResolve?.(); },
+    warp() { if (reduced.matches) return Promise.resolve(true); if (warpResolve) return Promise.resolve(false); return new Promise(resolve => { warpResolve = resolve; warpStart = performance.now(); transition.dataset.progress='0';drawWarp(warpStart);transition.classList.add('active');schedule(); }); },
+    cancelWarp() { finishWarp(false); },
+    destroy() { cancelAnimationFrame(frame); observer.disconnect(); window.removeEventListener('pointermove', pointerMove); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); finishWarp(false); },
   };
 }
 function format(value) { return Number(value).toLocaleString('en-US').replaceAll(',', "'"); }
