@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80" viewBox="0 0 200 80">
+  <title>Supa Agent section schematics — illustrative navigation, not recorded activity</title>
+  <defs>
+    <pattern id="ruling" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 8H8" stroke="#d8d4b4" stroke-opacity=".08"/></pattern>
+  </defs>
+  <symbol id="agents" viewBox="0 0 200 80">
+    <g fill="none" stroke="#d8d4b4" stroke-width="1">
+      <path d="M30 40H66M134 40H170M100 22V8M100 58V72" opacity=".45"/>
+      <rect x="66" y="14" width="68" height="52"/><rect x="6" y="28" width="24" height="24" opacity=".5"/><rect x="170" y="28" width="24" height="24" opacity=".5"/>
+      <path d="M77 56H123M11 36H25M11 43H20M175 36H189M175 43H184" opacity=".5"/>
+    </g>
+    <path fill="#71957d" fill-rule="evenodd" d="M78 24h44v3H78zm0 7h28v3H78zm0 7h36v3H78zm0 7h18v3H78z"/>
+    <g fill="#d8d4b4"><rect x="98" y="6" width="4" height="4"/><rect x="98" y="70" width="4" height="4"/></g>
+  </symbol>
+  <symbol id="intelligence" viewBox="0 0 200 80">
+    <rect x="2" y="4" width="196" height="72" fill="url(#ruling)"/>
+    <g fill="none" stroke="#d8d4b4" stroke-width=".8">
+      <path d="M18 40C50 40 44 12 82 12S126 40 182 40M18 40C50 40 44 28 82 28S126 40 182 40M18 40C50 40 44 52 82 52S126 40 182 40M18 40C50 40 44 68 82 68S126 40 182 40" opacity=".6"/>
+      <path d="M116 16H146V64H116M132 16V4H18V30M132 64V76H18V50" stroke-dasharray="3 4" opacity=".4"/>
+    </g>
+    <g fill="#71957d"><rect x="13" y="35" width="10" height="10"/><rect x="178" y="36" width="8" height="8"/><circle cx="82" cy="12" r="2"/><circle cx="82" cy="28" r="2"/><circle cx="82" cy="52" r="2"/><circle cx="82" cy="68" r="2"/></g>
+  </symbol>
+  <symbol id="memory" viewBox="0 0 200 80">
+    <g fill="#0c0c0c" stroke="#d8d4b4" stroke-width="1">
+      <path d="M48 8H164V52H48z" opacity=".3"/><path d="M36 18H152V62H36z" opacity=".55"/><path d="M24 28H140V72H24z"/>
+      <path d="M38 39H126M38 50H98M38 61H111" opacity=".5"/><path d="M156 28H184V60H148" stroke-dasharray="3 3" opacity=".5"/>
+    </g>
+    <g fill="#71957d"><rect x="15" y="35" width="4" height="4"/><rect x="15" y="47" width="4" height="4"/><rect x="15" y="59" width="4" height="4"/><rect x="174" y="40" width="10" height="8"/></g>
+  </symbol>
+  <symbol id="economy" viewBox="0 0 200 80">
+    <g fill="none" stroke="#d8d4b4" stroke-width="1"><path d="M8 8H94V72H8zM106 8H192V72H106zM8 31H94M106 31H192M21 43H80M21 53H63M21 63H74M119 43H178M119 53H161M119 63H174" opacity=".65"/><path d="M100 3V77" stroke-dasharray="2 4" opacity=".4"/></g>
+    <g font-family="monospace" font-size="13" fill="#71957d"><text x="20" y="24">SIM</text><text x="116" y="24">DEVNET</text></g>
+  </symbol>
+  <symbol id="social" viewBox="0 0 200 80">
+    <g fill="none" stroke="#d8d4b4" stroke-width="1"><path d="M47 6H184V54H170V66L154 54" opacity=".3"/><path d="M15 16H162V62H48L31 76V62H15z"/><path d="M67 31H146M67 42H135M30 53H111" opacity=".5"/></g>
+    <path fill="#71957d" d="M30 29h10v10h-6v6h-4zm17 0h10v10h-6v6h-4z"/>
+    <text x="120" y="76" font-family="monospace" font-size="12" fill="#71957d">DRAFT</text>
+  </symbol>
+  <symbol id="trading" viewBox="0 0 200 80">
+    <g fill="none" stroke="#d8d4b4" stroke-width="1" opacity=".5"><path d="M12 10H188V70H12zM80 10V70M120 10V70M12 25H188M12 40H188M12 55H188M22 18H62M22 33H50M22 48H58M22 63H45M138 18H178M150 33H178M142 48H178M158 63H178"/></g>
+    <rect x="82" y="25" width="36" height="30" fill="#0c0c0c" stroke="#d8d4b4"/>
+    <g fill="none" stroke="#71957d" stroke-width="2"><path d="M92 35V30a8 8 0 0 1 16 0V35M90 35H110V49H90z"/></g>
+  </symbol>
+  <symbol id="token-launch" viewBox="0 0 200 80">
+    <g fill="none" stroke="#d8d4b4" stroke-width="1"><path d="M77 6H123L146 29V51L123 74H77L54 51V29z" opacity=".65"/><circle cx="100" cy="40" r="24" opacity=".4"/><path d="M8 40H46M154 40H192M28 32L36 40L28 48M172 32L164 40L172 48" opacity=".5"/></g>
+    <path fill="#71957d" d="M90 28h7v24h-7zm13 0h7v24h-7z"/>
+  </symbol>
+  <symbol id="factory" viewBox="0 0 200 80">
+    <g fill="none" stroke="#d8d4b4" stroke-width="1"><path d="M12 26H56V54H12zM144 5H188V25H144zM144 30H188V50H144zM144 55H188V75H144z"/><path d="M56 40H86M112 40H126V15H144M126 40H144M126 40V65H144" stroke-dasharray="3 4" opacity=".55"/><rect x="87" y="28" width="24" height="24"/></g>
+    <path d="M93 34L105 46M105 34L93 46" stroke="#71957d" stroke-width="2"/>
+    <g fill="#71957d" opacity=".6"><rect x="24" y="34" width="20" height="12"/><rect x="154" y="12" width="24" height="6"/><rect x="154" y="37" width="24" height="6"/><rect x="154" y="62" width="24" height="6"/></g>
+  </symbol>
+  <symbol id="about" viewBox="0 0 200 80">
+    <g fill="none" stroke="#d8d4b4" stroke-width="1"><path d="M5 28H53V59H5zM76 28H124V59H76zM147 28H195V59H147zM53 43H76M124 43H147M29 22V10H171V22M29 65V73H171V65" opacity=".7"/></g>
+    <g font-family="monospace" font-size="12" fill="#71957d"><text x="15" y="48">RUST</text><text x="91" y="48">PG</text><text x="160" y="48">API</text></g>
+  </symbol>
+</svg>
