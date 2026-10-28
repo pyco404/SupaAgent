@@ -121,6 +121,11 @@ body[data-view=projects] .stage{height:100dvh;min-height:0;padding-bottom:0}
 .workspace-controls .agent-option{display:block;width:100%;min-height:44px;padding:10px;text-align:left;text-decoration:none;line-height:1.5;white-space:normal;overflow-wrap:anywhere;color:var(--ink);background:var(--bg)}
 .agent-option[aria-selected=true]{color:var(--green)!important;background:#141816!important}
 .agent-option:focus-visible{outline-offset:-2px}
+.autonomy-form{display:grid;gap:12px;margin:14px 0;white-space:normal;line-height:1.6}
+.autonomy-form textarea{display:block;width:100%;resize:vertical;min-height:88px;padding:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;caret-color:var(--ink)}
+.autonomy-form textarea:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+.autonomy-consent{display:flex;align-items:flex-start;gap:10px}.autonomy-consent input{flex:none;width:18px;height:18px;margin:3px 0;accent-color:var(--green)}
+.autonomy-panel button{min-height:44px;padding:8px 10px;border:1px solid var(--line);text-align:left;white-space:normal}.autonomy-panel>button{margin:8px 8px 8px 0}
 /* Keep native scrolling, with a single-pixel terminal line in supporting browsers. */
 @supports selector(::-webkit-scrollbar){
   .buffer,.agent-options{scrollbar-width:auto;scrollbar-color:auto}
