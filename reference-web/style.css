@@ -44,7 +44,7 @@ body[data-view=intro] .frame-top,.intro-bottom{font-size:clamp(12px,1vw,16px);li
 .portal-brand img{display:block;width:var(--portal-logo-size,144px);height:var(--portal-logo-size,144px);filter:none;image-rendering:pixelated}
 .portal-brand span{color:var(--ink);font:400 clamp(18px,2.6vmin,28px)/1.2 Plex,monospace;letter-spacing:.18em;padding-left:.18em;white-space:nowrap}
 .transition.active+.portal-brand{visibility:visible;opacity:var(--portal-brand-opacity,0)}
-.intro-mascot{--mascot-size:clamp(140px,22vw,300px);position:fixed;left:calc(39.12vw - var(--mascot-size)/2);top:calc(12.5dvh + 30px);width:var(--mascot-size);height:var(--mascot-size);opacity:.3;filter:blur(.4px);pointer-events:none;user-select:none;z-index:0}
+.intro-mascot{--mascot-size:clamp(260px,32vw,460px);position:fixed;left:calc(39.12vw - var(--mascot-size)/2);top:calc(12.5dvh + 30px);width:var(--mascot-size);height:var(--mascot-size);opacity:.6;filter:blur(.2px);pointer-events:none;user-select:none;z-index:0}
 .intro-canvas{z-index:1}
 @media(max-width:700px){.intro-mascot{left:calc(20px + (100vw - 40px)*.32 - var(--mascot-size)/2)}}
 html[data-motion=still] .intro-modes{top:70dvh;bottom:auto;display:flex}
