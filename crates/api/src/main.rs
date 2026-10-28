@@ -34,6 +34,13 @@ async fn run() -> Result<()> {
     store.recover().await?;
     let runtime = Runtime::new(store.clone(), reasoner);
     let mut state = AppState::new(store.clone(), runtime, token)?;
+    if let Ok(id) = std::env::var("SUPA_OPERATOR_ID") {
+        state = state.with_operator(id.parse().map_err(|_| Error::Invalid)?)?;
+    }
+    if let Ok(value) = std::env::var("SUPA_OPERATOR_CREDENTIALS") {
+        state =
+            state.with_credentials(serde_json::from_str(&value).map_err(|_| Error::Invalid)?)?;
+    }
     state.wallet_read_operator = std::env::var("SUPA_WALLET_READ_OPERATOR_ID")
         .ok()
         .map(|value| value.parse().map_err(|_| Error::Invalid))
@@ -68,7 +75,15 @@ async fn run() -> Result<()> {
     if wallet_poll.is_some_and(|v| v < 30) || wallet_poll.is_some() && state.wallets.is_none() {
         return Err(Error::Invalid);
     }
-    let scheduler_state = state.clone();
+    let monitor = supa_runtime::health::WorkerMonitor::start(
+        state.store.clone(),
+        "api",
+        scheduler_enabled,
+        1,
+    )
+    .await?;
+    let mut scheduler_state = state.clone();
+    scheduler_state.runtime = scheduler_state.runtime.with_worker(monitor.id);
     let (shutdown_tx, mut shutdown_rx) = tokio::sync::watch::channel(false);
     let mut wallet_shutdown = shutdown_rx.clone();
     let wallet_state = state.clone();
@@ -129,6 +144,7 @@ async fn run() -> Result<()> {
         task.abort();
         let _ = task.await;
     }
+    monitor.shutdown().await?;
     result
 }
 
