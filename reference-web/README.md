@@ -248,3 +248,32 @@ and `ev_64be3207f30818c79d6104a8644b3ab2d63d30a6cd9c4f68d118b8754592a12d`.
 Screenshots establish appearance; browser tests check responsive anchor positions,
 painted pixels, touch suppression and transitions between intro and workspace.
 Syntax/build and all 15 focused desktop/tablet/mobile browser tests passed.
+
+### Keyboard/mouse hand coordination and text tether
+
+The right hand now uses an outlined mouse while the pointer moves, then returns
+to the keyboard after 700 ms of inactivity. The left hand stays at the keyboard.
+Both hands follow the existing screen-typing clock; no camera or device tracking
+is involved. The keyboard keeps identical bounds across the handoff. Touch input
+does not activate the mouse pose, and reduced motion keeps typing gestures still.
+
+The workspace now has a non-interactive input illustration in its own row below
+saved-record status. It uses the same renderer as the intro. A second dotted
+line follows the actual typing position: canvas cursor coordinates on the intro,
+and a DOM Range around the current rendered character in the workspace. A
+focused command field uses its visible caret position. Offscreen text endpoints
+are omitted; navigation clears stale text references, and the portal hides both
+lines. The pointer line continues to mark the actual mouse position separately.
+No saved record, inference, transaction or model context is generated or changed.
+
+Syntax/build checks passed. The initial 27 focused browser checks passed; after
+stabilizing keyboard geometry, all nine geometry/input/responsive checks passed
+again across desktop, tablet and mobile. These check real hand transitions,
+keyboard bounds, typing synchronization, text endpoints and reduced motion.
+REA inspected the running local page:
+[mouse pose on desktop](evidence/2026-10-28/supa-input-hands-mouse-desktop.png) /
+[keyboard pose in mobile workspace](evidence/2026-10-28/supa-input-hands-keyboard-mobile.png).
+Evidence IDs: `ev_d570b8980a82cea3c3b2b5d17c94d9be433337cccab67f69f6e8847b84dc31e9`
+and `ev_241c4f433207faf60ee7c42adfc6cec87ac6c31b5273042060fd6c5359f20660`.
+The mouse capture uses controlled CDP movement; the keyboard capture follows its
+cessation. Screenshots establish appearance; automated browser tests verify timing.
