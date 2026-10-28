@@ -122,6 +122,23 @@ A new browser regression verifies gradual character/row progress and immediate c
 
 The final complete rerun passed **42/42 tests**, with no failed, skipped, flaky or automatically retried cases. Syntax checks, static build and whitespace validation also passed. The original 39-test validation JSON above documents the earlier baseline; the latest full result is in the ignored local `test-results/results.json`.
 
+## Follow-up: screenshot-matched single editor
+
+The opening now follows the user's supplied current-site screenshots: one wide editor instead of mirrored columns, a file heading and numbered rows, muted token coloring, an active-line highlight and caret, and one continuous mode/file/cursor status bar. The status switches from INSERT to NORMAL when the slow top-to-bottom reveal completes. The displayed source path and cursor refer to this implementation's own public code; the terminal-style command beneath is decorative and executes nothing.
+
+The larger face is independently generated from code glyphs shaped around eyes, nose and mouth, with an eye box and dashed guide to the actual pointer position. Hands use articulated finger landmarks, palm connections and bounding boxes above a keyboard layout. All geometry is procedural and pointer-driven; there is no webcam, face capture or biological tracking. These are approximations of the supplied screenshots, not copied portrait assets or a claim of exact visual equality.
+
+REA inspected the rendered desktop (1440×1000) and mobile (390×844) composition with reduced motion for stable captures. Both scenario actions completed; event coverage remained incomplete, so no complete runtime-equivalence claim is made. The mobile status bar, header and footer fit the viewport without horizontal page overflow. The previous Supa website and project-browser components remain separate.
+
+| Updated capture | REA evidence ID | PNG SHA-256 |
+| --- | --- | --- |
+| [Single editor, desktop](evidence/2026-10-28/intro-single-editor-desktop.png) | `ev_d10846eb0756232cdd479f07c86d4537ad37340a9e964e4a90c3b75f0b44a767` | `8e13cf0397340bc754b62c6481650a76d212fcf5cafa01cfc16573f23cd8efce` |
+| [Single editor, mobile](evidence/2026-10-28/intro-single-editor-mobile.png) | `ev_896bb33344ece4fae943cfeb12c5d84ad32d115c9babd6cfbc0252b6aa3d143b` | `0a2917a41a3584af68be504ea5ba2bc99f79cf919ca24f7f7998be54521d9f84` |
+
+The captures predate only the nonvisual screen-reader description added to clarify that the geometry is procedural. Earlier paired screenshots and their comparison metrics remain historical baseline evidence. The new regression checks a single mode label, true source filename, cursor position, status-bar bounds, theme interaction and status dismissal when entering the project browser on each viewport.
+
+Validation for this follow-up passed: syntax checks, static build, whitespace checks, and **45/45 browser tests** across desktop, tablet and mobile, with zero failed, skipped, flaky or retried cases. The focused design detector reports zero failures; the previously documented theme-thumbnail stripe advisory remains unchanged.
+
 ## Git handling
 
 All new eligible files are committed individually on `main` through `scripts/commit-one`, with one descriptive Conventional Commit per file and hooks enabled. Secret scanning and the one-file history audit are required before completion. The pre-existing root `.gitignore` edit is preserved and excluded from these commits. No archival branch, private evaluation files or credentials are added. No push or deployment is authorized by this task.
