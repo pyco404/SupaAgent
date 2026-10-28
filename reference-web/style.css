@@ -97,3 +97,16 @@ html[data-motion=still] .intro-modes span+span{display:block}
 .wheel-item .wheel-label{height:32px;padding:0 7px 3px;display:flex;flex-direction:column;justify-content:flex-end;gap:1px;line-height:13px;white-space:normal;overflow:visible}
 .wheel-name{display:block;font-size:11px;color:var(--ink);overflow-wrap:anywhere}
 .wheel-planned{display:block;font-size:11px;color:var(--dim)}
+
+/* Keep the input illustration at the viewport edge on every workspace view. */
+body[data-view=projects] .stage{height:100dvh;min-height:0;padding-bottom:0}
+.projects{--hands-height:clamp(112px,16dvh,160px);grid-template-rows:minmax(0,1fr) 58px 20px calc(var(--hands-height) + env(safe-area-inset-bottom,0px))}
+.workspace-hands{position:fixed;left:50%;bottom:env(safe-area-inset-bottom,0px);transform:translateX(-50%);width:min(1008px,calc(100vw - 64px));height:var(--hands-height);z-index:2}
+.study-note{grid-row:3}
+.blueprint{height:clamp(220px,26dvh,300px)}
+@media(max-width:700px){
+ .projects{--hands-height:clamp(96px,15dvh,124px);grid-template-rows:44px minmax(0,1fr) 52px calc(var(--hands-height) + env(safe-area-inset-bottom,0px))}
+ .workspace-hands{width:calc(100vw - 40px)}
+ .blueprint{height:clamp(190px,30dvh,290px)}
+}
+@media(max-width:700px) and (max-height:650px){.blueprint{height:160px}.projects{--hands-height:96px}}
