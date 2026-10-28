@@ -52,25 +52,18 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     return { ctx, w: box.width, h: box.height };
   }
   function ascii(ctx, x, y, width, height, time, small = false) {
-    const columns = small ? 45 : 50, rows = small ? 42 : 52;
-    const cw = width / columns, ch = height / rows;
-    ctx.font = `${Math.max(3, ch * .83)}px Plex,monospace`;
-    const px = (pointer.x - .5) * .25, py = (pointer.y - .5) * .15;
-    for (let r = 0; r < rows; r++) for (let c = 0; c < columns; c++) {
-      const nx = c / columns * 2 - 1, ny = r / rows * 2 - 1;
-      const face = (nx - px) ** 2 / .64 + ny ** 2 / .9;
-      if (face > 1) continue;
-      const eyes = Math.exp(-(((Math.abs(nx - px) - .29) / .13) ** 2 + ((ny + .18 - py) / .075) ** 2));
-      const nose = Math.exp(-(((nx - px) / .09) ** 2) - ((ny - .05) / .25) ** 2);
-      const mouth = Math.exp(-(((nx - px) / .31) ** 2) - ((ny - .48) / .035) ** 2);
-      const cheek = Math.max(0, 1 - face) * (.4 + .15 * Math.sin(c * .75 + r * .1));
-      const blink = reduced.matches ? 1 : Math.sin(time / 1900) > .996 ? .1 : 1;
-      const tone = Math.max(.04, cheek + eyes * blink + nose * .6 + mouth * .7);
-      ctx.globalAlpha = Math.min(.85, tone * .75);
-      const ramp = ' .,:;i1tfLCG08@';
-      ctx.fillText(ramp[Math.min(ramp.length - 1, Math.floor(tone * 10))], x + c * cw, y + r * ch);
+    // Code texture moves inside the canonical mask; the robot never deforms.
+    const silhouette = new Path2D('M7 2h10v2h4v4h2v10h-4v4H5v-4H1V8h2V4h4zM6 9h4v5H6zm8 0h4v5h-4zM8 17h8v2H8z');
+    const size=Math.min(width,height),scale=size/24;
+    ctx.save();ctx.translate(x+(width-size)/2,y+(height-size)/2);ctx.scale(scale,scale);
+    ctx.clip(silhouette,'evenodd');ctx.font='.72px Plex,monospace';
+    ctx.textBaseline='top';ctx.fillStyle=ink();
+    const source=code.join(' ').replace(/\s+/g,' '),offset=reduced.matches?0:Math.floor(time/1800);
+    for(let row=0;row<30;row++)for(let column=0;column<48;column++){
+      ctx.globalAlpha=.35+.25*((row+column)%4)/3;
+      ctx.fillText(source[(row*48+column+offset)%source.length],column*.5,row*.8);
     }
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
   // Decorative hands share the editor's typing clock; no camera or key capture.
   function drawHands(ctx, w, h, typing, character) {
