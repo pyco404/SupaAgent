@@ -15,7 +15,7 @@ const palettes=[['#0c0c0c','#d8d4b4','#949078'],['#0b0b0b','#ebe6db','#9b968a'],
 let sceneData, revealTyping=null;
 let theme=0,wheel,scenes,itemIndex=0,typing=0,typingTimer=0,leaving=false,entryAttempt=0,worm=false;
 let state={status:{error:'Connecting to local backend…'},agents:{error:'Loading saved agents…'},retrievedAt:'not yet retrieved'},agentId='',renderVersion=0,reloadVersion=0;
-let commandHistory=[],historyIndex=0;
+let commandHistory=[],historyIndex=0,liveTimer=0,liveBusy=false,viewFingerprint='';
 try{const saved=Number(localStorage.getItem('supa.dark-theme'));if(Number.isInteger(saved)&&saved>=0&&saved<palettes.length)theme=saved;}catch{/* Optional preference. */}
 function applyTheme(){['--bg','--ink','--dim'].forEach((name,index)=>root.style.setProperty(name,palettes[theme][index]));}
 applyTheme();
@@ -61,7 +61,21 @@ async function boot(){
   const initial=location.hash;setView(location.pathname.startsWith('/site'));if(document.body.dataset.view==='projects')openHash(initial);
   root.dataset.ready='true';
   void reload(data);
+  liveTimer=setInterval(()=>void refreshLive(),15000);
   return true;
+}
+// Read-only polling pauses while hidden, typing or interacting. It never starts a cycle.
+async function refreshLive(){
+  if(liveBusy||document.hidden||document.body.dataset.view!=='projects'||$('.buffer').getAttribute('aria-busy')==='true'||!$('.command').hidden||!$('#agent-options').hidden||$('.projects').classList.contains('drawer-open'))return;
+  liveBusy=true;
+  try{
+    const version=reloadVersion,next=await overview();
+    if(version!==reloadVersion||document.hidden||document.body.dataset.view!=='projects')return;
+    const changed=JSON.stringify([state.status,state.agents])!==JSON.stringify([next.status,next.agents]);
+    state=next;
+    if(changed){await reload();return;}
+    await select(itemIndex,true);
+  }finally{liveBusy=false;}
 }
 async function reload(currentScene=sceneData){
   const version=++reloadVersion;$('.reload-records').disabled=true;$('.reload-records').textContent='Retrieving…';
@@ -108,15 +122,23 @@ function setDrawer(open,focus=true){
 $('.tabline').addEventListener('click',()=>setDrawer($('.tabline').getAttribute('aria-expanded')!=='true'));
 $('.wheel').addEventListener('click',event=>{if(event.target.closest('.wheel-item')&&matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.buffer').focus({preventScroll:true});}});
 function line(text,className='terminal-line'){const el=node('p',className,text);$('.buffer').append(el);return el;}
-async function select(index){
-  itemIndex=index;cancelTyping();const version=++renderVersion,item=navigation[index];if(!item)return;
+async function select(index,background=false){
+  const item=navigation[index];if(!item)return;
+  const version=background?renderVersion:++renderVersion;
+  if(!background){itemIndex=index;cancelTyping();}
   if(document.body.dataset.view==='projects')history.replaceState(null,'',`#${item.id}`);
-  $('.tab-file').textContent=item.label;$('.winbar').textContent=`supa@local — ${item.label} / read-only`;
-  const buffer=$('.buffer');buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
-  $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
-  line('supa@local ~','prompt');line('Loading saved view…','prompt');
+  const buffer=$('.buffer');
+  if(!background){
+    $('.tab-file').textContent=item.label;$('.winbar').textContent=`supa@local — ${item.label} / read-only`;
+    buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
+    $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
+    line('supa@local ~','prompt');line('Loading saved view…','prompt');
+  }
   const rows=await sectionView(item.id,state,agentId);
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
+  const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
+  if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
+  viewFingerprint=fingerprint;if(background)cancelTyping();
   buffer.replaceChildren();line('supa@local ~','prompt');
   for(const row of rows){
     if(row.kind==='agent'){
@@ -220,4 +242,4 @@ window.addEventListener('keydown',async event=>{
   else if(event.key==='g')$('.buffer').scrollTo({top:0});
   else if(event.key==='G')$('.buffer').scrollTo({top:$('.buffer').scrollHeight});
 });
-window.addEventListener('pagehide',event=>{if(!event.persisted){cancelTyping();wheel?.destroy();scenes?.destroy();}});
+window.addEventListener('pagehide',event=>{if(!event.persisted){clearInterval(liveTimer);cancelTyping();wheel?.destroy();scenes?.destroy();}});
