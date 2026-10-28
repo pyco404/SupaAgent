@@ -199,6 +199,21 @@ Geometry validation compares actual rendered master-SVG pixels against the origi
 
 The final full reference run passed **57/57 tests**, with identical logo pixels at every tested size on all three viewport projects, and zero failed, skipped, flaky or retried cases. The initial broader run was interrupted after diagnosing one existing drawer test's `page.goto` timeout waiting for optional remote art. The test helper now waits for DOM content and the local application's explicit ready state; reload checks likewise avoid waiting for remote image completion. Automatic retries remain disabled. Both frontend builds and whitespace checks passed. Candidate scans covered all 15 changed/new files with zero secret findings. The previously documented theme-thumbnail stripe advisory is unchanged.
 
+## Follow-up: Supa identity inside the radial void
+
+The radial entry now places the existing sharp mint mascot above **SUPA AGENT** in the black circular void. Warm-ivory Plex Mono lettering, restrained tracking and generous vertical space keep the composition consistent with the terminal presentation. The group is centered in the viewport/circle and scales to fit mobile. The logo uses 24px size increments (72px on the mobile capture, 192px on desktop), preserving its existing pixel geometry.
+
+The branding is a lightweight decorative DOM layer above the canvas. Its fade and small entrance scale share the radial animation's progress clock; it fades away during the final circle expansion. It appears only while the transition is active and is immediately hidden after completion, cancellation or a switch to reduced motion. The total entry remains 2.4 seconds. The faint blurred logo behind the opening code is unchanged.
+
+REA exercised Enter and captured the actual intermediate desktop and mobile views. The captures are sampled frames, not proof of frame-exact reference equality. Existing transition regressions now check the title, canonical image, centering, complete group bounds inside the circle, and cleanup after navigation/reduced-motion cancellation on all three viewport projects.
+
+| Capture | REA evidence ID | PNG SHA-256 |
+| --- | --- | --- |
+| [Desktop branded void](evidence/2026-10-28/branded-portal-desktop.png) | `ev_b143994f35e9039549a8734128dae0a1ca789d96c0e9693525e95d6619bf6c89` | `a491e772493dc1040f737d2a22fba1ea53fbb4c2d0b9811e6ec6edf6118dd7a8` |
+| [Mobile branded void](evidence/2026-10-28/branded-portal-mobile.png) | `ev_1077214be0e55362402c773cb6eac2f860030abe0db82f40f01171179f9a1af7` | `b29518b32169b09d25ccc5770c791f86b3889401137a349727a5866e57bdfb7a` |
+
+Validation passed: syntax checks, static build, whitespace checks and **57/57 browser tests**, with zero failed, skipped, flaky or retried cases. The existing navigation, keyboard animation, SVG geometry and permissions checks continue to pass. The focused design detector reports zero failures, with the previously documented theme-thumbnail stripe advisory unchanged.
+
 ## Git handling
 
 All new eligible files are committed individually on `main` through `scripts/commit-one`, with one descriptive Conventional Commit per file and hooks enabled. Secret scanning and the one-file history audit are required before completion. The pre-existing root `.gitignore` edit is preserved and excluded from these commits. No archival branch, private evaluation files or credentials are added. No push or deployment is authorized by this task.
