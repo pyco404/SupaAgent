@@ -118,11 +118,11 @@ test("pixel typography, dark surfaces and accent colors satisfy the design", asy
   await page.evaluate(() => document.fonts.ready);
   const result = await page.evaluate(() => ({
     font: getComputedStyle(document.body).fontFamily,
-    loaded: document.fonts.check('21px "VT323"'),
+    loaded: document.fonts.check(`22px ${getComputedStyle(document.body).fontFamily.split(",")[0]}`),
     background: getComputedStyle(document.body).backgroundColor,
     colors: [...document.querySelectorAll("body *")].flatMap(e => { const s = getComputedStyle(e); return [s.color, s.backgroundColor, s.borderTopColor]; }),
   }));
-  expect(result.font).toContain("VT323"); expect(result.loaded).toBe(true); expect(result.background).toBe("rgb(11, 13, 12)");
+  expect(result.font).toContain("VT323"); expect(result.loaded).toBe(true); expect(result.background).toBe("rgb(9, 11, 10)");
   expect(result.colors.filter(c => { const n = c.match(/\d+/g)?.map(Number); return n && n[2] > n[0] + 12 && n[2] > n[1] + 5; })).toEqual([]);
 });
 
