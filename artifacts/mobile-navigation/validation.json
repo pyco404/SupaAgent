@@ -1,0 +1,342 @@
+{
+  "date": "2026-10-28",
+  "scope": "Mobile navigation overlay only; desktop preserved",
+  "rea_tools": [
+    "list_browser_targets",
+    "capture_browser_scenario",
+    "capture_web_screenshot",
+    "compare_web_screenshots"
+  ],
+  "captures": [
+    {
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "preparation": {
+        "page": "home",
+        "path": "/",
+        "actual_viewport": {
+          "width": 320,
+          "height": 640,
+          "scroll_width": 320
+        },
+        "status": 200,
+        "synthetic_data": false
+      },
+      "checks": {
+        "width": 320,
+        "height": 640,
+        "dialog": {
+          "x": 0,
+          "y": 0,
+          "width": 320,
+          "height": 640
+        },
+        "open": true,
+        "body_position": "fixed",
+        "focused_close": true,
+        "blue_colors": []
+      },
+      "closed_evidence_id": "ev_1e72bc201a6b9c33138c8fd91aaca8f582d262d6f03ed9317ad39532c0bfee62",
+      "open_evidence_id": "ev_be86de6d9e3c3c7ffa0f658ff03a2c05dced434d57203550ee51b24839c9d962",
+      "scenario_evidence_id": "ev_d7fbbe012f25e06ab3888374d10c4252038b8a2b863a173b9d82d7ee9254a70f",
+      "steps": [
+        {
+          "step_id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "open-overlay",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "overlay-ready",
+          "status": "completed",
+          "error": null
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "preparation": {
+        "page": "home",
+        "path": "/",
+        "actual_viewport": {
+          "width": 390,
+          "height": 844,
+          "scroll_width": 390
+        },
+        "status": 200,
+        "synthetic_data": false
+      },
+      "checks": {
+        "width": 390,
+        "height": 844,
+        "dialog": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "open": true,
+        "body_position": "fixed",
+        "focused_close": true,
+        "blue_colors": []
+      },
+      "closed_evidence_id": "ev_dac2b00a01db0170d35aa6d9c933be9aeae474426cd4fae55a84e0fd159a1a76",
+      "open_evidence_id": "ev_6fa6a2ae637c8d7eeb9fc2656df586349f35da5cd2b64705a1acdeeeffb63c79",
+      "scenario_evidence_id": "ev_a223c0c196b82be27f3af13cb1260cae7c7f818d5fb496469bbaa0943a7aaa35",
+      "steps": [
+        {
+          "step_id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "open-overlay",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "overlay-ready",
+          "status": "completed",
+          "error": null
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 640,
+        "height": 800
+      },
+      "preparation": {
+        "page": "home",
+        "path": "/",
+        "actual_viewport": {
+          "width": 640,
+          "height": 800,
+          "scroll_width": 640
+        },
+        "status": 200,
+        "synthetic_data": false
+      },
+      "checks": {
+        "width": 640,
+        "height": 800,
+        "dialog": {
+          "x": 0,
+          "y": 0,
+          "width": 640,
+          "height": 800
+        },
+        "open": true,
+        "body_position": "fixed",
+        "focused_close": true,
+        "blue_colors": []
+      },
+      "closed_evidence_id": "ev_e8e5d0c3ecdfcfd379dabd751357d04b099c1e477237736818d5b87b374e708c",
+      "open_evidence_id": "ev_e7999c4145b22e820561d88759513c9d4334284adefa80b35ad41d68ecf0ba41",
+      "scenario_evidence_id": "ev_c44123ff547a797c8579a86c998317bb738f94bc4c7d42d34f1ade04c1f090c1",
+      "steps": [
+        {
+          "step_id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "open-overlay",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "overlay-ready",
+          "status": "completed",
+          "error": null
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "artifacts/mobile-navigation/closed-320.png",
+      "state": "closed",
+      "evidence_id": "ev_1e72bc201a6b9c33138c8fd91aaca8f582d262d6f03ed9317ad39532c0bfee62",
+      "sha256": "e1df9df02342a4febd4de4a419b7f0bc79218688f1a0a655dcdc45ea9f869358",
+      "viewport": {
+        "width": 320,
+        "height": 640
+      }
+    },
+    {
+      "path": "artifacts/mobile-navigation/open-320.png",
+      "state": "open",
+      "evidence_id": "ev_be86de6d9e3c3c7ffa0f658ff03a2c05dced434d57203550ee51b24839c9d962",
+      "sha256": "ef27a3fb57eeb0f0ed868e8667f456d12bb2df151d9d6d03f219f7c4038f77a7",
+      "viewport": {
+        "width": 320,
+        "height": 640
+      }
+    },
+    {
+      "path": "artifacts/mobile-navigation/closed-390.png",
+      "state": "closed",
+      "evidence_id": "ev_dac2b00a01db0170d35aa6d9c933be9aeae474426cd4fae55a84e0fd159a1a76",
+      "sha256": "6001ce9e1ec5d9a415f382441e6590022c4740056ce2979ea4aa8f39d95b86ce",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/mobile-navigation/open-390.png",
+      "state": "open",
+      "evidence_id": "ev_6fa6a2ae637c8d7eeb9fc2656df586349f35da5cd2b64705a1acdeeeffb63c79",
+      "sha256": "13fa365723246af8c367cb86e1944e96023d1439eda828a360509d17f337d816",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "path": "artifacts/mobile-navigation/closed-640.png",
+      "state": "closed",
+      "evidence_id": "ev_e8e5d0c3ecdfcfd379dabd751357d04b099c1e477237736818d5b87b374e708c",
+      "sha256": "0ff6306edd6de69c36a86aca714a0c1292685568a0a809da59153b80370d921a",
+      "viewport": {
+        "width": 640,
+        "height": 800
+      }
+    },
+    {
+      "path": "artifacts/mobile-navigation/open-640.png",
+      "state": "open",
+      "evidence_id": "ev_e7999c4145b22e820561d88759513c9d4334284adefa80b35ad41d68ecf0ba41",
+      "sha256": "28fa7450588f3581b73d52d37cc1c46ecc102e40b33409c110181d44e088e46f",
+      "viewport": {
+        "width": 640,
+        "height": 800
+      }
+    }
+  ],
+  "interaction": {
+    "evidence_id": "ev_deaa9a38c1d1ce03de50c14061a337eb66c710c2a7a137eb5b344d099c4e2b0e",
+    "steps": [
+      {
+        "step_id": "scenario_start",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "open-for-escape",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "escape-closes",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "dialog-hidden-after-escape",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "open-for-navigation",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "select-memory",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "dialog-hidden-after-navigation",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "open-on-memory",
+        "status": "completed",
+        "error": null
+      },
+      {
+        "step_id": "active-page-highlighted",
+        "status": "completed",
+        "error": null
+      }
+    ]
+  },
+  "desktop_comparison": {
+    "evidence_id": "ev_d373ccb03090afba5e84883ca4bb4809c898607321859b57d345597cc87e12c8",
+    "before_path": "artifacts/milestone-4/home-desktop.png",
+    "after_evidence_id": "ev_cf00f324418f94307b10e0ddd57c5455eb627de33516d24586926d74e2e192e3",
+    "result": {
+      "before": {
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "width": 1440,
+        "height": 1000
+      },
+      "channel_threshold": 0,
+      "limitations": [
+        "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+        "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+        "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+      ],
+      "status": "identical",
+      "compared_pixels": 1440000,
+      "changed_pixels": 0,
+      "changed_ratio": 0,
+      "maximum_channel_delta": 0,
+      "mean_absolute_channel_delta": 0
+    }
+  },
+  "limitations": [
+    "Chromium validation; Safari and Firefox were not run.",
+    "REA attached scenarios do not prove viewport size on their own. Actual dimensions were measured and the final screenshots captured read-only.",
+    "Attached scenario event capture is incomplete; no complete console/error coverage is claimed from REA event counts."
+  ],
+  "safety": {
+    "paid_inference": false,
+    "publishing": false,
+    "trading": false,
+    "funding": false,
+    "deployments": false,
+    "push": false
+  },
+  "checks": {
+    "typecheck": true,
+    "eslint_zero_warnings": true,
+    "production_build": true,
+    "browser_tests": {
+      "startTime": "2026-10-28T08:44:05.786Z",
+      "duration": 37135.958999999995,
+      "expected": 87,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "retries": 0,
+    "new_navigation_scenarios": [
+      "scroll_lock_and_restoration",
+      "focus_trap_and_escape",
+      "selected_link_and_browser_back",
+      "close_button_and_desktop_resize",
+      "320x568_fit_and_reachability",
+      "390x844_fit_and_reachability",
+      "640x800_fit_and_reachability",
+      "motion_and_reduced_motion"
+    ],
+    "base_commit": "38cb8d093e765e29e6934eb37904b075c6ee576e"
+  }
+}
