@@ -96,5 +96,10 @@ export async function sectionView(id, state, agentId) {
     }
     record('Retrieved',new Date().toISOString());
   }
+  if(id==='intelligence'){
+    const workflow=await read('/api/autonomy');
+    if(workflow.data)rows.splice(1,0,{kind:'autonomy',policy:workflow.data});
+    else add('Offline autonomy controls unavailable. Operator sign-in and a backend supporting this workflow are required.','notice');
+  }
   return rows;
 }
