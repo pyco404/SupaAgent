@@ -292,8 +292,8 @@ Full section names appear below the previews. Planned destinations retain their
 accessible full labels and get a separate visible “planned” line. The tilted
 wheel keeps scroll, drag, keyboard selection, focus behavior and reduced motion.
 Clustered branch fibers replace uniform branchlets, with fine connectors to each
-card's transformed edge. Branchwork redraws only during navigation/resize, not
-on a new idle animation loop. Mobile centers the wheel within its full-screen
+card's transformed edge. Fiber motion is independent of card navigation (see
+continuous motion below). Mobile centers the wheel within its full-screen
 navigation overlay while preserving close/Escape/focus controls.
 
 Syntax/build and 21 focused desktop/tablet/mobile browser tests passed. After the
@@ -306,3 +306,21 @@ REA inspected actual calibrated viewports (1440×1000 / 390×844):
 Evidence IDs: `ev_4302d7507dbedb5480b5f11d3efabe89cc9392d24faaf1a86ff39992c374f65b`
 and `ev_564b30ec4bed9e697e6c40da61255bfe1cb4c6c34b52c032c56d543916c140d5`.
 Screenshots establish appearance; automated browser checks verify interaction.
+
+### Continuous navigation-fiber motion
+
+The wheel's fibers now sway continuously around fixed attachment points while
+cards, labels and the spine remain still. Canvas-only idle updates are capped at
+about 30 fps and reuse the wheel's existing frame scheduler; navigation still
+updates normally. The clock stops when the wheel leaves the viewport, the mobile
+menu closes, the tab is hidden, or the user chooses Pause branches in the footer
+command panel. Reduced motion renders a stable alternative and disables autoplay.
+Observers, frame scheduling and the pause listener are cleaned up on destruction.
+
+Syntax/build and 15 focused desktop/tablet/mobile browser tests passed. Actual
+canvas-pixel comparisons verify idle motion, stable card transforms, pause/resume,
+offscreen freezing and reduced motion, alongside navigation/focus checks. REA
+inspected the running local page (`ev_a40d9a714f29ac8e8016451d663f4785d2399269e7c34222fa763b804e26dc37`).
+An eight-second recording of the actual local page is available:
+[continuous branches](evidence/2026-10-28/supa-continuous-branches-desktop.webm).
+The clip is trimmed from a browser recording; it is not a generated animation.
