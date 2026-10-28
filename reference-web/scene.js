@@ -175,7 +175,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     if(status)status.dataset.mode=state;
     if(label&&label.textContent!==state)label.textContent=state;
     if(position&&position.textContent!==cursor)position.textContent=cursor;
-    introTarget={x:left+cell*4+activeColumn*cell,y:first+activeRow*line-font*.35};
+    introTarget=!reduced.matches&&revealedRows<rows?{x:left+cell*4+activeColumn*cell,y:first+activeRow*line-font*.35}:null;
     drawHands(ctx,w,h,!reduced.matches&&revealedRows<rows,typedKey);
     ctx.globalAlpha=1;
   }
@@ -237,7 +237,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       tether.dataset.endpoints=[startX,startY,x,y].join(',');
     }
     let target=mode==='intro'?introTarget:null;
-    if(mode==='projects'&&typingTarget?.text.isConnected&&typingTarget.offset>0){
+    if(mode==='projects'&&terminalTyping&&typingTarget?.text.isConnected&&typingTarget.offset>0){
       const {text,offset}=typingTarget,range=document.createRange(),limit=Math.min(offset,text.length);
       if(limit){range.setStart(text,limit-1);range.setEnd(text,limit);const rect=range.getBoundingClientRect(),buffer=document.querySelector('.buffer').getBoundingClientRect();
         if(rect.height&&rect.top>=buffer.top&&rect.bottom<=buffer.bottom)target={x:rect.right,y:rect.top+rect.height/2};}
