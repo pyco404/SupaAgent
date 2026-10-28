@@ -6,7 +6,7 @@ Date: 2026-10-28. Scope: separate `reference-web/` implementation. The user conf
 
 The working local baseline reproduces the main current-site structure: code/ASCII introduction, radial entry transition, terminal project browser, vertical tilted cards and branches, contribution visualization, terminal reveal, keyboard controls, image navigation, persistent footer and responsive mobile project drawer. It is independently authored and retains visible differences. It is ready for review as a baseline; it is not an exact upstream port.
 
-The existing frontend, approved robot logo, Rust services, migrations and historical financial/evaluation records were not edited. The preview is http://127.0.0.1:3200. No deployment or push is included.
+The initial reference baseline preserved the existing frontend and approved robot logo. The later authorized logo follow-up below changes only the Supa header's mascot component and adds assets using the original geometry. Rust services, migrations and historical financial/evaluation records remain untouched. The reference preview is http://127.0.0.1:3200. No deployment or push is included.
 
 ## Discovery and provenance
 
@@ -170,6 +170,34 @@ REA captured the actual normal-motion scene on desktop and mobile. The images ve
 | [Mobile typing keyboard](evidence/2026-10-28/typing-keyboard-mobile.png) | `ev_6c5b88e54aa4feeb0f5c2f55f8b3db110e4090d00e8c850b2b148acbd06234fe` | `2fc8ba3a100c1ad3ed920e7216f7186e167ee1932b33c99dbd34b8889fe0bd76` |
 
 Validation passed: syntax checks, static build, whitespace checks and **54/54 browser tests**, with zero failed, skipped, flaky or retried cases. The added regression checks keyboard width, horizontal centering and vertical bounds, visible pixel changes during typing, and unchanged keyboard/hand pixels under reduced motion. Candidate secret scanning reports zero findings; both screenshot hashes match the recorded values.
+
+## Follow-up: exact Supa logo and soft intro backdrop
+
+The user clarified that the existing Supa Agent logo should replace the human face, with slight blur so the code stays visible. The geometric source is the unchanged `PixelMark` in `web/src/components/visuals.tsx`: the same stepped outer path, eye rectangles and mouth rectangle. The new SVGs preserve those path coordinates and use transparent even-odd cutouts rather than painting background-colored holes. There is no mascot redesign or new portrait.
+
+Assets in `public/assets/`:
+
+- [Primary SVG](public/assets/supa-agent.svg): transparent, muted mint `#71957d`, 24×24 coordinate system.
+- [Small icon/favicon SVG](public/assets/supa-agent-icon.svg): the same geometry on near-black `#090B0A`.
+- [Header-ready SVG](public/assets/supa-agent-header.svg): unchanged mascot with two units of additional clear space on every side.
+- [Monochrome SVG](public/assets/supa-agent-monochrome.svg): unchanged geometry in warm white `#F1F3EF` for dark surfaces.
+
+The canonical assets remain sharp and contain no blur filter. Only the intro's decorative image has `opacity: .16` and `filter: blur(1.5px)`. It is below the code canvas, ignores pointer input and is hidden together with the intro after Enter. The old text-built face, facial tracking box, guide line and coordinate labels are removed from this introduction. The typing fingers and radial entry remain intact.
+
+The reusable [`SupaLogo`](../web/src/components/supa-logo.tsx) component uses the identical SVG path and muted mint tone. It replaces only the desktop/mobile navbar mascot in the existing Supa frontend. The surrounding wordmark, footer mascot, core diagram and other branding are preserved. Header inspection measured a 24×24 SVG, no blur, centered inside the existing 44px-high brand link at both desktop and mobile sizes; no horizontal overflow was observed.
+
+REA captured the running intro on port 3200 and the actual compiled Supa navbar in an isolated loopback Next.js preview on port 3102. That temporary preview explicitly disabled backend credentials/connections; its record state is not evidence of the live backend. It was stopped after inspection. The original authenticated application and backend were not reconfigured. REA actions completed, while event coverage remained incomplete; no complete runtime-equivalence claim is made.
+
+| Capture | REA evidence ID | PNG SHA-256 |
+| --- | --- | --- |
+| [Soft logo behind desktop code](evidence/2026-10-28/supa-logo-desktop.png) | `ev_95cf1e325217208473112c14b8ad2808abc3eb0474d2a2e2096f6ceeeab92eab` | `826ee979d41c4e24be469103e441ba02600b7fd2994f4cd128883d0c4712e556` |
+| [Soft logo behind mobile code](evidence/2026-10-28/supa-logo-mobile.png) | `ev_04a899de639e836b76eb0ce76bb137b286dd8f7c53648c45255a91618c8c97a7` | `57b6bd63559a97542c711201a57f86d6210bed71c1c4a324cdf8478e4b4602b9` |
+| [Sharp desktop navbar logo](evidence/2026-10-28/supa-logo-header-desktop.png) | `ev_03d05cdf836453611134c50cb742f90e3bc143c3971e34448756e5304f92ed62` | `1662a84ebd8021a4b155cf79d8136a596c5b16ebef41aa791db322871da722a2` |
+| [Sharp mobile navbar logo](evidence/2026-10-28/supa-logo-header-mobile.png) | `ev_eec908709116b24412ae4a3a461d68036f318a94dded51b670de226a56a114ed` | `156adb0f18764a5d566186e0119ba7d3a2c3159493b4e0b3c48b615d8c6b1aea` |
+
+Geometry validation compares actual rendered master-SVG pixels against the original mascot paths at 24px, 48px and 96px on the same dark background. The focused desktop case passed with identical pixels at all three sizes. Static inspection also confirms all four asset variants and the reusable component use the original path coordinates. The existing seven mobile navigation cases passed, covering focus, scrolling, selected links, browser back, resize and reduced motion. Next.js build, lint and TypeScript checks passed. No additional dependency, backend permission or paid API call is involved.
+
+The final full reference run passed **57/57 tests**, with identical logo pixels at every tested size on all three viewport projects, and zero failed, skipped, flaky or retried cases. The initial broader run was interrupted after diagnosing one existing drawer test's `page.goto` timeout waiting for optional remote art. The test helper now waits for DOM content and the local application's explicit ready state; reload checks likewise avoid waiting for remote image completion. Automatic retries remain disabled. Both frontend builds and whitespace checks passed. Candidate scans covered all 15 changed/new files with zero secret findings. The previously documented theme-thumbnail stripe advisory is unchanged.
 
 ## Git handling
 
