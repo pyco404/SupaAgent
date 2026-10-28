@@ -81,6 +81,26 @@ The sanitized [validation.json](evidence/2026-10-28/validation.json) records tes
 
 Accessibility improvements include semantic links/buttons, selected listbox options, visible focus, Escape restoration, status announcements and reduced-motion handling. During progressive reveal the terminal is marked busy and live announcements are suspended until complete. These are functional checks, not an accessibility certification. Reference-sized 12px text and some small controls remain; physical-device, screen-reader and cross-engine reviews are outstanding.
 
+### Design-hook typography triage
+
+The post-completion detector reported nine `undersized-ui-text` findings in `reference-web/index.html`. Each was reviewed against the matched reference captures and the user's explicit confirmation to reproduce the current live site faithfully:
+
+| Finding | Classification and disposition |
+| --- | --- |
+| 8px keyboard hints | Intentional compact terminal-footer legend; retained for this reference demo |
+| 9px REPOS | Intentional terminal statistics label; retained |
+| 9px STARS | Intentional terminal statistics label; retained |
+| 9px FOLLOWERS | Intentional terminal statistics label; retained |
+| 9px WORM | Intentional terminal actor-status label; retained |
+| 10px asleep | Intentional reference-scale terminal actor control; retained with its existing keyboard access |
+| 9px EYE | Intentional terminal actor-status label; retained |
+| 9px GHOST | Intentional terminal actor-status label; retained |
+| 7px CAPTURED GITHUB DATA | Compact local provenance label within the same footer composition; retained, with the dated source explained in accessible footer metadata and this report |
+
+No application styling was changed by this triage. The sanctioned demo exception is persisted through `impeccable hooks ignore-value` for **this rule in this HTML file only**. Other design rules and the existing Supa frontend remain in scope. This preserves intentional reference presentation rather than claiming the small sizes meet a general production usability standard. Reconsider the small footer type when adapting the baseline into the public Supa product.
+
+The detector also reported an advisory about repeating stripes. Those stripes are confined to a theme-preview thumbnail, representing the preview's subject rather than decorating page surfaces. The advisory remains unsuppressed; no page-level stripe treatment was added.
+
 ## Remaining fidelity and release limits
 
 1. The ASCII face/hands and contribution/branch topology are independent procedural approximations; the original filmed portrait and actor algorithms were not copied.
