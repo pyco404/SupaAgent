@@ -147,7 +147,7 @@ async function select(index,background=false){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
     }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
-    else if(row.kind==='schedule')buffer.append(schedulePanel(row.status,row.goals));
+    else if(row.kind==='schedule')buffer.append(schedulePanel(row.status,row.goals,row.role));
     else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
     else if(row.kind==='draft'){const block=node('figure','saved-draft');block.append(node('blockquote','',row.text),node('figcaption','prompt',row.meta));buffer.append(block);}
@@ -243,16 +243,17 @@ function autonomyPanel(policy){
   reset.addEventListener('click',()=>{if(autonomyAttempt?.status==='pending')return;autonomyAttempt=null;goal.value='';consent.checked=false;try{sessionStorage.removeItem('supa.offline-request');}catch{}sync();goal.focus();});
   details.append(form,status,inspect,reset);sync();return details;
 }
-function schedulePanel(view,goals){
+function schedulePanel(view,goals,role){
   const details=node('details','calculation autonomy-panel schedule-panel');details.append(node('summary','','Agent lifecycle and bounded scheduling'));
   const stateText=node('p','terminal-notice');stateText.dataset.scheduleState='';
   stateText.textContent=`${view.lifecycle} / ${view.enabled?'authorized schedule':'scheduling disabled'} / revision ${view.revision}\nCycles started ${view.cycles_started}${view.policy?' / '+view.policy.max_cycles:''}\nConservative allowance used ${view.reserved_microusd} simulated microUSD${view.policy?' / '+view.policy.simulated_budget_microusd:''}\nNext eligible ${view.next_cycle_at}\nAuthorization expires ${view.expires_at??'not authorized'}${view.last_error?'\nLast outcome / '+view.last_error:''}`;
   details.append(stateText,node('p','prompt','Offline only. Actual expenses appear in Economy; allowance consumption is a conservative limit, not another charge. An enabled offline scheduler service is also required. Status polls every 15 seconds when idle.'));
   const form=node('form','autonomy-form schedule-form'),operation=node('select'),operationLabel=node('label','','Lifecycle operation');operation.id='schedule-operation';operationLabel.htmlFor=operation.id;
-  const choices=[];if(!view.policy&&['created','paused','suspended'].includes(view.lifecycle))choices.push(['start','Start scheduling']);
-  if(view.policy&&['paused','suspended'].includes(view.lifecycle))choices.push(['resume','Resume scheduling']);
-  if(view.lifecycle==='active')choices.push(['pause','Pause agent']);if(view.lifecycle!=='terminated')choices.push(['stop','Stop permanently']);
-  form.hidden=!choices.length;if(!choices.length)details.append(node('p','terminal-notice','This identity is permanently terminated. It cannot start or resume. Saved history remains available.'));
+  const choices=[];if(role==='owner'&&!view.policy&&['created','paused','suspended'].includes(view.lifecycle))choices.push(['start','Start scheduling']);
+  if(role==='owner'&&view.policy&&['paused','suspended'].includes(view.lifecycle))choices.push(['renew','Renew with new finite limits']);
+  if(role!=='viewer'&&view.policy&&['paused','suspended'].includes(view.lifecycle))choices.push(['resume','Resume scheduling']);
+  if(role!=='viewer'&&view.lifecycle==='active')choices.push(['pause','Pause agent']);if(role!=='viewer'&&view.lifecycle!=='terminated')choices.push(['stop','Stop permanently']);
+  form.hidden=!choices.length;if(!choices.length)details.append(node('p','terminal-notice',view.lifecycle==='terminated'?'This identity is permanently terminated. It cannot start or resume. Saved history remains available.':'Your role permits reading saved records only.'));
   for(const [value,label]of choices){const option=node('option','',label);option.value=value;operation.append(option);}
   const setup=node('fieldset','schedule-policy'),legend=node('legend','','New scheduling authorization');setup.append(legend);
   const selected=[];for(const goal of goals.filter(goal=>!goal.completed)){const label=node('label','autonomy-consent'),check=node('input');check.type='checkbox';check.value=goal.id;check.name='approved-goal';label.append(check,document.createTextNode(goal.description));setup.append(label);selected.push(check);}
@@ -261,17 +262,18 @@ function schedulePanel(view,goals){
     const wrap=node('label','',label),input=node('input');input.type='number';input.name=key;input.value=String(value);input.min=String(min);input.max=String(max);input.step='1';input.required=true;wrap.append(input);setup.append(wrap);fields[key]=input;
   }
   const reasonLabel=node('label','','Operator reason'),reason=node('textarea');reason.name='reason';reason.rows=2;reason.maxLength=500;reason.required=true;reasonLabel.append(reason);
-  const consentLabel=node('label','autonomy-consent'),consent=node('input');consent.type='checkbox';consent.required=true;consent.name='schedule-authorization';consentLabel.append(consent,document.createTextNode('I authorize this operation on the selected agent. Start uses only its existing memory/goal tools, 1,100 simulated microUSD per cycle and the limits above. Resume never resets limits. Stop permanently terminates this identity. No paid inference or financial transactions.'));
+  const consentLabel=node('label','autonomy-consent'),consent=node('input');consent.type='checkbox';consent.required=true;consent.name='schedule-authorization';consentLabel.append(consent,document.createTextNode('I authorize this operation on the selected agent. Start or explicit renewal uses only its existing memory/goal tools, 1,100 simulated microUSD per cycle and the limits above. Resume never resets limits. Stop permanently terminates this identity. No paid inference or financial transactions.'));
   const submit=node('button','','Apply authorized lifecycle operation');submit.type='submit';submit.disabled=!choices.length;
   const feedback=node('p','terminal-notice');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
   const refresh=node('button','','Reload saved schedule');refresh.type='button';refresh.addEventListener('click',()=>void select(itemIndex));
-  function updateSetup(){setup.disabled=operation.value!=='start';setup.hidden=setup.disabled;consent.checked=false;}
-  operation.addEventListener('change',updateSetup);form.append(operationLabel,operation,setup,reasonLabel,consentLabel,submit);details.append(form,feedback,refresh);updateSetup();
+  function updateSetup(){setup.disabled=!['start','renew'].includes(operation.value);setup.hidden=setup.disabled;consent.checked=false;}
+  setup.addEventListener('input',()=>{consent.checked=false;});reason.addEventListener('input',()=>{consent.checked=false;});
+  operation.addEventListener('change',()=>{selected.forEach(input=>input.checked=false);updateSetup();});form.append(operationLabel,operation,setup,reasonLabel,consentLabel,submit);details.append(form,feedback,refresh);updateSetup();
   form.addEventListener('submit',async event=>{
     event.preventDefault();event.stopPropagation();if(submit.disabled||!form.reportValidity()||!consent.checked)return;
-    const policy=operation.value==='start'?{goal_ids:selected.filter(input=>input.checked).map(input=>input.value),...Object.fromEntries(Object.entries(fields).map(([key,input])=>[key,Number(input.value)]))}:null;
+    const policy=['start','renew'].includes(operation.value)?{goal_ids:selected.filter(input=>input.checked).map(input=>input.value),...Object.fromEntries(Object.entries(fields).map(([key,input])=>[key,Number(input.value)]))}:null;
     if(policy&&!policy.goal_ids.length){feedback.textContent='Select at least one unfinished goal to authorize.';return;}
-    const command={request_id:crypto.randomUUID(),expected_revision:view.revision,operation:operation.value,authorize_offline:true,reason:reason.value.trim(),policy};
+    const command={request_id:crypto.randomUUID(),expected_revision:view.revision,operation:operation.value,authorize_offline:true,reason:reason.value.trim(),policy,...(operation.value==='renew'?{consented_at:new Date().toISOString()}:{})};
     submit.disabled=true;operation.disabled=true;setup.disabled=true;reason.disabled=true;consent.disabled=true;refresh.disabled=true;feedback.textContent='Saving authorized operation…';
     try{
       const response=await fetch(`/api/agents/${view.agent_id}/schedule`,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Supa-Action':'offline-autonomy'},body:JSON.stringify(command),signal:AbortSignal.timeout(35000)});
