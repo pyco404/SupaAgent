@@ -512,3 +512,17 @@ test('navigation fibers keep moving while cards stay still and can be paused',as
   await page.emulateMedia({reducedMotion:'reduce'});await expect(canvas).toHaveAttribute('data-motion-state','reduced');await expect(control).toBeDisabled();
   const still=await pixels();await page.waitForTimeout(200);expect(await pixels()).toBe(still);
 });
+
+test('every workspace view anchors the keyboard below content and enlarges architecture',async({page})=>{
+  for(const section of ['home','agents','intelligence','memory','economy','social','trading','token-launch','factory','about']){
+    await open(page,`/site/#${section}`);
+    const keyboard=await page.locator('.workspace-hands').boundingBox(),bar=await page.locator('.bar').boundingBox(),buffer=await page.locator('.buffer').boundingBox();
+    expect(keyboard.y+keyboard.height).toBeCloseTo(page.viewportSize().height,0);expect(bar.y+bar.height).toBeLessThanOrEqual(keyboard.y+1);
+    expect(buffer.height).toBeGreaterThan(60);expect(buffer.y+buffer.height).toBeLessThanOrEqual(bar.y+1);
+    if(['home','about'].includes(section))expect((await page.locator('.blueprint').boundingBox()).height).toBeGreaterThanOrEqual(190);
+  }
+  await page.setViewportSize({width:360,height:640});await open(page,'/site/#home');
+  expect((await page.locator('.blueprint').boundingBox()).height).toBeGreaterThanOrEqual(160);
+  const keyboard=await page.locator('.workspace-hands').boundingBox();expect(keyboard.y+keyboard.height).toBeCloseTo(640,0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
