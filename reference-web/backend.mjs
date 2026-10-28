@@ -2,7 +2,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { parseEnv } from 'node:util';
 import { resolve } from 'node:path';
-import { schemas } from '../web/src/lib/contracts.ts';
+import { schemas, autonomyRequestSchema } from '../web/src/lib/contracts.ts';
 import { operatorAuthorized, localRequest } from '../web/src/lib/auth.ts';
 
 export async function loadLocalEnvironment() {
@@ -22,6 +22,7 @@ export async function loadLocalEnvironment() {
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function resource(path) {
+  if (path === '/api/autonomy') return {path:'/autonomy',schema:schemas.autonomy,public:false};
   if (path === '/api/status') return { path:'/health', schema:schemas.health, public:true };
   if (path === '/api/agents') return { path:'/agents', schema:schemas.agents, public:true };
   const parts = path.split('/').slice(2);
@@ -77,3 +78,30 @@ export async function readResource(path, headers, fetcher = fetch) {
   } catch { return fail('backend_disconnected',503); }
 }
 export { operatorAuthorized, localRequest };
+
+/** The only browser mutation: an explicitly approved, isolated offline workflow. */
+export async function runAutonomy(path, headers, body, fetcher=fetch) {
+  const request=new Request('http://127.0.0.1'+path,{headers});
+  if(path!=='/api/autonomy')return fail('write_not_permitted',403);
+  if(!localRequest(request)||!request.headers.get('origin'))return fail('same_origin_required',403);
+  if(!operatorAuthorized(request.headers.get('authorization')))return fail('operator_authentication_required',401);
+  if(request.headers.get('x-supa-action')!=='offline-autonomy'||request.headers.get('content-type')?.split(';')[0].trim()!=='application/json')return fail('explicit_json_action_required',400);
+  if(Buffer.byteLength(body)>4096)return fail('request_too_large',413);
+  let input;try{input=autonomyRequestSchema.safeParse(JSON.parse(body));}catch{return fail('invalid_workflow_request',400);}
+  if(!input.success)return fail('invalid_workflow_request',400);
+  const token=process.env.SUPA_API_TOKEN;let base;
+  try{
+    base=new URL(process.env.SUPA_BACKEND_URL);
+    const privateStaging=process.env.SUPA_SITE_MODE==='staging'&&/^[a-z0-9][a-z0-9-]*\.railway\.internal$/.test(base.hostname);
+    if(base.protocol!=='http:'||!(['127.0.0.1','[::1]'].includes(base.hostname)||privateStaging)||base.username||base.password||base.pathname!=='/'||base.search||base.hash||!token||token.length<32||token.length>256||!/^[\x21-\x7e]+$/.test(token))throw Error();
+  }catch{return fail('backend_configuration_invalid',503);}
+  try{
+    const response=await fetcher(new URL('/autonomy',base),{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(input.data),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(30000)});
+    if(!response.ok)return {status:[400,401,403,409].includes(response.status)?response.status:502,body:{error:response.status===409?'workflow_already_exists_or_busy':'workflow_not_completed',agent_id:input.data.request_id}};
+    const reader=response.body?.getReader();if(!reader||!response.headers.get('content-type')?.includes('application/json'))return fail('workflow_contract_invalid',502);
+    let size=0;const chunks=[];try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>16384){await reader.cancel();return fail('workflow_contract_invalid',502);}chunks.push(value);}}finally{reader.releaseLock();}
+    const result=schemas['autonomy-result'].safeParse(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+    if(!result.success||result.data.agent_id!==input.data.request_id)return fail('workflow_contract_invalid',502);
+    return {status:200,body:result.data};
+  }catch{return {status:503,body:{error:'workflow_outcome_unknown_inspect_saved_run',agent_id:input.data.request_id}};}
+}
