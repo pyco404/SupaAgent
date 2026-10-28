@@ -215,9 +215,10 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   }
   function drawPointer() {
     const view=fit(tether);if(!view)return;
-    tether.dataset.active=String(pointer.visible&&mode==='projects'&&!warpStart);
+    tether.dataset.active=String(pointer.visible&&!warpStart);
     if(tether.dataset.active!=='true')return;
-    const box=entity.getBoundingClientRect(),x=pointer.x*innerWidth,y=pointer.y*innerHeight;
+    const anchor=mode==='intro'?document.querySelector('.intro-mascot'):entity;
+    const box=anchor.getBoundingClientRect(),x=pointer.x*innerWidth,y=pointer.y*innerHeight;
     const startX=box.left+box.width*.5,startY=box.top+box.height*.4;
     const {ctx}=view;ctx.globalAlpha=.6;ctx.lineWidth=1;
     ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(startX,startY);ctx.lineTo(x,y);ctx.stroke();
