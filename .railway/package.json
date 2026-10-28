@@ -1,0 +1,7 @@
+{
+  "name": "supa-agent-staging-infrastructure",
+  "private": true,
+  "type": "module",
+  "scripts": { "check": "node railway.test.mjs", "preflight": "node preflight.mjs" },
+  "dependencies": { "railway": "3.12.0" }
+}
