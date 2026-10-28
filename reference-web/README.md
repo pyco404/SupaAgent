@@ -1,49 +1,109 @@
-# Hancore reference baseline
+# Supa Agent cinematic website
 
-A separate, independently authored reconstruction of the **current** [hancore.dev](https://hancore.dev/) experience observed on 2026-10-28. This is a local reference study, not an official upstream source port or a Supa Agent product release. Supa's existing `web/`, robot logo, Rust workspace, database and safety controls are preserved.
+The approved dark, warm-ivory terminal experience now presents Supa Agent content.
+The code introduction, typing hands, robot, radial portal, tilted wheel, organic
+branches, terminal and ambient entity remain. The older Next.js operator console
+in `web/` remains intact; the Rust workspace and database are unchanged.
 
-## Run locally
+## Local setup
 
-From the repository root, with Node.js and the existing frontend dependencies installed:
-
-```sh
-cd reference-web
-npm run dev
-```
-
-Open **http://127.0.0.1:3200**. The preview binds to loopback only. `/` opens the code/ASCII introduction; Enter opens `/site/`. No authentication or backend connection is needed.
+Requires Node.js 24.22+ (native TypeScript loading), Chrome at
+`/usr/bin/google-chrome`, and the existing console dependencies:
 
 ```sh
-npm run check
-npm run build
-npm test
+npm --prefix web ci
+npm --prefix reference-web run dev
 ```
 
-The build creates ignored `dist/` static output. Tests use the repository's existing `web/node_modules` Playwright installation and `/usr/bin/google-chrome`; they start their own loopback server on port 3201. On a fresh checkout install the existing frontend dependencies from the repository root with `npm --prefix web ci`. No additional animation or application dependencies were introduced. There is no deployment step.
+Open **http://127.0.0.1:3200**. Enter moves from `/` to `/site/#home`.
+The server binds only to `127.0.0.1`. Nothing is deployed.
 
-## Implemented baseline
+The server reads only `SUPA_BACKEND_URL`, `SUPA_API_TOKEN`, `SUPA_WEB_USERNAME`
+and `SUPA_WEB_PASSWORD` from the existing owner-only `web/.env.local` file.
+Shell values take precedence. It never loads the evaluation key or budget file.
+`SUPA_SITE_ENV_FILE` can select another private, owner-owned mode-0600 file;
+set it to an empty string for a deliberately disconnected site. Do not put
+credentials in client files or commit private configuration.
 
-- Almost-black and warm ivory terminal presentation, locally hosted IBM Plex Mono, responsive header and persistent statistics footer.
-- Authored code-wall opening, procedural ASCII entity and hands, pointer/keyboard response, and radial transition into the project browser.
-- Vertical tilted project wheel, organic canvas branches, scroll/drag/click selection, arrows and j/k navigation, folders and fragment deep links.
-- Contribution visualization based on a captured public GitHub snapshot, progressive terminal reveal, image browsing/expansion and repository links.
-- Mobile project drawer with Escape/focus restoration; browser back navigation; three persisted dark palettes.
-- Reduced-motion handling, cancellation of obsolete terminal reveals, hidden-tab animation suspension and restrained frame scheduling.
+Backend URL must be a credential-free loopback HTTP origin. Bearer tokens stay
+on the Node server. No model, blockchain or publishing requests originate here.
 
-In the terminal, Escape returns focus to navigation; j/k and arrows scroll the text rather than changing projects. `:` opens a small allowlisted command interface (`help`, `theme`, `e <project>`, `q`). It cannot execute JavaScript or shell commands. The WORM toggle is a simplified visual interaction.
+## Sections and interaction
 
-## Source and asset boundaries
+The wheel has Home, Agents, Intelligence, Memory, Economy, Social, Trading,
+Token Launch, Factory and About. Trading, Pump.fun launches and Factory are
+planned and non-executable. The $5 trading ceiling describes a future policy,
+not current trading availability. SUPA notation does not imply a launched token.
 
-The live site links [HANCORE-linux](https://github.com/HANCORE-linux). A bounded search of that public account's repositories did not locate an official website source repository or establish a site reuse license. The profile repository's MIT license is not permission for all website art; its asset notices exclude third-party material. Public delivered modules were inspected for behavior, but none of their scripts, stylesheets, README bodies or filmed portrait assets were vendored.
+Scroll, drag, touch or use arrows/j/k on the wheel. In the terminal these keys
+scroll saved content; Escape returns to navigation. The mobile menu remains open
+while browsing options and closes on activation, Escape or history navigation.
+Its background is inert while open. Reduced motion bypasses intro/portal motion.
 
-`app.js`, `scene.js`, `wheel.js`, markup and CSS are independently implemented. The introduction displays **this implementation's own public `app.js`**, not copied upstream code. The bio is paraphrased. `reference-data.json` stores factual public project/contribution data from [content.json](https://hancore.dev/site/content.json) and [github-snapshot.json](https://hancore.dev/github-snapshot.json), whose recorded snapshot timestamp is **2026-10-15T23:36:51.675Z**. These are Hancore snapshot statistics, not Supa statistics or live visitor counts.
+Click Command or type `:`. UI-only commands:
 
-Preview images, favicon and wordmark are referenced directly from public `https://hancore.dev` URLs. They require connectivity and may change or disappear. They are not copied into the asset directory; no redistribution rights are claimed. Before public reuse, replace these references with approved assets or obtain appropriate permission.
+- `supa status`, `supa agents`, `supa inspect <exact name or UUID>`
+- `supa intelligence`, `supa memory`, `supa economy`, `supa social`
+- `supa capabilities`, `supa help`, `theme`, `q`
 
-The independently obtained [IBM Plex Mono](https://github.com/google/fonts/tree/main/ofl/ibmplexmono) font is distributed under the included [SIL Open Font License](public/fonts/OFL.txt).
+Up/down inside command input browses the last 50 commands in memory. No command
+runs a shell or writes backend data. Commands are not persisted to browser storage.
+Only the local dark-theme preference is stored.
 
-## Isolation and limitations
+## Public and operator records
 
-The local server allows only GET/HEAD for an explicit static-file allowlist and public assets. It rejects parent paths, dotfiles and symlink escapes. CSP restricts script and fetch connections to this origin and images to this origin plus hancore.dev. No analytics, visitor counter, Supa API, wallet, model API or financial operation is connected. Remote project links open the original public repositories.
+Public `/api/status` exposes validated health. Public `/api/agents` deliberately
+projects only ID, name, lifecycle and creation date. It never forwards goals,
+memory, personality, model prompts, tool arguments or agent configuration.
 
-This baseline does **not** establish exact visual or behavioral equivalence. The portrait, contribution topology, worm/ghost behavior, project text and theme catalogue differ. Full upstream archive/log/editor functionality is not reconstructed. See [the implementation and validation report](REPORT.md) for matched screenshots, measured differences and remaining work. Supa integration is intentionally deferred.
+Use **Operator sign-in** to unlock private read-only records with the existing
+console credentials. This is an explicit browser Basic-auth challenge on
+`/operator`; private API requests without authentication return a sanitized 401
+without prompting public visitors. Auth is evaluated server-side using the
+existing `web/src/lib/auth.ts` rules. Browser credentials use loopback HTTP only;
+this local auth design is not a production account system. Close the browser's
+operator session to clear its cached Basic credentials; no logout endpoint is
+claimed.
+
+The Node adapter imports the existing Zod contracts from
+`web/src/lib/contracts.ts`, strips unknown fields, scrubs known/recognizable
+credentials, limits responses to 2 MB, uses five-second upstream timeouts and
+rejects redirects. All API operations are GET/HEAD. Unknown paths, queries,
+non-local hosts/origins and every write method fail closed.
+
+Intelligence shows saved goals, cycles, activity and authorization outcomes;
+Memory labels hypotheses and verified observations separately; Economy keeps
+simulated micro-USD, saved Devnet test assets and unavailable Mainnet separate;
+Social shows original stored drafts, event/memory references and review history.
+No draft is published or generated when viewed. Retrieved timestamps are not
+blockchain observation timestamps. No polling or invented live activity is used.
+Reload saved records explicitly updates the selected view.
+
+Provider/model attribution is currently unavailable through the reused console
+contracts. Empty histories remain empty. Historical GPT evaluation databases are
+not merged or selected automatically. Wallet signing remains disabled.
+
+## Validation and assets
+
+```sh
+npm --prefix reference-web run check
+npm --prefix reference-web run build
+npm --prefix reference-web run test:unit
+npm --prefix reference-web test
+```
+
+The build writes ignored `dist/` **static assets only**; it does not package the
+private adapter or credentials. A static host without the Node API has honest
+disconnected states. Tests use disconnected port 3201 plus explicitly synthetic
+read-only fixtures on 18082/3202. They never connect a database or paid provider.
+
+See [SUPA-REPORT.md](SUPA-REPORT.md) for API evidence, browser captures, security,
+parity gaps and independent critique. `REPORT.md`, `reference-data.json` and the
+earlier screenshots are historical reference evidence, preserved unchanged.
+The legacy snapshot is excluded from the server allowlist and fresh builds;
+no reference account, statistics, remote screenshots or favicon is used by Supa.
+
+The approved SVG robot retains its exact pixel silhouette. IBM Plex Mono is
+self-hosted under the included [SIL Open Font License](public/fonts/OFL.txt).
+All interface code and geometry are independently authored; no upstream website
+scripts, styles or filmed visual assets are vendored.
