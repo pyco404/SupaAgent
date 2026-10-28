@@ -26,7 +26,7 @@ export async function sectionView(id, state, agentId) {
   const record=(label,value)=>add(`${label}  ${value ?? 'unavailable'}`);
   const empty=label=>add(`No saved ${label} were returned.`);
   const load=async name=>{
-    const result=await read(`/api/agents/${agentId}/${name}`);
+    const result=await read(`/api/agents/${agentId}${name?'/'+name:''}`);
     if(result.error)add(`${name}: ${result.error}`,'notice');
     return result.data;
   };
@@ -64,7 +64,8 @@ export async function sectionView(id, state, agentId) {
     record('Identity',agentId);
     if(id==='intelligence') {
       add('Provider/model attribution is not exposed by the current read API. No inference runs when viewing this page.','notice');
-      const [goals,cycles,actions,activity]=await Promise.all(['goals','cycles','actions','activity'].map(load));
+      const [profile,wallet,goals,cycles,actions,activity]=await Promise.all(['','wallet','goals','cycles','actions','activity'].map(load));
+      if(profile){add('Agent profile','heading');record('Lifecycle',profile.agent.lifecycle);record('Created',profile.agent.created_at);record('Verified activity records',activity?.length);record('Wallet network',wallet?.network ?? 'No saved wallet identity');record('Wallet address',wallet?.address ?? 'unavailable');}
       if(goals){add('Goals','heading');if(!goals.length)empty('goals');goals.forEach(g=>add(`${g.completed?'complete':'open'} / priority ${g.priority} / suggested progress ${g.suggested_progress_bps/100}%\n${g.description}\nref ${g.id}`));}
       if(cycles){add(`Saved reasoning cycles / ${cycles.length}`,'heading');cycles.forEach(c=>add(`${c.status} / ${c.started_at}\ncycle ${c.id}\nfinished ${c.finished_at ?? 'not recorded'}${c.failure_code?' / failure '+c.failure_code:''}`));}
       if(actions){add(`Tool actions / ${actions.length}`,'heading');actions.forEach(a=>add(`${a.proposal.tool} / authorization ${a.authorization_outcome} / ${a.status}\ncycle ${a.cycle_id}${a.failure_code?' / failure '+a.failure_code:''}`));}
