@@ -121,3 +121,11 @@ body[data-view=projects] .stage{height:100dvh;min-height:0;padding-bottom:0}
 .workspace-controls .agent-option{display:block;width:100%;min-height:44px;padding:10px;text-align:left;text-decoration:none;line-height:1.5;white-space:normal;overflow-wrap:anywhere;color:var(--ink);background:var(--bg)}
 .agent-option[aria-selected=true]{color:var(--green)!important;background:#141816!important}
 .agent-option:focus-visible{outline-offset:-2px}
+/* Keep native scrolling, with a single-pixel terminal line in supporting browsers. */
+@supports selector(::-webkit-scrollbar){
+  .buffer,.agent-options{scrollbar-width:auto;scrollbar-color:auto}
+  .buffer::-webkit-scrollbar,.agent-options::-webkit-scrollbar{width:1px;height:1px}
+  .buffer::-webkit-scrollbar-thumb,.agent-options::-webkit-scrollbar-thumb{background:var(--line);border-radius:0}
+  .buffer::-webkit-scrollbar-track,.agent-options::-webkit-scrollbar-track{background:transparent}
+  .buffer::-webkit-scrollbar-button,.agent-options::-webkit-scrollbar-button{display:none}
+}
