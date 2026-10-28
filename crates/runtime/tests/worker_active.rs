@@ -105,7 +105,8 @@ async fn offline_worker_runs_persists_and_restarts_paused_without_reactivation()
         [Capability::Remember].into(),
     )
     .unwrap();
-    store.create(&agent).await.unwrap();
+    let owner = Uuid::new_v4();
+    store.create_owned(&agent, owner).await.unwrap();
     store
         .credit(agent.id, LedgerKind::Seed, 100_000, Uuid::new_v4())
         .await
@@ -115,13 +116,14 @@ async fn offline_worker_runs_persists_and_restarts_paused_without_reactivation()
         .await
         .unwrap();
     store
-        .schedule_control(
+        .schedule_control_as(
             agent.id,
             &ScheduleCommand {
                 request_id: Uuid::new_v4(),
                 expected_revision: 0,
                 operation: ScheduleOperation::Start,
                 authorize_offline: true,
+                consented_at: Some(chrono::Utc::now()),
                 reason: "Explicit bounded worker test".into(),
                 policy: Some(SchedulePolicy {
                     goal_ids: vec![goal.id],
@@ -131,6 +133,7 @@ async fn offline_worker_runs_persists_and_restarts_paused_without_reactivation()
                     valid_for_seconds: 3600,
                 }),
             },
+            Some(owner),
         )
         .await
         .unwrap();
