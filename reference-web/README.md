@@ -191,3 +191,22 @@ Evidence: `ev_e9e9589badbdce47aa9989d29dd50c93341ef196e7afb46741359781fceaf624`
 and `ev_864d57d6bf7e3ed3d76cabfe3f8e27c9df6d137963f1358c6b15ea114b683bb8`.
 These screenshot/DOM/accessibility captures lack event coverage; interaction
 assertions come from the browser tests, not a complete REA runtime trace.
+
+### Pointer tether
+
+A viewport-sized, non-interactive canvas connects the code mascot to the mouse
+with a warm-ivory dashed line and cursor box. The former pointer listener stored
+coordinates without rendering them. The tether now follows those coordinates,
+hides on pointer exit/window blur, touch input, intro and portal transitions, and
+is removed with the scene. Reduced motion follows deliberate pointer input
+without adding easing or a continuous animation loop.
+
+Syntax/build and 12 focused desktop/tablet/mobile browser tests passed, including
+actual painted-line pixels, endpoints, reduced motion, input pass-through, touch
+suppression, keyboard commands, responsive scenes and navigation focus. REA
+captured the real local viewport after Playwright moved the mouse:
+[desktop](evidence/2026-10-28/supa-pointer-tether-desktop.png) /
+[mobile with mouse](evidence/2026-10-28/supa-pointer-tether-mobile.png).
+Screenshot evidence IDs: `ev_82a9679c4f85dc421a408991370fa36dee5b9ce3e7a53e48f5c5158a169dd033`
+and `ev_b3ed94db5acd6b0a59dbc2f03382d614fbe5e70cafeb5002f14ff0818b23cbbb`.
+REA screenshots establish appearance; automated browser assertions verify behavior.
