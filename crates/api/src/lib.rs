@@ -1,3 +1,4 @@
+mod autonomy;
 mod wallet;
 use axum::{
     Json, Router,
@@ -77,6 +78,7 @@ async fn auth(State(state): State<AppState>, request: Request, next: Next) -> Re
 pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(wallet::routes())
+        .merge(autonomy::routes())
         .route("/health", get(health))
         .route("/agents", get(list).post(create))
         .route("/agents/{id}", get(status))
