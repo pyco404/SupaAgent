@@ -375,3 +375,19 @@ test("code logo keeps the canonical silhouette and transparent facial cutouts", 
   expect(raster.leftEye+raster.rightEye+raster.mouth+raster.outside).toBe(0);
   expect(raster.ink).toBeGreaterThan(2000);expect(raster.gaps).toBeLessThan(2000);
 });
+
+
+test("returning to the intro restarts its code and typing hands from the top", async ({ page }) => {
+  await page.emulateMedia({reducedMotion:'no-preference'});await open(page,'/');
+  const intro=page.locator('.intro-canvas');
+  await expect.poll(async()=>Number(await intro.getAttribute('data-typed-characters'))).toBeGreaterThan(20);
+  await page.locator('.enter').click();await expect(page.locator('body')).toHaveAttribute('data-view','projects');
+  await page.goBack();await expect(page.locator('body')).toHaveAttribute('data-view','intro');
+  expect(Number(await intro.getAttribute('data-revealed-rows'))).toBeLessThan(2);
+  await expect(intro).toHaveAttribute('data-hand-state','typing');
+  await page.locator('.enter').click();await expect(page.locator('body')).toHaveAttribute('data-view','projects');
+  await page.locator('.brand').click();await expect(page.locator('body')).toHaveAttribute('data-view','intro');
+  expect(Number(await intro.getAttribute('data-revealed-rows'))).toBeLessThan(2);
+  await expect(intro).toHaveAttribute('data-hand-state','typing');
+  await page.emulateMedia({reducedMotion:'reduce'});await expect(intro).toHaveAttribute('data-intro-state','complete');
+});
