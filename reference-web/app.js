@@ -19,6 +19,38 @@ let commandHistory=[],historyIndex=0;
 try{const saved=Number(localStorage.getItem('supa.dark-theme'));if(Number.isInteger(saved)&&saved>=0&&saved<palettes.length)theme=saved;}catch{/* Optional preference. */}
 function applyTheme(){['--bg','--ink','--dim'].forEach((name,index)=>root.style.setProperty(name,palettes[theme][index]));}
 applyTheme();
+// Keep the native value as backing state; the visible picker never uses an OS popup.
+function closeAgentPicker(focus=false){$('#agent-options').hidden=true;$('#agent-picker-trigger').setAttribute('aria-expanded','false');if(focus)$('#agent-picker-trigger').focus({preventScroll:true});}
+function syncAgentPicker(){
+  const native=$('#agent-select'),list=$('#agent-options'),trigger=$('#agent-picker-trigger'),restore=list.contains(document.activeElement);
+  $('#agent-selected-name').textContent=native.selectedOptions[0]?.textContent ?? 'Choose an agent';trigger.title=$('#agent-selected-name').textContent;trigger.disabled=native.options.length<2;
+  list.replaceChildren();
+  for(const option of native.options){
+    const button=node('button','agent-option',option.textContent);button.type='button';button.setAttribute('role','option');button.setAttribute('aria-selected',String(option.value===native.value));button.tabIndex=-1;
+    button.addEventListener('click',()=>{native.value=option.value;native.dispatchEvent(new Event('change'));closeAgentPicker(true);});list.append(button);
+  }
+  closeAgentPicker(restore);
+}
+function openAgentPicker(last=false){
+  const trigger=$('#agent-picker-trigger'),list=$('#agent-options');if(trigger.disabled)return;
+  const box=trigger.getBoundingClientRect(),below=Math.max(0,innerHeight-box.bottom-12),above=Math.max(0,box.top-12),up=below<180&&above>below;
+  list.style.width=`${Math.min(box.width,innerWidth-16)}px`;list.style.left=`${Math.max(8,Math.min(box.left,innerWidth-box.width-8))}px`;
+  list.style.top=up?'auto':`${box.bottom+4}px`;list.style.bottom=up?`${innerHeight-box.top+4}px`:'auto';list.style.maxHeight=`${Math.min(240,up?above:below)}px`;
+  list.hidden=false;trigger.setAttribute('aria-expanded','true');
+  const options=[...list.children],active=last?options.at(-1):options.find(option=>option.getAttribute('aria-selected')==='true')??options[0];active?.focus({preventScroll:true});active?.scrollIntoView({block:'nearest'});
+}
+$('#agent-picker-trigger').addEventListener('click',()=>$('#agent-options').hidden?openAgentPicker():closeAgentPicker());
+$('.agent-picker').addEventListener('keydown',event=>{
+  if(event.ctrlKey||event.metaKey||event.altKey)return;
+  const options=[...$('#agent-options').children],index=options.indexOf(document.activeElement);
+  if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+    event.preventDefault();event.stopPropagation();if($('#agent-options').hidden){openAgentPicker(event.key==='ArrowUp'||event.key==='End');return;}
+    const next=event.key==='Home'?0:event.key==='End'?options.length-1:Math.max(0,Math.min(options.length-1,index+(event.key==='ArrowDown'?1:-1)));options[next]?.focus({preventScroll:true});options[next]?.scrollIntoView({block:'nearest'});
+  }else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeAgentPicker(true);}else if(event.key==='Tab')closeAgentPicker(true);else if(event.key.length===1&&event.key!==' '){event.preventDefault();event.stopPropagation();if($('#agent-options').hidden)openAgentPicker();options.find(option=>option.textContent.toLowerCase().startsWith(event.key.toLowerCase()))?.focus();}
+});
+document.addEventListener('pointerdown',event=>{if(!$('.agent-picker').contains(event.target))closeAgentPicker();});
+window.addEventListener('resize',()=>closeAgentPicker($('#agent-options').contains(document.activeElement)));
+document.addEventListener('scroll',event=>{const target=event.target;if(target===document||target instanceof Element&&target.contains($('#agent-picker-trigger')))closeAgentPicker($('#agent-options').contains(document.activeElement));},true);
 const ready=boot();
 async function boot(){
   const data=sceneData={days:[],account:'Supa Agent',connection:'connecting',agentCount:null,retrievedAt:null};
@@ -38,7 +70,7 @@ async function reload(currentScene=sceneData){
     if(!state.agents.data?.some(agent=>agent.id===agentId))agentId=state.agents.data?.[0]?.id ?? '';
     const selectEl=$('#agent-select');selectEl.replaceChildren(node('option','',state.agents.error?'Agent records unavailable':state.agents.data?.length?'Choose an agent':'No saved agents'));selectEl.firstChild.value='';
     for(const agent of state.agents.data ?? []){const option=node('option','',`${agent.name} / ${agent.lifecycle}`);option.value=agent.id;selectEl.append(option);}
-    selectEl.value=agentId;
+    selectEl.value=agentId;syncAgentPicker();
     $('[data-stat=repos]').textContent=state.agents.data?.length ?? '—';
     $('[data-stat=stars]').textContent=state.status.data?.status ?? 'offline';
     $('[data-stat=followers]').textContent='SIM';
@@ -50,8 +82,9 @@ async function reload(currentScene=sceneData){
   }finally{if(version===reloadVersion){$('.reload-records').disabled=false;$('.reload-records').textContent='Reload saved records';}}
 }
 $('.reload-records').addEventListener('click',()=>{closeCommand(false);$('.buffer').focus({preventScroll:true});void reload();});
-$('#agent-select').addEventListener('change',event=>{agentId=event.target.value;void select(itemIndex);});
+$('#agent-select').addEventListener('change',event=>{agentId=event.target.value;syncAgentPicker();void select(itemIndex);});
 function setView(projects){
+  closeAgentPicker();
   entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
   if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));$('.buffer').focus({preventScroll:true});});}
@@ -87,7 +120,7 @@ async function select(index){
   buffer.replaceChildren();line('supa@local ~','prompt');
   for(const row of rows){
     if(row.kind==='agent'){
-      const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
+      const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
     }else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
     else if(row.kind==='draft'){const block=node('figure','saved-draft');block.append(node('blockquote','',row.text),node('figcaption','prompt',row.meta));buffer.append(block);}
@@ -149,7 +182,7 @@ function typeTerminal() {
   }
   typingTimer=setTimeout(tick,150);
 }
-function openCommand(prefix=''){ $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
+function openCommand(prefix=''){closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
 function closeCommand(focus=true){$('.command').hidden=true;if(focus)returnFocus();}
 function returnFocus(){if(document.body.dataset.view==='intro'){$('.enter').focus({preventScroll:true});return;}if(matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.tabline').focus({preventScroll:true});}else $('.wheel').focus({preventScroll:true});}
 $('.command-toggle').addEventListener('click',()=>openCommand('supa '));
@@ -164,7 +197,7 @@ $('.command').addEventListener('submit',event=>{
   if(command.startsWith('inspect ')){
     const query=command.slice(8).toLowerCase();const agent=state.agents.data?.find(a=>a.id===query||a.name.toLowerCase()===query);
     if(!agent){$('.announcement').textContent='No matching saved agent. Use supa agents.';return;}
-    agentId=agent.id;$('#agent-select').value=agentId;wheel.select(2);void select(2);return;
+    agentId=agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);return;
   }
   const id=({status:'home',capabilities:'about'})[command]??command,index=navigation.findIndex(item=>item.id===id);
   if(index>=0){if(document.body.dataset.view==='intro'){history.pushState({},'','/site/');setView(true);}wheel.select(index);void select(index);}
