@@ -1,0 +1,745 @@
+{
+  "synthetic_backend_fixtures": true,
+  "retries": 0,
+  "uncaught_javascript_errors_asserted": true,
+  "stats": {
+    "startTime": "2026-10-28T08:23:20.941Z",
+    "duration": 26124.013,
+    "expected": 66,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "title": "original survival diagram responds to all four stages",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1994
+        }
+      ]
+    },
+    {
+      "title": "navigation covers every page with no horizontal overflow",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 3073
+        }
+      ]
+    },
+    {
+      "title": "disconnected and empty states never invent agent data",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1655
+        }
+      ]
+    },
+    {
+      "title": "loading, sanitized error and recovery states are explicit",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1036
+        }
+      ]
+    },
+    {
+      "title": "trading has no executable controls or mutation requests",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1177
+        }
+      ]
+    },
+    {
+      "title": "launch has no executable controls or mutation requests",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1072
+        }
+      ]
+    },
+    {
+      "title": "factory has no executable controls or mutation requests",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 982
+        }
+      ]
+    },
+    {
+      "title": "pixel typography, dark surfaces and accent colors satisfy the design",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 903
+        }
+      ]
+    },
+    {
+      "title": "smallest supported layout remains usable at 320 pixels",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 862
+        }
+      ]
+    },
+    {
+      "title": "original survival diagram responds to all four stages",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1796
+        }
+      ]
+    },
+    {
+      "title": "navigation covers every page with no horizontal overflow",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2476
+        }
+      ]
+    },
+    {
+      "title": "disconnected and empty states never invent agent data",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1431
+        }
+      ]
+    },
+    {
+      "title": "loading, sanitized error and recovery states are explicit",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 903
+        }
+      ]
+    },
+    {
+      "title": "trading has no executable controls or mutation requests",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 960
+        }
+      ]
+    },
+    {
+      "title": "launch has no executable controls or mutation requests",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 993
+        }
+      ]
+    },
+    {
+      "title": "factory has no executable controls or mutation requests",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 977
+        }
+      ]
+    },
+    {
+      "title": "pixel typography, dark surfaces and accent colors satisfy the design",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 999
+        }
+      ]
+    },
+    {
+      "title": "smallest supported layout remains usable at 320 pixels",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 931
+        }
+      ]
+    },
+    {
+      "title": "original survival diagram responds to all four stages",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1646
+        }
+      ]
+    },
+    {
+      "title": "navigation covers every page with no horizontal overflow",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 2582
+        }
+      ]
+    },
+    {
+      "title": "disconnected and empty states never invent agent data",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1315
+        }
+      ]
+    },
+    {
+      "title": "loading, sanitized error and recovery states are explicit",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 766
+        }
+      ]
+    },
+    {
+      "title": "trading has no executable controls or mutation requests",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1033
+        }
+      ]
+    },
+    {
+      "title": "launch has no executable controls or mutation requests",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1079
+        }
+      ]
+    },
+    {
+      "title": "factory has no executable controls or mutation requests",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 947
+        }
+      ]
+    },
+    {
+      "title": "pixel typography, dark surfaces and accent colors satisfy the design",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 863
+        }
+      ]
+    },
+    {
+      "title": "smallest supported layout remains usable at 320 pixels",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 866
+        }
+      ]
+    },
+    {
+      "title": "directory search and profile preserve lifecycle, permissions and goal estimates",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1844
+        }
+      ]
+    },
+    {
+      "title": "economy separates simulation, mock Devnet and unavailable balances",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1637
+        }
+      ]
+    },
+    {
+      "title": "memory filters distinguish hypotheses and verified observations",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1603
+        }
+      ]
+    },
+    {
+      "title": "social renders exact draft text separately from provenance and rejection codes",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1450
+        }
+      ]
+    },
+    {
+      "title": "directory search and profile preserve lifecycle, permissions and goal estimates",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1683
+        }
+      ]
+    },
+    {
+      "title": "economy separates simulation, mock Devnet and unavailable balances",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1390
+        }
+      ]
+    },
+    {
+      "title": "memory filters distinguish hypotheses and verified observations",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1331
+        }
+      ]
+    },
+    {
+      "title": "social renders exact draft text separately from provenance and rejection codes",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1169
+        }
+      ]
+    },
+    {
+      "title": "directory search and profile preserve lifecycle, permissions and goal estimates",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1434
+        }
+      ]
+    },
+    {
+      "title": "economy separates simulation, mock Devnet and unavailable balances",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1403
+        }
+      ]
+    },
+    {
+      "title": "memory filters distinguish hypotheses and verified observations",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1453
+        }
+      ]
+    },
+    {
+      "title": "social renders exact draft text separately from provenance and rejection codes",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 1373
+        }
+      ]
+    },
+    {
+      "title": "financial contracts reject unsafe integers and unlabelled or Mainnet values",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 59
+        }
+      ]
+    },
+    {
+      "title": "verified payment rows retain exact mint, network and evidence while stripping unknown data",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 12
+        }
+      ]
+    },
+    {
+      "title": "API projections strip unrequested upstream fields",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 15
+        }
+      ]
+    },
+    {
+      "title": "financial contracts reject unsafe integers and unlabelled or Mainnet values",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 27
+        }
+      ]
+    },
+    {
+      "title": "verified payment rows retain exact mint, network and evidence while stripping unknown data",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 9
+        }
+      ]
+    },
+    {
+      "title": "API projections strip unrequested upstream fields",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 9
+        }
+      ]
+    },
+    {
+      "title": "financial contracts reject unsafe integers and unlabelled or Mainnet values",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 43
+        }
+      ]
+    },
+    {
+      "title": "verified payment rows retain exact mint, network and evidence while stripping unknown data",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 13
+        }
+      ]
+    },
+    {
+      "title": "API projections strip unrequested upstream fields",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 11
+        }
+      ]
+    },
+    {
+      "title": "configured console requires operator authentication",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 181
+        }
+      ]
+    },
+    {
+      "title": "server-only bearer and unknown backend fields never reach the browser",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 124
+        }
+      ]
+    },
+    {
+      "title": "all implemented read resources satisfy the backend contract",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 392
+        }
+      ]
+    },
+    {
+      "title": "mutations and unapproved paths are blocked before the backend",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 180
+        }
+      ]
+    },
+    {
+      "title": "cross-origin and DNS rebinding requests fail closed",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 99
+        }
+      ]
+    },
+    {
+      "title": "disconnected proxy never forwards arbitrary targets",
+      "project": "desktop",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 18
+        }
+      ]
+    },
+    {
+      "title": "configured console requires operator authentication",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 70
+        }
+      ]
+    },
+    {
+      "title": "server-only bearer and unknown backend fields never reach the browser",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 64
+        }
+      ]
+    },
+    {
+      "title": "all implemented read resources satisfy the backend contract",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 212
+        }
+      ]
+    },
+    {
+      "title": "mutations and unapproved paths are blocked before the backend",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 125
+        }
+      ]
+    },
+    {
+      "title": "cross-origin and DNS rebinding requests fail closed",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 71
+        }
+      ]
+    },
+    {
+      "title": "disconnected proxy never forwards arbitrary targets",
+      "project": "tablet",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 18
+        }
+      ]
+    },
+    {
+      "title": "configured console requires operator authentication",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 110
+        }
+      ]
+    },
+    {
+      "title": "server-only bearer and unknown backend fields never reach the browser",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 81
+        }
+      ]
+    },
+    {
+      "title": "all implemented read resources satisfy the backend contract",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 250
+        }
+      ]
+    },
+    {
+      "title": "mutations and unapproved paths are blocked before the backend",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 166
+        }
+      ]
+    },
+    {
+      "title": "cross-origin and DNS rebinding requests fail closed",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 78
+        }
+      ]
+    },
+    {
+      "title": "disconnected proxy never forwards arbitrary targets",
+      "project": "mobile",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "duration_ms": 25
+        }
+      ]
+    }
+  ],
+  "client_secret_scan": {
+    "files": 27,
+    "matches": 0
+  }
+}
