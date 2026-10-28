@@ -1,11 +1,12 @@
 # Local HTTP API
 
-Default origin: `http://127.0.0.1:8080`. All routes require `Authorization: Bearer $SUPA_API_TOKEN`. POST bodies are JSON and are limited to 16 KiB. Creation/configuration types reject unknown fields. UUIDs identify agents, goals, cycles, actions, events and ledger idempotency keys. Timestamps are UTC instants serialized as RFC3339 by application models; PostgreSQL JSON history timestamps include an offset.
+Default origin: `http://127.0.0.1:8080`. Protected routes require a server-configured bearer credential. A shared service token alone grants only health, public directory and fixed capability reads; private routes require principal identity plus agent ownership/grants. `/ready` remains unauthenticated and returns no agent data. POST bodies are JSON and are limited to 16 KiB. Creation/configuration types reject unknown fields. UUIDs identify agents, goals, cycles, actions, events and ledger idempotency keys. Timestamps are UTC instants serialized as RFC3339 by application models; PostgreSQL JSON history timestamps include an offset.
 
 | Method | Path | Behavior |
 |---|---|---|
 | GET | `/health` | Database liveness, simulation mode, publishing disabled |
-| GET / POST | `/agents` | List up to 100 agents / create with zero balance in `created` state |
+| GET | `/directory` | Up to 100 minimal public identities; no goals, instructions, memory or financials |
+| GET / POST | `/agents` | List accessible agents / owner-role creation with atomic ownership and zero balance |
 | GET | `/agents/{id}` | Identity, lifecycle, config, personality, goals, memory and simulated finances |
 | POST | `/agents/{id}/lifecycle` | `{ "state": "paused", "reason": "Operator requested pause" }` |
 | GET / POST | `/agents/{id}/goals` | List / add `{ "description": "..." }` |
@@ -14,7 +15,7 @@ Default origin: `http://127.0.0.1:8080`. All routes require `Authorization: Bear
 | GET | `/agents/{id}/activity` | Latest 100 sanitized durable events |
 | GET | `/agents/{id}/financials` | Clearly labeled simulated balance, revenue, inference/operating costs and runway |
 | POST | `/agents/{id}/simulated-funding` | Operator credit; see payload below |
-| GET / POST | `/agents/{id}/cycles` | Latest cycles / request one cycle for an active agent |
+| GET / POST | `/agents/{id}/cycles` | Latest cycles / request one bounded offline cycle under a recorded finite authorization |
 | GET | `/agents/{id}/actions` | Proposed tool metadata, authorization_outcome, execution status and failure codes |
 | GET | `/agents/{id}/drafts` | Legacy saved drafts and event references; never published |
 | GET | `/agents/{id}/social` | New social drafts, abstentions, rejected-decision codes and separate review metadata; publishing disabled |
@@ -40,7 +41,7 @@ Financial responses use `simulated: true`, `unit: "simulated_micro_usd"`, `balan
 
 Application errors are `{ "error": "controlled_code" }`: 400 invalid input; 401 missing/invalid operator authentication; 403 denied operation; 404 absent agent/goal; 409 inactive agent, invalid lifecycle transition, busy/stale cycle, or insufficient simulated funds; 504 reasoning timeout; 503 database/provider failure. Invalid UUID paths use framework validation. History is bounded without cursor pagination in this milestone.
 
-The cycle endpoint is synchronous. A client disconnect may leave work to finish or expire; it must not assume success and blindly retry. Read cycle/activity history first. Pausing blocks subsequent tool effects; it cannot unsend an in-flight provider request. No endpoint changes permissions after creation or executes arbitrary tools.
+The cycle endpoint is synchronous. A client disconnect may leave work to finish or expire; it must not assume success and blindly retry. Read cycle/activity history first. Pausing blocks subsequent tool effects; it cannot unsend an in-flight provider request. Agent capability sets cannot be changed through HTTP and arbitrary tools cannot be executed. Owner-managed access grants are separate from tool permissions.
 
 ## Milestone 2 additions
 
@@ -84,9 +85,9 @@ See [authorization, recovery and workflow validation](autonomy.md).
 ## Continuous offline scheduling
 
 Authenticated `GET/POST /agents/{id}/schedule` exposes persisted scheduling policy
-and revision-checked operator commands (`start`, `pause`, `resume`, `stop`). Start
+and revision-checked operator commands (`start`, `renew`, `pause`, `resume`, `stop`). Start
 requires explicit consent, approved goal IDs, interval, cycle ceiling, simulated
-expense ceiling and expiry. Other commands preserve those limits. Stop permanently
+expense ceiling and expiry. Explicit owner renewal requires fresh consent and a new audited finite policy. Pause/resume preserve the current limits. Stop permanently
 terminates the identity. Replayed UUIDs return current state without reactivation.
 Managed schedules always use Offline; live inference reservations are rejected in
 persistence. Browser access is operator-only and uses the existing same-origin JSON
@@ -95,3 +96,23 @@ action guard. See [complete limits, payloads and recovery](continuous-autonomy.m
 Agent and API scheduling now default disabled. Existing active identities require
 new explicit scheduling authorization and are never adopted by the worker merely
 because an old configuration flag was true.
+
+## Authorization renewal, roles and worker health
+
+See [the complete ownership, renewal, rollout and health contract](authorization-renewal.md).
+New protected reads: `GET /agents/{id}/access` (effective role), `/authorizations`
+(approval epochs), and `/execution-health` (measured heartbeat/lease status).
+Owners alone can `POST /agents/{id}/access` to grant viewer/operator access.
+Unknown ownership and cross-user access return 403 without private records.
+
+Renew uses `operation: "renew"`, a new UUID, current `expected_revision`,
+`authorize_offline: true`, recent RFC3339 `consented_at`, reason and a complete
+finite policy. Consent expires after 120 seconds. It requires paused/suspended
+execution with no unresolved running lease; terminated identities cannot renew.
+History and accounting survive each new epoch. Server-authenticated approvers
+are recorded independently of the existing lifecycle actor enum.
+
+`execution_running` requires an actual valid lease, current recorded approval and
+a fresh associated worker; authorization alone is insufficient. Health is one of
+`healthy`, `delayed`, `unavailable`, `recovery_required`. The frontend continues
+idle polling every 15 seconds. Scheduling remains opt-in and offline-only.
