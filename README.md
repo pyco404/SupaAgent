@@ -4,11 +4,13 @@
 
 Supa Agent is a Solana-native autonomous-agent project. Milestones 1 and 2 implement a local Rust backend with durable identities, bounded reasoning cycles, permissioned tools, provenance-aware memory, prioritized goals, personality, metered OpenAI calls, draft-only social content, and simulated economics. Milestone 3 adds encrypted Devnet wallet identities, read-only payment monitoring and separate verified test-token accounting.
 
-Wallet support is opt-in and Devnet-only. No transaction signing/broadcast, Jupiter trade, X publisher, shell tool, autonomous agent-creation tool, or code-modification tool is included. The future frontend must preserve the approved futuristic dark dashboard and neon-teal identity; this milestone does not build a substitute dashboard.
+Wallet support is opt-in and Devnet-only. No transaction signing/broadcast, Jupiter trade, X publisher, shell tool, autonomous agent-creation tool, or code-modification tool is included. Milestone 4 adds a local, read-only Next.js console with the requested near-black, mint and pixel-typographic design. See [the website implementation and actual browser evidence](docs/milestone-4.md).
 
 ## Local setup
 
-Requires Rust 1.93+, PostgreSQL 16+, and a local PostgreSQL database. Node.js is only needed for the future frontend. Docker is optional and not required. See [Ubuntu and isolated PostgreSQL setup](docs/local-setup.md).
+Requires Rust 1.93+, PostgreSQL 16+, and a local PostgreSQL database. The optional website requires Node.js 22.18+ (validated with Node.js 24.22.1 and npm 11.19.1). Docker is optional and not required. See [Ubuntu and isolated PostgreSQL setup](docs/local-setup.md).
+
+For the website, run `npm ci --prefix web`, then `npm run build --prefix web`. Use `./scripts/web-local` with the existing private `.env.devnet` to start the loopback-only console and offline API against the inactive, dedicated Devnet agent. The launcher creates ignored, mode-600 `web/.env.local` credentials if absent; it never loads `.env.eval`. Open `http://127.0.0.1:3000` and use the operator credentials from that private file. See [manual/disconnected setup, authentication and tests](docs/milestone-4.md#local-commands).
 
 ```bash
 export DATABASE_URL='postgresql://supa:your-local-password@127.0.0.1:5432/supa_agent'
