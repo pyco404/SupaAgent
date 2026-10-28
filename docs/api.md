@@ -80,3 +80,18 @@ through `/api/autonomy`, requiring a matching Origin, JSON content type and
 `X-Supa-Action: offline-autonomy`. Browser bodies are limited to 4 KiB. General
 lifecycle, funding and arbitrary tool writes remain unavailable through the BFF.
 See [authorization, recovery and workflow validation](autonomy.md).
+
+## Continuous offline scheduling
+
+Authenticated `GET/POST /agents/{id}/schedule` exposes persisted scheduling policy
+and revision-checked operator commands (`start`, `pause`, `resume`, `stop`). Start
+requires explicit consent, approved goal IDs, interval, cycle ceiling, simulated
+expense ceiling and expiry. Other commands preserve those limits. Stop permanently
+terminates the identity. Replayed UUIDs return current state without reactivation.
+Managed schedules always use Offline; live inference reservations are rejected in
+persistence. Browser access is operator-only and uses the existing same-origin JSON
+action guard. See [complete limits, payloads and recovery](continuous-autonomy.md).
+
+Agent and API scheduling now default disabled. Existing active identities require
+new explicit scheduling authorization and are never adopted by the worker merely
+because an old configuration flag was true.
