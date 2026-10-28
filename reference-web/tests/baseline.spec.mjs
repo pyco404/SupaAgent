@@ -415,3 +415,23 @@ test('mascot draws a full-viewport pointer tether without intercepting input', a
   await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointermove',{clientX:100,clientY:200,pointerType:'touch'})));
   await expect(tether).toHaveAttribute('data-active','false');
 });
+
+test('decorative branches flow, pause and respect reduced motion and visibility', async ({ page }) => {
+  await page.emulateMedia({reducedMotion:'no-preference'});await open(page,'/site/#home');
+  const diagram=page.locator('.blueprint');
+  const pixels=()=>diagram.evaluate(canvas=>{const data=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;let hash=0;for(let i=0;i<data.length;i+=4)hash=(Math.imul(hash,31)+data[i]+data[i+3])|0;return hash;});
+  await expect(diagram).toHaveAttribute('data-motion-state','running');
+  const first=await pixels();await page.waitForTimeout(250);expect(await pixels()).not.toBe(first);
+  await page.locator('.command-toggle').click();const control=page.getByRole('button',{name:'Animate decorative diagram'});
+  await control.click();await expect(diagram).toHaveAttribute('data-motion-state','paused');await expect(control).toHaveText('Play diagram');
+  const paused=await pixels();await page.waitForTimeout(180);expect(await pixels()).toBe(paused);
+  await control.click();await expect(diagram).toHaveAttribute('data-motion-state','running');await expect(control).toHaveText('Pause diagram');
+  await diagram.evaluate(canvas=>canvas.style.visibility='hidden');
+  // IntersectionObserver follows geometry/display, rather than paint visibility.
+  await diagram.evaluate(canvas=>canvas.style.display='none');await expect(diagram).toHaveAttribute('data-motion-state','offscreen');
+  const stopped=await diagram.getAttribute('data-motion-phase');await page.waitForTimeout(180);expect(await diagram.getAttribute('data-motion-phase')).toBe(stopped);
+  await diagram.evaluate(canvas=>{canvas.style.removeProperty('display');canvas.style.removeProperty('visibility');});await expect(diagram).toHaveAttribute('data-motion-state','running');
+  await page.emulateMedia({reducedMotion:'reduce'});await expect(diagram).toHaveAttribute('data-motion-state','reduced');await expect(control).toBeDisabled();
+  const still=await pixels();await page.waitForTimeout(180);expect(await pixels()).toBe(still);
+  await expect(diagram).toHaveAttribute('aria-label',/not live agent activity/);
+});
