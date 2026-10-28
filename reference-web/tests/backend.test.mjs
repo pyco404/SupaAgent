@@ -90,6 +90,10 @@ test('separate operator accounts forward distinct server-side credentials and re
     let observed;
     const result=await readResource(`/api/agents/${agentId}/memory`,other,async(url,options)=>{observed=options.headers.Authorization;return response([]);});
     assert.equal(result.status,200);assert.equal(observed,`Bearer ${otherToken}`);
+    const redacted=await readResource('/api/agents',publicHeaders,async()=>response([{...agent,name:otherToken+' '+password}]));
+    assert.ok(!redacted.body[0].name.includes(otherToken));assert.ok(!redacted.body[0].name.includes(password));
+    process.env.SUPA_WEB_OPERATORS=JSON.stringify([{username:'other',password,api_token:process.env.SUPA_API_TOKEN}]);
+    assert.equal((await readResource(`/api/agents/${agentId}/memory`,headers,async()=>{throw Error('must not share credentials');})).status,401);
     process.env.SUPA_WEB_OPERATORS=JSON.stringify([{username:'fixture',password,api_token:otherToken}]);
     assert.equal((await readResource(`/api/agents/${agentId}/memory`,headers,async()=>{throw Error('must not reach upstream');})).status,401);
   } finally {if(previous===undefined)delete process.env.SUPA_WEB_OPERATORS;else process.env.SUPA_WEB_OPERATORS=previous;}
