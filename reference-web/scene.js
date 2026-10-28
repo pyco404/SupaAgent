@@ -2,7 +2,9 @@
 // No reference scripts, filmed portrait or tracking code are included.
 export function createScenes({ intro, blueprint, entity, transition, spark, reduced, data }) {
   let mode = 'intro', frame = 0, previous = 0, warpStart = 0, warpResolve, input = '', selected = 0, worm = false;
-  const pointer = { x: .5, y: .5, visible: false };
+  const pointer = { x: .5, y: .5, visible: false, movedAt: -Infinity };
+  let pointerIdleTimer=0,typingTarget=null,introTarget=null,terminalProgress=0,terminalCharacter='',terminalTyping=false;
+  const workspaceHands=document.querySelector('.workspace-hands');
   const tether = document.createElement('canvas');
   tether.className='pointer-tether';tether.setAttribute('aria-hidden','true');
   tether.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:8';
@@ -72,9 +74,11 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     ctx.restore();
   }
   // Decorative hands share the editor's typing clock; no camera or key capture.
-  function drawHands(ctx, w, h, typing, character) {
-    const width=Math.min(700,w-40,h*.8),pitch=width/15,rowPitch=pitch*.68,keyHeight=pitch*.54;
-    const left=(w-width)/2,top=h*.755,height=rowPitch*4.65;
+  function drawHands(ctx, w, h, typing, character, surface=intro, compact=false) {
+    const mouseActive=pointer.visible&&performance.now()-pointer.movedAt<700;
+    const progress=compact?terminalProgress:introProgress;
+    const width=Math.min(700,(w-40)/1.28,compact?h*3.1:h*.8),pitch=width/15,rowPitch=pitch*.68,keyHeight=pitch*.54;
+    const left=(w-width)/2,top=compact?8:h*.755,height=rowPitch*4.65;
     const rows=[['esc','`','1','2','3','4','5','6','7','8','9','0','-','=','back'],['tab','q','w','e','r','t','y','u','i','o','p','[',']','\\'],['caps','a','s','d','f','g','h','j','k','l',';',"'",'enter'],['shift','z','x','c','v','b','n','m',',','.','/','shift']];
     const keys=[],byKey=new Map();
     rows.forEach((row,r)=>{
@@ -87,9 +91,9 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     const space={label:' ',x:w/2-width*.25,y:top+4*rowPitch,w:width*.5,h:keyHeight};
     space.cx=w/2;space.cy=space.y+space.h/2;keys.push(space);byKey.set(' ',space);
     const aliases={'{':'[','}':']','(': '9',')':'0',':':';','"':"'",'<':',','>':'.','|':'\\','_':'-','+':'=','!':'1'};
-    const beat=typing?Math.floor(introProgress/5):-1;
+    const beat=typing?Math.floor(progress/5):-1;
     if(beat!==handBeat){handBeat=beat;handKey=aliases[character]||character.toLowerCase();}
-    const active=typing?byKey.get(handKey):null,pulse=typing?Math.sin((introProgress/5%1)*Math.PI):0;
+    const active=typing?byKey.get(handKey):null,pulse=typing?Math.sin((progress/5%1)*Math.PI):0;
     const leftFingers=[' ','45rtfgvb','3edc','2wsx','1qaz'];
     const rightFingers=[' ','67yuhjnm','8ik,','9ol.','0p;/-=[]\\\''];
     let activeHand=handBeat%2,activeFinger=0;
@@ -109,12 +113,17 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     }
     const connections=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20],[5,9,13,17]];
     for(const [hand,sign,home] of [[0,-1,[' ','f','d','s','a']],[1,1,[' ','j','k','l',';']]]){
-      const wristX=w/2+sign*width*.145,wristY=top+height+pitch*.36,points=[[wristX,wristY]];
+      const mouseHand=hand===1&&mouseActive,mouseX=w/2+width*.58;
+      const wristX=mouseHand?mouseX:w/2+sign*width*.145,wristY=top+height+pitch*.36,points=[[wristX,wristY]];
+      if(mouseHand){
+        ctx.globalAlpha=.45;ctx.lineWidth=.8;ctx.beginPath();ctx.roundRect(mouseX-pitch*.7,top+pitch*.65,pitch*1.4,pitch*2.3,pitch*.7);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(mouseX,top+pitch*.65);ctx.lineTo(mouseX,top+pitch*1.6);ctx.stroke();
+      }
       for(let finger=0;finger<5;finger++){
-        const rest=byKey.get(home[finger]),press=active&&hand===activeHand&&finger===activeFinger;
-        const tipX=press?active.cx:rest.cx+(finger===0?sign*pitch*.65:0);
-        const tipY=(press?active.cy:rest.cy)-pitch*.18+(press?pulse*pitch*.23:0);
-        const baseX=wristX+(rest.cx-wristX)*.65,baseY=top+height*.85;
+        const rest=byKey.get(home[finger]),press=!mouseHand&&active&&hand===activeHand&&finger===activeFinger;
+        const tipX=mouseHand?mouseX+[-.7,-.35,0,.3,.6][finger]*pitch:press?active.cx:rest.cx+(finger===0?sign*pitch*.65:0);
+        const tipY=mouseHand?top+[2.1,.95,.85,1.05,1.6][finger]*pitch:(press?active.cy:rest.cy)-pitch*.18+(press?pulse*pitch*.23:0);
+        const baseX=wristX+((mouseHand?tipX:rest.cx)-wristX)*.65,baseY=top+height*.85;
         for(let joint=0;joint<4;joint++){
           const t=joint/3;
           points.push([baseX+(tipX-baseX)*t,baseY+(tipY-baseY)*t-(press?Math.sin(t*Math.PI)*pulse*pitch*.12:0)]);
@@ -125,8 +134,8 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       ctx.globalAlpha=.85;for(const [px,py] of points)ctx.fillRect(px-1,py-1,2,2);
     }
     ctx.restore();
-    intro.dataset.handState=typing?'typing':'idle';
-    intro.dataset.keyboardBounds=[left,top,width,height+pitch*.42].map(n=>n.toFixed(2)).join(',');
+    surface.dataset.handState=typing?'typing':'idle';surface.dataset.rightHand=mouseActive?'mouse':'keyboard';surface.dataset.leftHand='keyboard';
+    surface.dataset.keyboardBounds=[left,top,width,height+pitch*.42].map(n=>n.toFixed(2)).join(',');
   }
   function drawIntro(time) {
     const view = fit(intro); if (!view) return;
@@ -166,6 +175,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     if(status)status.dataset.mode=state;
     if(label&&label.textContent!==state)label.textContent=state;
     if(position&&position.textContent!==cursor)position.textContent=cursor;
+    introTarget={x:left+cell*4+activeColumn*cell,y:first+activeRow*line-font*.35};
     drawHands(ctx,w,h,!reduced.matches&&revealedRows<rows,typedKey);
     ctx.globalAlpha=1;
   }
@@ -216,14 +226,27 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   function drawPointer() {
     const view=fit(tether);if(!view)return;
     tether.dataset.active=String(pointer.visible&&!warpStart);
-    if(tether.dataset.active!=='true')return;
+    tether.dataset.typingActive='false';
+    if(warpStart)return;
     const anchor=mode==='intro'?document.querySelector('.intro-mascot'):entity;
-    const box=anchor.getBoundingClientRect(),x=pointer.x*innerWidth,y=pointer.y*innerHeight;
-    const startX=box.left+box.width*.5,startY=box.top+box.height*.4;
+    const box=anchor.getBoundingClientRect(),startX=box.left+box.width*.5,startY=box.top+box.height*.4;
     const {ctx}=view;ctx.globalAlpha=.6;ctx.lineWidth=1;
-    ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(startX,startY);ctx.lineTo(x,y);ctx.stroke();
-    ctx.setLineDash([]);ctx.strokeRect(x-9,y-6,18,12);
-    tether.dataset.endpoints=[startX,startY,x,y].join(',');
+    function connect(x,y){ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(startX,startY);ctx.lineTo(x,y);ctx.stroke();ctx.setLineDash([]);ctx.strokeRect(x-9,y-6,18,12);}
+    if(pointer.visible){
+      const x=pointer.x*innerWidth,y=pointer.y*innerHeight;connect(x,y);
+      tether.dataset.endpoints=[startX,startY,x,y].join(',');
+    }
+    let target=mode==='intro'?introTarget:null;
+    if(mode==='projects'&&typingTarget?.text.isConnected&&typingTarget.offset>0){
+      const {text,offset}=typingTarget,range=document.createRange(),limit=Math.min(offset,text.length);
+      if(limit){range.setStart(text,limit-1);range.setEnd(text,limit);const rect=range.getBoundingClientRect(),buffer=document.querySelector('.buffer').getBoundingClientRect();
+        if(rect.height&&rect.top>=buffer.top&&rect.bottom<=buffer.bottom)target={x:rect.right,y:rect.top+rect.height/2};}
+    }
+    const command=document.querySelector('.command-input');
+    if(document.activeElement===command){const rect=command.getBoundingClientRect();ctx.font=getComputedStyle(command).font;target={x:Math.min(rect.right-4,rect.left+ctx.measureText(command.value.slice(0,command.selectionStart)).width),y:rect.top+rect.height/2};}
+    if(target&&target.y>0&&target.y<innerHeight){
+      ctx.globalAlpha=.35;connect(target.x,target.y);tether.dataset.typingActive='true';tether.dataset.typingEndpoints=[startX,startY,target.x,target.y].join(',');
+    }
   }
   function drawSpark() {
     const view = fit(spark); if (!view) return;
@@ -274,14 +297,14 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       drawBlueprint();
     }
     diagramPrevious=animateDiagram?time:null;
-    if (mode === 'intro') drawIntro(time); else { drawEntity(time); if (worm) { const p = fit(spark); if (p) { p.ctx.fillStyle = ink(); p.ctx.fillRect(((time / 20) % p.w), 8, 3, 3); } } }
+    if (mode === 'intro') drawIntro(time); else { drawEntity(time);const hands=fit(workspaceHands);if(hands)drawHands(hands.ctx,hands.w,hands.h,terminalTyping&&!reduced.matches,terminalCharacter,workspaceHands,true); if (worm) { const p = fit(spark); if (p) { p.ctx.fillStyle = ink(); p.ctx.fillRect(((time / 20) % p.w), 8, 3, 3); } } }
     drawPointer();
     if (warpStart) drawWarp(time);
   }
   function tick(time) { frame = 0; if (document.hidden) return; if(document.documentElement.dataset.motion!==(reduced.matches?'still':'running')){motionChange();return;} if (time - previous > 33) { draw(time); previous = time; } if (!reduced.matches || warpStart) frame = requestAnimationFrame(tick); }
   function schedule() { if (document.hidden) return; if (reduced.matches && !warpStart) draw(); else if (!frame) frame = requestAnimationFrame(tick); }
   function resize() { drawBlueprint(); drawSpark(); draw(); schedule(); }
-  function pointerMove(e) { pointer.x = e.clientX / innerWidth; pointer.y = e.clientY / innerHeight; pointer.visible=e.pointerType!=='touch';schedule(); }
+  function pointerMove(e) { if(pointer.x!==e.clientX/innerWidth||pointer.y!==e.clientY/innerHeight)pointer.movedAt=performance.now();pointer.x=e.clientX/innerWidth;pointer.y=e.clientY/innerHeight;pointer.visible=e.pointerType!=='touch';clearTimeout(pointerIdleTimer);pointerIdleTimer=setTimeout(schedule,720);schedule(); }
   function pointerLeave() { pointer.visible=false;schedule(); }
   function visibility() { introTime=null;diagramPrevious=null; if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
   function updateDiagramControl(){diagramControl.disabled=reduced.matches;diagramControl.textContent=reduced.matches?'Diagram motion reduced':diagramPaused?'Play diagram':'Pause diagram';diagramControl.setAttribute('aria-pressed',String(!diagramPaused&&!reduced.matches));}
@@ -289,18 +312,20 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   diagramControl.addEventListener('click',toggleDiagram);
   function motionChange() { document.documentElement.dataset.motion = reduced.matches ? 'still' : 'running';updateDiagramControl();diagramPrevious=null; if (reduced.matches) { cancelAnimationFrame(frame); frame = 0; if (warpResolve) finishWarp(true); } resize(); }
   const diagramObserver=new IntersectionObserver(entries=>{diagramVisible=entries[0].isIntersecting;diagramPrevious=null;schedule();});diagramObserver.observe(blueprint);
-  const observer = new ResizeObserver(resize); [intro, blueprint, entity, spark].forEach(c => observer.observe(c));
+  const observer = new ResizeObserver(resize); [intro, blueprint, entity, spark,workspaceHands].forEach(c => observer.observe(c));
   window.addEventListener('pointermove', pointerMove, { passive: true });document.documentElement.addEventListener('pointerleave',pointerLeave);window.addEventListener('blur',pointerLeave); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
     setMode(value) { mode = value; if(value==='intro'){introProgress=0;handBeat=-1;handKey='';}introTime=null;resize(); },
     setCode(text) { code=String(text).split('\n').slice(0,500);introProgress=0;introTime=null;handBeat=-1;handKey='';resize(); },
+    onTyping(text,offset,character,progress){typingTarget={text,offset};terminalCharacter=character;terminalProgress=progress;terminalTyping=true;schedule();},
+    stopTyping(clear=false){terminalTyping=false;if(clear)typingTarget=null;schedule();},
     setSelection(index) { selected = index; blueprint.dataset.selection = String(selected); drawBlueprint(); },
     setWorm(value) { worm = value; schedule(); },
     onInput(value) { input = value; schedule(); },
     redraw: resize,
     warp() { if (reduced.matches) return Promise.resolve(true); if (warpResolve) return Promise.resolve(false); return new Promise(resolve => { warpResolve = resolve; warpStart = performance.now(); transition.dataset.progress='0';drawWarp(warpStart);transition.classList.add('active');schedule(); }); },
     cancelWarp() { finishWarp(false); },
-    destroy() { cancelAnimationFrame(frame); observer.disconnect();diagramObserver.disconnect();diagramControl.removeEventListener('click',toggleDiagram); window.removeEventListener('pointermove', pointerMove);document.documentElement.removeEventListener('pointerleave',pointerLeave);window.removeEventListener('blur',pointerLeave);tether.remove(); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); finishWarp(false); },
+    destroy() { cancelAnimationFrame(frame);clearTimeout(pointerIdleTimer); observer.disconnect();diagramObserver.disconnect();diagramControl.removeEventListener('click',toggleDiagram); window.removeEventListener('pointermove', pointerMove);document.documentElement.removeEventListener('pointerleave',pointerLeave);window.removeEventListener('blur',pointerLeave);tether.remove(); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility); reduced.removeEventListener('change', motionChange); finishWarp(false); },
   };
 }
 function format(value) { return Number(value).toLocaleString('en-US').replaceAll(',', "'"); }
