@@ -21,6 +21,7 @@ export const records: Record<string, unknown> = {
     { id: cycleId, cycle_id: cycleId, disposition: "rejected", failure_code: "social_repetition", created_at: timestamp, data: { choice: "draft", text: "Rejected fixture text must not be shown as an approved draft", style: "humor", reason: "too_repetitive", event_ids: [eventId], memory_ids: [] } },
   ],
   [`agents/${agentId}/drafts`]: [],
+  [`agents/${agentId}/wallet`]: { network: "devnet", address: "synthetic-test-address" },
   [`agents/${agentId}/wallet/balances`]: null,
   [`agents/${agentId}/wallet/treasury`]: { network: "devnet", environment: "mocked_devnet", observed_sol_lamports: 0, observed_usdc_atoms: 0, verified_incoming_usdc_atoms: 0, reserved_usdc_atoms: 0, available_operating_usdc_atoms: 0, api_inference_estimate_microusd: 0, fresh: false, reconciled: false, observed_at: null },
   [`agents/${agentId}/wallet/payments`]: [],
