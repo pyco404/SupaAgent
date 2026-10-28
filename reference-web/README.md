@@ -172,3 +172,22 @@ captures: [desktop](evidence/2026-10-28/supa-source-mascot-desktop.png) /
 Evidence IDs: `ev_43f68ad850a393c0c07c45589fde7409cb9b2871c3a4e0f63dd6e7c6a922e287`
 and `ev_064bd67f7ad47146cb32e88edc0a9f9ae53e559e051f29703dc10ba10e550cea`.
 Viewports were calibrated before each capture; event coverage was unavailable.
+
+### Clear workspace toolbar and current Home logo
+
+The workspace toolbar now contains only the agent selector. Reload saved records,
+Show all text and Operator sign-in are available through the footer's SUPA AGENT
+command button (or the `:` keyboard shortcut). The panel has a close button and
+supports Escape; reload and text reveal close it after use. The Home navigation
+card uses the latest source-character robot SVG instead of the solid icon.
+
+Syntax checks, static build and **42 focused browser tests passed** across desktop,
+tablet and mobile, including relocated controls, typing, navigation, permission
+boundaries and loading/error recovery. REA inspected the actual local page at
+1440×1000 and 390×844 with no horizontal overflow:
+[desktop](evidence/2026-10-28/supa-clean-toolbar-desktop.png) /
+[mobile](evidence/2026-10-28/supa-clean-toolbar-mobile.png).
+Evidence: `ev_e9e9589badbdce47aa9989d29dd50c93341ef196e7afb46741359781fceaf624`
+and `ev_864d57d6bf7e3ed3d76cabfe3f8e27c9df6d137963f1358c6b15ea114b683bb8`.
+These screenshot/DOM/accessibility captures lack event coverage; interaction
+assertions come from the browser tests, not a complete REA runtime trace.
