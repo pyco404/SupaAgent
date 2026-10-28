@@ -4,6 +4,9 @@ const text = z.string().max(8000);
 const id = z.uuid();
 const integer = z.number().int().refine(Number.isSafeInteger);
 const date = z.string().max(80);
+export const autonomyRequestSchema = z.object({ request_id: id, goal: z.string().trim().min(3).max(500), authorize_offline: z.literal(true) }).strict();
+const autonomyPolicySchema = z.object({ mode:z.literal("offline"),max_cycles:z.literal(3),simulated_seed_microusd:z.literal(10000),simulated_expense_limit_microusd:z.literal(3300),paid_requests:z.literal(0),tools:z.tuple([z.literal("read_memory"),z.literal("remember"),z.literal("evaluate_goal")]) });
+const autonomyResultSchema = z.object({agent_id:id,mode:z.literal("offline"),simulated:z.literal(true),cycles:z.array(id).length(3).refine(ids=>new Set(ids).size===3),lifecycle:z.literal("paused"),paid_requests:z.literal(0),simulated_seed_microusd:z.literal(10000),simulated_expense_limit_microusd:z.literal(3300)});
 export const goalSchema = z.object({ id, description: text, completed: z.boolean(), priority: integer, suggested_progress_bps: integer });
 export const memorySchema = z.object({ id, lesson: text, kind: z.enum(["hypothesis", "verified_observation"]), source_event_ids: z.array(id), cycle_id: id.nullable(), created_at: date });
 export const agentSchema = z.object({
@@ -33,6 +36,7 @@ const paymentSchema = z.object({
 }).refine(row => row.signature === row.data.signature && row.mint === row.data.mint && row.amount_atoms === row.data.amount_atoms && row.slot === row.data.slot && row.evidence_source === row.data.evidence_source)
   .transform(({ data, ...row }) => ({ ...row, network: data.network }));
 export const schemas = {
+  autonomy:autonomyPolicySchema, "autonomy-result":autonomyResultSchema,
   health: z.object({ status: text, economic_mode: z.literal("simulation"), publishing_enabled: z.literal(false).optional() }),
   agents: z.array(agentSchema).max(100),
   agent: z.object({ agent: agentSchema, financials: financialSchema }),
