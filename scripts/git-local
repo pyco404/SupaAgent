@@ -7,8 +7,11 @@ command_index=0
 if [[ ${arguments[0]:-} == --literal-pathspecs ]]; then command_index=1; fi
 command_name=${arguments[$command_index]:-}
 if [[ $command_name == push ]]; then
-    printf '%s\n' 'Push blocked: initial public push requires explicit user approval and a fresh secrets scan.' >&2
-    exit 1
+    if [[ $command_index != 0 || $# != 4 || ${2:-} != --no-follow-tags || ${3:-} != origin || ${4:-} != refs/heads/main:refs/heads/main ]]; then
+        printf '%s\n' 'Push requires the exact approved main-only command, without force or tags.' >&2
+        exit 1
+    fi
+    python3 "$project_root/scripts/git-policy.py" push-check
 fi
 for argument in "$@"; do
     if [[ $argument == --squash || $argument == --autosquash || $argument == --amend ]]; then
