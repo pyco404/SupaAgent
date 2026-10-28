@@ -107,3 +107,24 @@ The approved SVG robot retains its exact pixel silhouette. IBM Plex Mono is
 self-hosted under the included [SIL Open Font License](public/fonts/OFL.txt).
 All interface code and geometry are independently authored; no upstream website
 scripts, styles or filmed visual assets are vendored.
+
+## Code-built logo refinement
+
+The large intro and portal robot now use
+[`supa-agent-code.svg`](public/assets/supa-agent-code.svg): source-code characters
+clipped to the **unchanged canonical pixel path**, including transparent eyes
+and mouth. The intro retains a faint, lightly blurred treatment behind the
+editor. The animated text entity also uses this mask; its characters change
+without deforming the silhouette. Header/favicons retain solid pixels for small
+sizes. This is decorative source text, not runtime activity or model output.
+
+Syntax/build passed, and 15 focused Chromium tests passed across desktop, tablet
+and mobile. Tests retain canonical solid-mask comparisons and verify the new
+code texture, exact path, transparent cutouts, portal fit, reduced motion and
+responsive overflow. REA rendered captures:
+[desktop](evidence/2026-10-28/supa-code-logo-desktop.png) /
+[mobile](evidence/2026-10-28/supa-code-logo-mobile.png).
+Evidence IDs: `ev_2258aacc694b5ba8a3d5f7b4529303428b853c0b2b39ef63acdadec0272ccb27`
+and `ev_29a92d8811fe5966e30a1a59a91f57b93892f4f9e97e303b74bf05bb2cff896d`.
+Physical viewports were calibrated before each capture. REA reported missing
+event coverage; screenshots do not establish complete runtime equivalence.
