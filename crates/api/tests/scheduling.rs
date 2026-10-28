@@ -59,6 +59,7 @@ fn control(view: &ScheduleStatus, operation: ScheduleOperation) -> ScheduleComma
         expected_revision: view.revision,
         operation,
         authorize_offline: true,
+        consented_at: Some(sqlx::types::chrono::Utc::now()),
         reason: "Explicit isolated scheduling test".into(),
         policy: None,
     }
@@ -76,7 +77,10 @@ async fn fixture(store: &Store) -> (Agent, ScheduleCommand) {
         .into(),
     )
     .unwrap();
-    store.create(&agent).await.unwrap();
+    store
+        .create_owned(&agent, Uuid::from_u128(1))
+        .await
+        .unwrap();
     let goal = store
         .add_goal(
             agent.id,
@@ -127,7 +131,12 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     store.migrate().await.unwrap();
     let calls = Arc::new(AtomicUsize::new(0));
     let runtime = Runtime::new(store.clone(), Arc::new(Trap(calls.clone())));
-    let app = router(AppState::new(store.clone(), runtime.clone(), TOKEN.into()).unwrap());
+    let app = router(
+        AppState::new(store.clone(), runtime.clone(), TOKEN.into())
+            .unwrap()
+            .with_operator(Uuid::from_u128(1))
+            .unwrap(),
+    );
     let (agent, start) = fixture(&store).await;
     let id = agent.id;
     assert_eq!(
@@ -169,21 +178,35 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     assert!(matches!(runtime.cycle(id, true).await, Err(Error::Busy)));
     let view = store.schedule_status(id).await.unwrap();
     let pause = control(&view, ScheduleOperation::Pause);
-    store.schedule_control(id, &pause).await.unwrap();
+    store
+        .schedule_control_as(id, &pause, Some(Uuid::from_u128(1)))
+        .await
+        .unwrap();
     assert_eq!(
-        store.schedule_control(id, &start).await.unwrap().lifecycle,
+        store
+            .schedule_control_as(id, &start, Some(Uuid::from_u128(1)))
+            .await
+            .unwrap()
+            .lifecycle,
         Lifecycle::Paused
     ); // delayed start cannot reactivate
     let resumed = control(
         &store.schedule_status(id).await.unwrap(),
         ScheduleOperation::Resume,
     );
-    let after = store.schedule_control(id, &resumed).await.unwrap();
+    let after = store
+        .schedule_control_as(id, &resumed, Some(Uuid::from_u128(1)))
+        .await
+        .unwrap();
     assert_eq!(after.cycles_started, 1);
     assert_eq!(after.reserved_microusd, 1100);
     assert!(matches!(
         store
-            .schedule_control(id, &control(&view, ScheduleOperation::Stop))
+            .schedule_control_as(
+                id,
+                &control(&view, ScheduleOperation::Stop),
+                Some(Uuid::from_u128(1))
+            )
             .await,
         Err(Error::Stale)
     ));
@@ -208,7 +231,11 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     );
     assert!(matches!(
         store
-            .schedule_control(id, &control(&final_view, ScheduleOperation::Resume))
+            .schedule_control_as(
+                id,
+                &control(&final_view, ScheduleOperation::Resume),
+                Some(Uuid::from_u128(1))
+            )
             .await,
         Err(Error::ResourceBudget)
     ));
@@ -224,7 +251,9 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     let mut altered = start.clone();
     altered.reason = "Changed request content".into();
     assert!(matches!(
-        store.schedule_control(id, &altered).await,
+        store
+            .schedule_control_as(id, &altered, Some(Uuid::from_u128(1)))
+            .await,
         Err(Error::Invalid)
     ));
     // A worker cannot adopt a legacy active/scheduler-enabled identity without authorization.
@@ -241,7 +270,10 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     ));
     // Expired leases retain allowance consumption; unknown work is fenced, never replayed.
     let (crashed, approval) = fixture(&store).await;
-    store.schedule_control(crashed.id, &approval).await.unwrap();
+    store
+        .schedule_control_as(crashed.id, &approval, Some(Uuid::from_u128(1)))
+        .await
+        .unwrap();
     let cycle = store.begin_cycle(crashed.id, true).await.unwrap();
     sqlx::query("UPDATE cycles SET lease_until=now()-interval '1 second' WHERE id=$1")
         .bind(cycle)
@@ -271,14 +303,21 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
         Err(Error::Inactive)
     ));
     let resumed = store
-        .schedule_control(crashed.id, &control(&recovered, ScheduleOperation::Resume))
+        .schedule_control_as(
+            crashed.id,
+            &control(&recovered, ScheduleOperation::Resume),
+            Some(Uuid::from_u128(1)),
+        )
         .await
         .unwrap();
     let stop = control(&resumed, ScheduleOperation::Stop);
-    store.schedule_control(crashed.id, &stop).await.unwrap();
+    store
+        .schedule_control_as(crashed.id, &stop, Some(Uuid::from_u128(1)))
+        .await
+        .unwrap();
     assert_eq!(
         store
-            .schedule_control(crashed.id, &stop)
+            .schedule_control_as(crashed.id, &stop, Some(Uuid::from_u128(1)))
             .await
             .unwrap()
             .lifecycle,
@@ -286,12 +325,13 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     );
     assert!(
         store
-            .schedule_control(
+            .schedule_control_as(
                 crashed.id,
                 &control(
                     &store.schedule_status(crashed.id).await.unwrap(),
                     ScheduleOperation::Resume
-                )
+                ),
+                Some(Uuid::from_u128(1))
             )
             .await
             .is_err()
@@ -302,7 +342,10 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
         if boundary == "budget" {
             cmd.policy.as_mut().unwrap().simulated_budget_microusd = 1100;
         }
-        store.schedule_control(a.id, &cmd).await.unwrap();
+        store
+            .schedule_control_as(a.id, &cmd, Some(Uuid::from_u128(1)))
+            .await
+            .unwrap();
         if boundary == "expiry" {
             sqlx::query(
                 "UPDATE agent_schedules SET expires_at=now()-interval '1 second' WHERE agent_id=$1",
@@ -330,7 +373,7 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     // Duplicate action effects, excessive charges and live reservations are rejected in storage.
     let (local, authorization) = fixture(&store).await;
     store
-        .schedule_control(local.id, &authorization)
+        .schedule_control_as(local.id, &authorization, Some(Uuid::from_u128(1)))
         .await
         .unwrap();
     let cycle = store.begin_cycle(local.id, true).await.unwrap();
@@ -412,14 +455,14 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     assert!(!store.schedule_status(local.id).await.unwrap().enabled);
     let (race, authorization) = fixture(&store).await;
     let active = store
-        .schedule_control(race.id, &authorization)
+        .schedule_control_as(race.id, &authorization, Some(Uuid::from_u128(1)))
         .await
         .unwrap();
     let pause = control(&active, ScheduleOperation::Pause);
     let stop = control(&active, ScheduleOperation::Stop);
     let (a, b) = tokio::join!(
-        store.schedule_control(race.id, &pause),
-        store.schedule_control(race.id, &stop)
+        store.schedule_control_as(race.id, &pause, Some(Uuid::from_u128(1))),
+        store.schedule_control_as(race.id, &stop, Some(Uuid::from_u128(1)))
     );
     assert_eq!(usize::from(a.is_ok()) + usize::from(b.is_ok()), 1);
     // Wider stored permissions remain intact, but scheduled plans cannot use social tools.
@@ -436,7 +479,10 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
         .into(),
     )
     .unwrap();
-    store.create(&wider).await.unwrap();
+    store
+        .create_owned(&wider, Uuid::from_u128(1))
+        .await
+        .unwrap();
     let goal = store
         .add_goal(wider.id, "Retain verified outcomes".into())
         .await
@@ -448,7 +494,10 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     let mut command = authorization.clone();
     command.request_id = Uuid::new_v4();
     command.policy.as_mut().unwrap().goal_ids = vec![goal.id];
-    store.schedule_control(wider.id, &command).await.unwrap();
+    store
+        .schedule_control_as(wider.id, &command, Some(Uuid::from_u128(1)))
+        .await
+        .unwrap();
     runtime.cycle(wider.id, true).await.unwrap();
     assert_eq!(
         store.get(wider.id).await.unwrap().capabilities,
