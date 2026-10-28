@@ -5,7 +5,7 @@ const id = z.uuid();
 const integer = z.number().int().refine(Number.isSafeInteger);
 const date = z.string().max(80);
 const schedulePolicySchema=z.object({goal_ids:z.array(id).min(1).max(10).refine(ids=>new Set(ids).size===ids.length),interval_seconds:integer.min(5).max(86400),max_cycles:integer.min(1).max(100),simulated_budget_microusd:integer.min(1100).max(110000),valid_for_seconds:integer.min(60).max(86400)}).strict();
-export const scheduleCommandSchema=z.object({request_id:id,expected_revision:integer.nonnegative(),operation:z.enum(["start","pause","resume","stop"]),authorize_offline:z.literal(true),reason:z.string().trim().min(1).max(500),policy:schedulePolicySchema.nullable()}).strict().refine(value=>(value.operation==="start")===(value.policy!==null));
+export const scheduleCommandSchema=z.object({request_id:id,expected_revision:integer.nonnegative(),operation:z.enum(["start","renew","pause","resume","stop"]),authorize_offline:z.literal(true),consented_at:z.iso.datetime().optional(),reason:z.string().trim().min(1).max(500),policy:schedulePolicySchema.nullable()}).strict().refine(value=>(["start","renew"].includes(value.operation))===(value.policy!==null)).refine(value=>value.operation!=="renew"||value.consented_at!==undefined);
 const scheduleStatusSchema=z.object({agent_id:id,lifecycle:z.enum(["created","active","paused","suspended","terminated"]),revision:integer.nonnegative(),enabled:z.boolean(),policy:schedulePolicySchema.nullable(),cycles_started:integer.min(0).max(100),reserved_microusd:integer.min(0).max(110000),expires_at:date.nullable(),next_cycle_at:date,last_error:text.nullable(),mode:z.literal("offline"),simulated:z.literal(true),paid_requests_enabled:z.literal(false)});
 export const autonomyRequestSchema = z.object({ request_id: id, goal: z.string().trim().min(3).max(500), authorize_offline: z.literal(true) }).strict();
 const autonomyPolicySchema = z.object({ mode:z.literal("offline"),max_cycles:z.literal(3),simulated_seed_microusd:z.literal(10000),simulated_expense_limit_microusd:z.literal(3300),paid_requests:z.literal(0),tools:z.tuple([z.literal("read_memory"),z.literal("remember"),z.literal("evaluate_goal")]) });
@@ -39,6 +39,10 @@ const paymentSchema = z.object({
 }).refine(row => row.signature === row.data.signature && row.mint === row.data.mint && row.amount_atoms === row.data.amount_atoms && row.slot === row.data.slot && row.evidence_source === row.data.evidence_source)
   .transform(({ data, ...row }) => ({ ...row, network: data.network }));
 export const schemas = {
+  access:z.object({role:z.enum(["owner","operator","viewer"])}),
+  "execution-health":z.object({agent_id:id,status:z.enum(["healthy","delayed","unavailable","recovery_required"]),execution_running:z.boolean(),worker_enabled:z.boolean().optional(),lifecycle:text,checked_at:date,heartbeat_at:date.nullable(),tick_finished_at:date.nullable(),lease_until:date.nullable(),cycle_id:id.nullable()}),
+  authorizations:z.array(z.object({id,approved_by:id.nullable(),approved_at:date.nullable(),policy:schedulePolicySchema,expires_at:date,closed_at:date.nullable(),cycles_started:integer.nonnegative(),reserved_microusd:integer.nonnegative(),legacy:z.boolean()})).max(100),
+  directory:z.array(agentSchema.pick({id:true,name:true,lifecycle:true,created_at:true})).max(100),
   schedule:scheduleStatusSchema,
   autonomy:autonomyPolicySchema, "autonomy-result":autonomyResultSchema,
   health: z.object({ status: text, economic_mode: z.literal("simulation"), publishing_enabled: z.literal(false).optional() }),
