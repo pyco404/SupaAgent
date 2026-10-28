@@ -48,11 +48,36 @@ try{
   const workerPort=await port();const worker=launch(resolve(root,'target/debug/supa-runtime'),[],root,{SUPA_WORKER_BIND:`127.0.0.1:${workerPort}`,SUPA_WORKER_ENABLED:'false'});await ready(`http://127.0.0.1:${workerPort}/ready`,worker);
   browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,...(process.env.SUPA_REA_CDP_PORT?{args:[`--remote-debugging-port=${Number(process.env.SUPA_REA_CDP_PORT)}`,'--remote-debugging-address=127.0.0.1']}:{})});
   const context=await browser.newContext({httpCredentials:operator,reducedMotion:'reduce',colorScheme:'dark'}),page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
+  assert.equal((await frontend('/api/autonomy',visitor)).status,401);
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto(site+'/site/#intelligence',{waitUntil:'domcontentloaded'});
+  await page.locator('.autonomy-panel summary').click();
+  const workflowGoal='Review saved outcomes and retain verified lessons';
+  await page.getByLabel('Goal / operator-only').fill(workflowGoal);
+  await page.screenshot({path:resolve(evidence,'offline-workflow-desktop.png')});
+  await page.getByRole('checkbox').check();
+  const completion=page.waitForResponse(response=>response.url()===site+'/api/autonomy'&&response.request().method()==='POST');
+  await page.getByRole('button',{name:'Run authorized offline workflow'}).click();
+  const outcome=await(await completion).json();assert.equal(outcome.lifecycle,'paused');assert.equal(outcome.paid_requests,0);assert.equal(outcome.cycles.length,3);
+  await page.locator('.autonomy-panel [role=status]').filter({hasText:'3 completed offline cycles'}).waitFor();
+  const offlineBase=`/agents/${outcome.agent_id}`,offlineState=await request(offlineBase),offlineCycles=await request(offlineBase+'/cycles'),offlineActions=await request(offlineBase+'/actions'),offlineMemory=await request(offlineBase+'/memory');
+  assert.equal(offlineState.agent.lifecycle,'paused');assert.equal(offlineState.agent.config.scheduler_enabled,false);assert.equal(offlineState.financials.balance_microusd,6700);assert.equal(offlineCycles.length,3);assert.ok(offlineMemory.length>=3);assert.ok(offlineActions.length>=8);assert.ok(offlineState.agent.goals.every(goal=>!goal.completed));
+  await page.getByRole('button',{name:'Inspect saved run'}).click();
+  await page.waitForFunction(id=>document.querySelector('#agent-select').value===id,outcome.agent_id);
+  await page.locator('.buffer[data-typing-state=complete]').waitFor();
+  assert.ok((await page.locator('.buffer').innerText()).includes('Saved reasoning cycles / 3'));
+  await page.setViewportSize({width:390,height:844});await page.locator('.autonomy-panel summary').click();
+  await page.screenshot({path:resolve(evidence,'offline-workflow-mobile.png')});
+  // Explicit replay probe of a completed test request: no extra identity, cycle or charge.
+  const replay=await fetch(site+'/api/autonomy',{method:'POST',headers:{Authorization:basic(operator),Origin:site,'Content-Type':'application/json','X-Supa-Action':'offline-autonomy'},body:JSON.stringify({request_id:outcome.agent_id,goal:workflowGoal,authorize_offline:true})});assert.equal(replay.status,409);
+  assert.equal((await request(offlineBase+'/financials')).balance_microusd,6700);
   const screenshots=[];
   for(const [name,width,height]of [['desktop',1440,1000],['tablet',768,1024],['mobile',390,844]]){
     await page.setViewportSize({width,height});
     for(const [section,text]of [['intelligence','Verify persistent integration'],['memory','Hypothesis'],['economy','Simulated ledger'],['social','never published']]){
       await page.goto(site+'/site/#'+section,{waitUntil:'domcontentloaded'});await page.locator('html[data-ready=true]').waitFor();
+      await page.waitForFunction(id=>[...document.querySelector('#agent-select').options].some(option=>option.value===id),agent);
+      await page.locator('#agent-select').evaluate((el,id)=>{el.value=id;el.dispatchEvent(new Event('change'));},agent);
       await page.waitForFunction(()=>document.querySelector('.buffer').dataset.typingState==='complete');
       assert.ok((await page.locator('.buffer').innerText()).includes(text),`${name} ${section} saved data absent`);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -64,8 +89,9 @@ try{
   service.kill('SIGTERM');await new Promise(r=>service.once('exit',r));
   const restarted=launch(resolve(root,'target/debug/supa-api'),[],root,{SUPA_BIND:`127.0.0.1:${apiPort}`});await ready(api+'/ready',restarted);
   assert.equal((await request(base)).agent.lifecycle,'paused');assert.equal((await request(base+'/cycles')).length,cycles.length);assert.equal((await request(base+'/memory')).length,memory.length);assert.deepEqual(await request(base+'/financials'),financials);
+  assert.equal((await request(offlineBase)).agent.lifecycle,'paused');assert.equal((await request(offlineBase+'/cycles')).length,3);assert.equal((await request(offlineBase+'/financials')).balance_microusd,6700);
   assert.deepEqual(errors,[]);
-  const report={passed:true,provider:'offline',database:'isolated_local_test',real_postgres:true,real_rust_api:true,real_next_host:true,api_restart_recovery:true,worker_default_paused:true,public_projection:true,private_reads_protected:true,writes_blocked:true,cycles:cycles.length,memories:memory.length,tool_actions:actions.length,simulated_expenses:financials.inference_microusd+financials.operating_microusd,screenshots,viewports:[1440,768,390],browser_errors:errors,paid_requests:0,transactions:0};
+  const report={passed:true,provider:'offline',database:'isolated_local_test',real_postgres:true,real_rust_api:true,real_next_host:true,api_restart_recovery:true,worker_default_paused:true,public_projection:true,private_reads_protected:true,unrestricted_writes_blocked:true,cycles:cycles.length,memories:memory.length,tool_actions:actions.length,simulated_expenses:financials.inference_microusd+financials.operating_microusd,offline_workflow:{agent_id:outcome.agent_id,cycles:offlineCycles.length,actions:offlineActions.length,memories:offlineMemory.length,lifecycle:'paused',simulated_expenses_microusd:3300,remaining_simulated_microusd:6700,duplicate_rejected:true,restart_preserved:true},screenshots:['offline-workflow-desktop.png','offline-workflow-mobile.png',...screenshots],viewports:[1440,768,390],browser_errors:errors,paid_requests:0,transactions:0};
   await writeFile(resolve(evidence,'system-check.json'),JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({...report,evidence_directory:evidence}));
   if(process.env.SUPA_REA_CDP_PORT){console.log(JSON.stringify({rea_origin:site,cdp_endpoint:`http://127.0.0.1:${process.env.SUPA_REA_CDP_PORT}`}));await new Promise(r=>{process.once('SIGTERM',r);process.once('SIGINT',r);});}
 }finally{
