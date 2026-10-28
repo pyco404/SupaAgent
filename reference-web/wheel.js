@@ -36,6 +36,10 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       thumbnail.decoding = "async";
       thumbnail.referrerPolicy = "no-referrer";
       button.append(thumbnail);
+    } else if(entry.preview) {
+      const thumbnail=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      thumbnail.setAttribute('class','wheel-thumb wheel-preview');thumbnail.setAttribute('viewBox','0 0 200 80');thumbnail.setAttribute('aria-hidden','true');
+      const use=document.createElementNS('http://www.w3.org/2000/svg','use');use.setAttribute('href',`/public/assets/navigation-previews.svg#${entry.preview}`);thumbnail.append(use);button.append(thumbnail);
     } else {
       const mark = document.createElement("span");
       mark.className = "wheel-thumb wheel-thumb-text";
@@ -45,7 +49,8 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
     }
     const label = document.createElement("span");
     label.className = "wheel-label";
-    label.textContent = entry.label;
+    const name=document.createElement('span');name.className='wheel-name';name.textContent=entry.label.split(' · ')[0];label.append(name);
+    if(entry.label.endsWith(' · planned')){const state=document.createElement('span');state.className='wheel-planned';state.textContent='planned';label.append(state);}
     button.append(label);
     row.append(button);
     list.append(row);
@@ -74,13 +79,13 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   };
   const dimensions = () => {
     const cardWidth = Math.min(150, Math.max(104, width * 0.66));
-    const cardHeight = cardWidth * 0.627;
-    const gap = Math.min(80, Math.max(55, height / 8.5));
+    const cardHeight = cardWidth * 0.74;
+    const gap = Math.min(88, Math.max(62, height / 7.5));
     return { cardWidth, cardHeight, gap };
   };
   const spine = (y) => {
     const normalized = (y - height / 2) / Math.max(height / 2, 1);
-    return -16 + normalized * normalized * Math.min(90, width * 0.4);
+    return -16 + normalized * normalized * Math.min(90, width * 0.4)+Math.sin(y/Math.max(height,1)*13+position*.35)*4;
   };
 
   function drawBranch() {
@@ -89,44 +94,38 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
     const ink = getComputedStyle(host).color || "#ebe6db";
     context.clearRect(0, 0, width + gutter, height);
     context.save();
-    context.translate(gutter + (matchMedia('(max-width:700px)').matches ? 41 : 0), 0);
+    context.translate(gutter + (matchMedia('(max-width:700px)').matches ? (width-dimensions().cardWidth)/2 : 0), 0);
     context.strokeStyle = ink;
     context.lineCap = "round";
-    context.lineWidth = 1.2;
+    context.lineWidth = 1.45;
     context.globalAlpha = 0.72;
     context.beginPath();
     for (let y = 0; y <= height; y += 3) {
-      const x = spine(y) + Math.sin(y * 0.036 + position * 0.5) * 1.2;
+      const x = spine(y) + Math.sin(y * 0.012 + position * 0.5) * .6;
       if (y === 0) context.moveTo(x, y); else context.lineTo(x, y);
     }
     context.stroke();
-    // Small, deterministic branchlets belong to the selected wheel position.
-    // The canvas redraws only during actual navigation, never on an idle loop.
-    for (let stem = 0; stem < 600; stem += 1) {
-      const seed = stem + Math.floor(position) * 19;
-      const y = random(seed + 1) * height;
-      const density = Math.pow(Math.sin(y * 0.024 + position * 0.7), 8);
-      if (random(seed + 2) > 0.2 + density * 0.8) continue;
-      const x = spine(y);
-      const length = 7 + random(seed + 3) * (18 + density * 68);
-      const direction = random(seed + 4) > 0.86 ? 1 : -1;
-      const tipX = x + direction * length;
-      const tipY = y - 9 - random(seed + 5) * 28;
-      context.globalAlpha = 0.16 + random(seed + 6) * 0.34;
-      context.lineWidth = 0.4;
-      context.beginPath();
-      context.moveTo(x, y);
-      context.quadraticCurveTo(x + direction * length * 0.3, y - 3, tipX, tipY);
-      context.stroke();
-      if (stem % 3 === 0) {
-        context.beginPath();
-        context.moveTo(x + direction * length * 0.35, y - 7);
-        context.lineTo(tipX - 5, tipY - 12);
-        context.stroke();
-        context.fillStyle = ink;
-        context.fillRect(tipX, tipY, 1.4, 1.4);
-      }
+    // Clustered fibers and junctions grow from the same spine; no idle redraws.
+    for(let stem=0;stem<420;stem++){
+      const seed=stem+Math.floor(position)*19,cluster=stem%5;
+      const center=[.07,.29,.55,.76,.96][cluster]*height;
+      const y=Math.max(0,Math.min(height,center+(random(seed+1)-.5)*height*.11));
+      const x=spine(y),direction=random(seed+4)>.87?1:-1;
+      const length=12+random(seed+3)**.65*(65+random(cluster+21)*45),tipX=x+direction*length,tipY=y-(random(seed+5)-.2)*90;
+      context.globalAlpha=.18+random(seed+6)*.45;context.lineWidth=.45;
+      context.beginPath();context.moveTo(x,y);context.bezierCurveTo(x+direction*length*.15,y-5,x+direction*length*.5,tipY+20,tipX,tipY);context.stroke();
+      if(stem%3===0){context.fillStyle=ink;context.globalAlpha=.65;context.fillRect(tipX,tipY,1.7,1.7);}
     }
+    const {gap,cardWidth}=dimensions();
+    buttons.forEach((button,index)=>{
+      const distance=wrappedDistance(index-position),y=height/2+Math.sin(distance*.17)/.17*gap;
+      if(y<0||y>height)return;
+      const cardX=3+Math.abs(distance)**2*Math.min(6,width/38);
+      const scale=.64+Math.max(0,1-Math.abs(distance)*2)*.36,angle=-distance*.085;
+      const endX=cardX+cardWidth/2-Math.cos(angle)*cardWidth*scale/2,endY=y-Math.sin(angle)*cardWidth*scale/2;
+      context.globalAlpha=index === selected ? .6 : .22;context.lineWidth=.6;
+      context.beginPath();context.moveTo(spine(y),y);context.bezierCurveTo(spine(y)+12,y-12,endX-8,endY-8,endX,endY);context.stroke();
+    });
     context.restore();
   }
 
@@ -135,7 +134,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
     buttons.forEach((button, index) => {
       const distance = wrappedDistance(index - position);
       const y = height / 2 + Math.sin(distance * 0.17) / 0.17 * gap - cardHeight / 2;
-      const x = 3 + (matchMedia('(max-width:700px)').matches ? 41 : 0) + Math.pow(Math.abs(distance), 2) * Math.min(6, width / 38);
+      const x = 3 + (matchMedia('(max-width:700px)').matches ? (width-dimensions().cardWidth)/2 : 0) + Math.pow(Math.abs(distance), 2) * Math.min(6, width / 38);
       const scale = 0.64 + Math.max(0, 1 - Math.abs(distance) * 2) * 0.36;
       button.style.position = "absolute";
       button.style.left = "0";
