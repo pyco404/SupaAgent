@@ -14,7 +14,7 @@ export function operatorToken(header:string|null):string|null {
       accounts.push(account);
     }
   } catch { return null; }
-  if(new Set(accounts.map(a=>a.username)).size!==accounts.length) return null;
+  if(new Set(accounts.map(a=>a.username)).size!==accounts.length || new Set(accounts.map(a=>a.api_token)).size!==accounts.length) return null;
   const hash=(value:string)=>createHash("sha256").update(value).digest();
   for(const account of accounts) {
     if(account.password.length<24 || account.api_token.length<32 || account.api_token.length>256 || !/^[\x21-\x7e]+$/.test(account.api_token)) continue;
