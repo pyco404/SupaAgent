@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""Start the local read-only website against the existing isolated Devnet database.
+
+Never loads .env.eval; never runs a reasoning cycle or a wallet sync. All child
+processes bind loopback. Stop with Ctrl-C. Credentials stay in web/.env.local.
+"""
+import os
+from pathlib import Path
+import secrets
+import shlex
+import signal
+import subprocess
+import sys
+import time
+from urllib.parse import urlparse
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def read_private(path):
+    if path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o077:
+        raise ValueError('private_configuration_requires_regular_mode_600_file')
+    values = {}
+    for line in path.read_text().splitlines():
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        key, value = line.split('=', 1)
+        if key in values:
+            raise ValueError('duplicate_configuration_key')
+        parts = shlex.split(value)
+        if len(parts) != 1:
+            raise ValueError('invalid_configuration_value')
+        values[key] = parts[0]
+    return values
+
+
+def run():
+    if len(sys.argv) > 1:
+        raise ValueError('no_execution_or_paid_options_supported')
+    devnet = read_private(ROOT / '.env.devnet')
+    database = urlparse(devnet['SUPA_DEVNET_DATABASE_URL'])
+    if database.hostname != '127.0.0.1' or database.path != '/supa_devnet':
+        raise ValueError('dedicated_loopback_devnet_database_required')
+    pg = {**os.environ, 'PGHOST': database.hostname, 'PGPORT': str(database.port or 5432),
+          'PGUSER': database.username or '', 'PGDATABASE': 'supa_devnet',
+          'PGPASSWORD': database.password or ''}
+    check = subprocess.run(['psql', '-XAt', '-c', "SELECT count(*) FROM agents WHERE data->>'lifecycle'='active' OR COALESCE((data->'config'->>'scheduler_enabled')::boolean,true);"],
+                           env=pg, capture_output=True, text=True)
+    if check.returncode or check.stdout.strip() != '0':
+        raise ValueError('devnet_database_must_have_no_active_or_scheduled_agents')
+    config_path = ROOT / 'web/.env.local'
+    if not config_path.exists():
+        values = {'SUPA_BACKEND_URL': 'http://127.0.0.1:8080', 'SUPA_API_TOKEN': secrets.token_urlsafe(48),
+                  'SUPA_WEB_USERNAME': 'operator', 'SUPA_WEB_PASSWORD': secrets.token_urlsafe(36)}
+        fd = os.open(config_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        with os.fdopen(fd, 'w') as handle:
+            handle.write('# Private local operator configuration. Never commit or paste.\n')
+            handle.write(''.join(f'{key}={value}\n' for key, value in values.items()))
+    web = read_private(config_path)
+    if web.get('SUPA_BACKEND_URL') != 'http://127.0.0.1:8080' or len(web.get('SUPA_API_TOKEN', '')) < 32 or len(web.get('SUPA_WEB_PASSWORD', '')) < 24 or not web.get('SUPA_WEB_USERNAME'):
+        raise ValueError('local_web_configuration_invalid_existing_file_preserved')
+    # Deliberate allowlist: no OpenAI credentials, live budgets or shell overrides.
+    base = {k: os.environ[k] for k in ('PATH', 'HOME', 'LANG', 'RUSTUP_HOME', 'CARGO_HOME') if k in os.environ}
+    api_env = {**base, **devnet, 'DATABASE_URL': devnet['SUPA_DEVNET_DATABASE_URL'],
+               'SUPA_API_TOKEN': web['SUPA_API_TOKEN'], 'SUPA_BIND': '127.0.0.1:8080',
+               'SUPA_PROVIDER': 'offline', 'SUPA_WALLET_ENABLED': 'true'}
+    children = []
+    def stop(*_):
+        for child in reversed(children):
+            try:
+                os.killpg(child.pid, signal.SIGINT)
+            except ProcessLookupError:
+                pass
+        for child in reversed(children):
+            try:
+                child.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(child.pid, signal.SIGTERM)
+    def interrupted(*_):
+        stop()
+        raise SystemExit(0)
+    signal.signal(signal.SIGINT, interrupted)
+    signal.signal(signal.SIGTERM, interrupted)
+    try:
+        children.append(subprocess.Popen(['cargo', 'run', '-p', 'supa-api', '--locked', '--offline'], cwd=ROOT, env=api_env, start_new_session=True))
+        children.append(subprocess.Popen(['npm', 'run', 'start', '--', '--port', '3000'], cwd=ROOT / 'web', env={**base, **web}, start_new_session=True))
+        print('Local console: http://127.0.0.1:3000 / operator credentials: web/.env.local (not printed)', flush=True)
+        while all(child.poll() is None for child in children):
+            time.sleep(1)
+        raise ValueError('local_child_process_stopped')
+    finally:
+        stop()
+
+
+if __name__ == '__main__':
+    try:
+        run()
+    except (ValueError, KeyError, OSError):
+        print('local_web_setup_failed: check private files, database availability and local ports', file=sys.stderr)
+        sys.exit(1)
