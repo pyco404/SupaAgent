@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="An isolated local study of the current hancore.dev experience. No Supa services are connected.">
-  <title>Hancore — local reference study</title>
-  <link rel="icon" href="https://hancore.dev/favicon.svg" type="image/svg+xml">
+  <meta name="description" content="Supa Agent. Born to think. Built to survive. Explore persistent agents and read-only economic records.">
+  <title>Supa Agent — Born to think. Built to survive.</title>
+  <link rel="icon" href="/public/assets/supa-agent-icon.svg" type="image/svg+xml">
   <link rel="preload" href="/public/fonts/IBMPlexMono-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -14,38 +14,39 @@
   <a class="skip" href="#workspace">Skip to the workspace</a>
   <main class="stage" id="workspace">
     <header class="frame-top">
-      <a class="brand" href="/" aria-label="hancore.dev intro"><img src="https://hancore.dev/favicon.svg" width="15" height="14" alt="" referrerpolicy="no-referrer"><span>hancore.dev</span></a>
-      <a class="github" href="https://github.com/HANCORE-linux" target="_blank" rel="noopener noreferrer">github</a>
+      <a class="brand" href="/" aria-label="Supa Agent introduction"><img src="/public/assets/supa-agent-icon.svg" width="15" height="14" alt="" referrerpolicy="no-referrer"><span>supa agent</span></a>
+      <a class="github" href="https://github.com/pyco404/SupaAgent" target="_blank" rel="noopener noreferrer">github</a>
     </header>
-    <h1 class="sr-only">Hancore reference: code, projects and an animated terminal.</h1>
+    <h1 class="sr-only">Supa Agent. Born to think. Built to survive.</h1>
     <section class="intro" aria-label="Animated code introduction">
       <img class="intro-mascot" src="/public/assets/supa-agent.svg" width="300" height="300" alt="" aria-hidden="true" draggable="false">
       <canvas class="intro-canvas" aria-hidden="true"></canvas>
-      <p class="sr-only">A single code editor types from top to bottom over a faint Supa Agent pixel logo. Animated fingers type on the keyboard; no camera is used. Enter opens the project browser.</p>
-      <div class="intro-modes" aria-hidden="true"><span class="mode-label">INSERT</span><span class="intro-file">reference-web/app.js</span><span class="intro-position">1:1</span></div>
-      <p class="intro-command" aria-hidden="true">: ./scene --track</p>
-      <footer class="intro-bottom"><span>// engineering with feeling.</span><div><button class="theme-key" aria-label="Change dark theme">⌁ :theme</button><a class="enter" href="/site/">enter ↩</a></div></footer>
+      <p class="sr-only">A single code editor types from top to bottom over a faint Supa Agent pixel logo. Animated fingers type on the keyboard; no camera is used. Enter opens the Supa workspace.</p>
+      <div class="intro-modes" aria-hidden="true"><span class="mode-label">INSERT</span><span class="intro-file">supa-agent/app.js</span><span class="intro-position">1:1</span></div>
+      <p class="intro-command" aria-hidden="true">: supa status</p>
+      <footer class="intro-bottom"><span>// Born to think. Built to survive.</span><div><button class="theme-key" aria-label="Change dark theme">⌁ :theme</button><a class="enter" href="/site/">enter ↩</a></div></footer>
     </section>
-    <section class="projects" aria-label="Project browser" hidden>
-      <button class="tabline" aria-expanded="false" aria-controls="project-tree"><span>~/Projects</span><span class="tab-file">whoami</span><span aria-hidden="true">↓</span></button>
+    <section class="projects" aria-label="Supa Agent workspace" hidden>
+      <button class="tabline" aria-expanded="false" aria-controls="project-tree"><span>~/supa</span><span class="tab-file">Home</span><span class="menu-indicator" aria-hidden="true">☰</span></button>
       <div class="editor">
-        <nav class="wheel" id="project-tree" tabindex="0" aria-label="Project navigation"><canvas class="wheel-ink" aria-hidden="true"></canvas></nav>
+        <nav class="wheel" id="project-tree" tabindex="0" aria-label="Supa navigation"><canvas class="wheel-ink" aria-hidden="true"></canvas></nav>
         <div class="pane">
-          <p class="winbar">fish — ~ · HANCORE-linux</p>
-          <canvas class="blueprint" aria-label="Generative contribution diagram based on the captured public GitHub snapshot" role="img"></canvas>
-          <div class="buffer" tabindex="0" aria-label="Project terminal" aria-live="polite"></div>
+          <div class="workspace-controls"><label for="agent-select">Agent</label><select id="agent-select"><option value="">Select an agent</option></select><button class="reload-records">Reload saved records</button><button class="command-toggle">Command</button><a href="/operator">Operator sign-in</a></div>
+          <p class="winbar">supa — read-only workspace</p>
+          <canvas class="blueprint" aria-label="Decorative architecture branches; not live agent activity" role="img"></canvas>
+          <div class="buffer" tabindex="0" aria-label="Supa terminal" aria-live="polite"></div>
           <canvas class="entity" aria-hidden="true"></canvas>
         </div>
       </div>
-      <footer class="bar" aria-label="Reference snapshot statistics">
-        <div class="bar-id"><span>HANCORE-LINUX</span><small class="key-feedback">↑↓ project · ↔ shot · ↩ enter · : cmd</small></div>
-        <div class="stat"><span>REPOS</span><b data-stat="repos">—</b></div><div class="stat"><span>STARS</span><b data-stat="stars">—</b></div><div class="stat"><span>FOLLOWERS</span><b data-stat="followers">—</b></div>
-        <div class="stat"><span>WORM</span><button class="worm-switch" aria-pressed="false">asleep</button></div><div class="stat entity-state"><span>EYE</span><b>tracking</b></div><div class="stat entity-state"><span>GHOST</span><b>idle</b></div>
-        <div class="snapshot"><span>CAPTURED GITHUB DATA</span><span class="snapshot-date"></span><canvas class="spark" aria-hidden="true"></canvas></div>
+      <footer class="bar" aria-label="Saved record status">
+        <div class="bar-id"><span>SUPA AGENT</span><small class="key-feedback">↑↓ navigate · : supa help</small></div>
+        <div class="stat"><span>AGENTS</span><b data-stat="repos">—</b></div><div class="stat"><span>API</span><b data-stat="stars">—</b></div><div class="stat"><span>MODE</span><b data-stat="followers">—</b></div>
+        <div class="stat"><span>AMBIENT</span><button class="worm-switch" aria-pressed="false">asleep</button></div><div class="stat entity-state"><span>POINTER</span><b>tracking</b></div><div class="stat entity-state"><span>TEXT</span><b>idle</b></div>
+        <div class="snapshot"><span>SAVED RECORDS</span><span class="snapshot-date"></span><canvas class="spark" aria-hidden="true"></canvas></div>
       </footer>
-      <p class="study-note">LOCAL REFERENCE STUDY · no analytics · no Supa services connected</p>
+      <p class="study-note">READ-ONLY · Simulated economics / Devnet test observations · Mainnet unavailable</p>
     </section>
-    <form class="command" hidden autocomplete="off"><label for="command-input">:</label><input id="command-input" class="command-input" aria-label="Terminal command" spellcheck="false" maxlength="80"><button type="submit">↩</button><span class="command-help">theme · e project · help · q</span></form>
+    <form class="command" hidden autocomplete="off"><label for="command-input">:</label><input id="command-input" class="command-input" aria-label="Terminal command" spellcheck="false" maxlength="80"><button type="submit">↩</button><span class="command-help">supa status · supa agents · supa help</span></form>
     <p class="announcement sr-only" role="status"></p>
   </main>
   <canvas class="transition" aria-hidden="true"></canvas>
