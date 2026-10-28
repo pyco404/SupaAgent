@@ -19,5 +19,7 @@ test("verified payment rows retain exact mint, network and evidence while stripp
   expect(schemas.payments.safeParse([{ ...row, data: { ...proof, network: "mainnet" } }]).success).toBe(false);
 });
 test("API projections strip unrequested upstream fields", () => {
-  expect(schemas.agent.parse({ agent: { ...agent, private_context: "not-public" }, financials, debug: "not-public" })).toEqual({ agent, financials });
+  const parsed = schemas.agent.parse({ agent: { ...agent, private_context: "not-public" }, financials, debug: "not-public" });
+  expect(parsed).toEqual({ agent: { ...agent, personality: { traits: agent.personality.traits } }, financials });
+  expect(parsed.agent.personality).not.toHaveProperty("voice");
 });
