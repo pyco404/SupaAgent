@@ -13,7 +13,7 @@ test('scheduling requires goal selection and explicit consent without triggering
   const panel=page.locator('.schedule-panel');await panel.getByLabel('Operator reason').fill('Review outcomes j k');await panel.getByLabel('Operator reason').pressSequentially(' jk');
   await panel.getByRole('button',{name:'Apply authorized lifecycle operation'}).click();expect(calls).toHaveLength(0);
   await panel.locator('[name=schedule-authorization]').check();await panel.getByRole('button',{name:'Apply authorized lifecycle operation'}).click();await expect(panel.getByRole('status')).toContainText('Select at least one');
-  await panel.locator('[name=approved-goal]').check();await panel.getByRole('button',{name:'Apply authorized lifecycle operation'}).click();await expect(panel.getByRole('status')).toContainText('Saved start');expect(calls).toHaveLength(1);
+  await panel.locator('[name=approved-goal]').check();await expect(panel.locator('[name=schedule-authorization]')).not.toBeChecked();await panel.locator('[name=schedule-authorization]').check();await panel.getByRole('button',{name:'Apply authorized lifecycle operation'}).click();await expect(panel.getByRole('status')).toContainText('Saved start');expect(calls).toHaveLength(1);
   expect(calls[0].policy.goal_ids).toEqual([id]);expect(calls[0].expected_revision).toBe(0);expect(calls[0].authorize_offline).toBe(true);await expect(panel.getByRole('button',{name:'Apply authorized lifecycle operation'})).toBeDisabled();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test('pause and permanent stop require fresh consent and uncertain responses are never replayed',async({page})=>{
@@ -24,4 +24,19 @@ test('pause and permanent stop require fresh consent and uncertain responses are
 });
 test('terminated identities expose saved history and no executable controls',async({page})=>{
   await visit(page,()=>{throw Error('No operation authorized');},status('terminated'));const panel=page.locator('.schedule-panel');await expect(panel.locator('.schedule-form')).toBeHidden();await expect(panel).toContainText('permanently terminated');await expect(panel.getByRole('button',{name:'Reload saved schedule'})).toBeVisible();
+});
+
+test('owner renewal requires specific new limits and clears consent when they change',async({page})=>{
+  const calls=[];await visit(page,async route=>{calls.push(route.request().postDataJSON());await route.fulfill({json:status('active')});},status('paused'));
+  const panel=page.locator('.schedule-panel');await panel.getByLabel('Lifecycle operation').selectOption('renew');await expect(panel.locator('[name=approved-goal]')).not.toBeChecked();
+  await panel.locator('[name=approved-goal]').check();await panel.getByLabel('Operator reason').fill('Fresh finite renewal approval');await panel.locator('[name=schedule-authorization]').check();
+  await panel.locator('[name=max_cycles]').fill('2');await expect(panel.locator('[name=schedule-authorization]')).not.toBeChecked();
+  await panel.locator('[name=schedule-authorization]').check();await panel.getByRole('button',{name:'Apply authorized lifecycle operation'}).click();await expect(panel.getByRole('status')).toContainText('Saved renew');
+  expect(calls).toHaveLength(1);expect(calls[0].policy.max_cycles).toBe(2);expect(calls[0].policy.goal_ids).toEqual([id]);expect(Number.isFinite(Date.parse(calls[0].consented_at))).toBe(true);
+});
+test('viewer reads genuine health contract without lifecycle controls or inferred running state',async({page})=>{
+  await page.route('**/api/agents/*/access',route=>route.fulfill({json:{role:'viewer'}}));
+  await page.route('**/api/agents/*/execution-health',route=>route.fulfill({json:{agent_id:id,status:'delayed',execution_running:false,worker_enabled:true,lifecycle:'active',checked_at:'2026-10-28T23:00:00Z',heartbeat_at:'2026-10-28T22:59:59Z',tick_finished_at:null,lease_until:null,cycle_id:null}}));
+  await visit(page,()=>{throw Error('No write permitted');},status('active'));
+  await expect(page.locator('.schedule-panel form')).toBeHidden();await expect(page.locator('.buffer')).toContainText('Your role  viewer');await expect(page.locator('.buffer')).toContainText('Worker health  delayed');await expect(page.locator('.buffer')).toContainText('No verified running execution');
 });
