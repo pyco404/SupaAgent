@@ -76,6 +76,7 @@ async fn bounded_offline_operator_workflow_persists_and_rejects_replay() {
         TOKEN.into(),
     )
     .unwrap();
+    let state = state.with_operator(Uuid::from_u128(1)).unwrap();
     let app = router(state.clone());
     assert_eq!(request(&app, None, false).await.0, StatusCode::UNAUTHORIZED);
     let (status, limits) = request(&app, None, true).await;
