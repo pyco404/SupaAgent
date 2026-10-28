@@ -1,0 +1,55 @@
+{
+  "captures": [
+    {
+      "evidence_id": "ev_70ac34136715d2a0b5bfee5bc4f9c31a4a0867cb8f7bb8c0b496226a7650b48a",
+      "view": "mobile-social",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "a3b2b9b56d4917f5c9382b9cc93b88d9d115abf4e9276e8dfa984256b6be827e"
+    },
+    {
+      "evidence_id": "ev_fdf177e0924603f39e6745b905a51c04fe9d5a6973c5904f2a4abceb681d30e7",
+      "view": "desktop-intelligence",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "135b27a389074e954759fd060e16cf6caaa3fe525ae36fc88543d9f15262b4b8"
+    },
+    {
+      "evidence_id": "ev_5dd158253862fe7133e22bb59fd356d2527cf13e9febd3a7168d0dd80a858020",
+      "view": "tablet-memory",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "sha256": "3b3664e42db9a808ec37b6c18cea5f81e1c6d2b11599f9292bfd4973a4d9425b"
+    },
+    {
+      "evidence_id": "ev_db4956d53bf8813bc3971e11bea3cfcfb4122560bb9049dbc51adaaa77c0456d",
+      "view": "mobile-navigation",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "890ecd1b5e4923a3d1e21af43f48663ff7855af45d5d9b85b8bc6b1fa3904a9c"
+    }
+  ],
+  "tools": [
+    "list_browser_targets",
+    "capture_web_screenshot",
+    "inspect_web_page"
+  ],
+  "page_inspection_evidence_id": "ev_d48ab61e6cd097919366389d1449b1c814acff3b6b9da7eeae5d424a041cf177",
+  "limitations": [
+    "Chrome emulation; no physical mobile device tested.",
+    "Screenshots establish rendered state; automated input checks establish interactions.",
+    "No Railway deployment or network validation performed."
+  ],
+  "impeccable_detector": {
+    "cdp_port": 9237,
+    "findings": 0
+  }
+}
