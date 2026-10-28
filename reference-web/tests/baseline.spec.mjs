@@ -391,3 +391,27 @@ test("returning to the intro restarts its code and typing hands from the top", a
   await expect(intro).toHaveAttribute('data-hand-state','typing');
   await page.emulateMedia({reducedMotion:'reduce'});await expect(intro).toHaveAttribute('data-intro-state','complete');
 });
+
+test('mascot draws a full-viewport pointer tether without intercepting input', async ({ page }) => {
+  await open(page, '/site/#home');
+  const tether=page.locator('.pointer-tether');
+  for(const reducedMotion of ['reduce','no-preference']){
+    await page.emulateMedia({reducedMotion});
+    const {width,height}=page.viewportSize(),x=Math.round(width*.55),y=Math.round(height*.7);
+    await page.mouse.move(x,y);
+    await expect(tether).toHaveAttribute('data-active','true');
+    const result=await tether.evaluate(canvas=>{
+      const [sx,sy,x,y]=canvas.dataset.endpoints.split(',').map(Number),box=document.querySelector('.entity').getBoundingClientRect();
+      const scale=canvas.width/innerWidth,ctx=canvas.getContext('2d');let painted=0;
+      // Check the middle of the long line, away from either endpoint.
+      for(let t=.35;t<.65;t+=.005){const pixel=ctx.getImageData(Math.round((sx+(x-sx)*t)*scale),Math.round((sy+(y-sy)*t)*scale),1,1).data;if(pixel[3])painted++;}
+      return {sx,sy,x,y,anchorX:box.left+box.width*.5,anchorY:box.top+box.height*.4,painted,pointerEvents:getComputedStyle(canvas).pointerEvents,hit:document.elementFromPoint(x,y)?.className};
+    });
+    expect(result.x).toBeCloseTo(x);expect(result.y).toBeCloseTo(y);expect(result.sx).toBeCloseTo(result.anchorX);expect(result.sy).toBeCloseTo(result.anchorY);
+    expect(result.painted).toBeGreaterThan(5);expect(result.pointerEvents).toBe('none');expect(result.hit).not.toBe('pointer-tether');
+  }
+  await page.evaluate(()=>document.documentElement.dispatchEvent(new PointerEvent('pointerleave')));
+  await expect(tether).toHaveAttribute('data-active','false');
+  await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointermove',{clientX:100,clientY:200,pointerType:'touch'})));
+  await expect(tether).toHaveAttribute('data-active','false');
+});
