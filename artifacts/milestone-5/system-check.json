@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "provider": "offline",
+  "database": "isolated_local_test",
+  "real_postgres": true,
+  "real_rust_api": true,
+  "real_next_host": true,
+  "api_restart_recovery": true,
+  "worker_default_paused": true,
+  "public_projection": true,
+  "private_reads_protected": true,
+  "writes_blocked": true,
+  "cycles": 1,
+  "memories": 2,
+  "tool_actions": 1,
+  "simulated_expenses": 1100,
+  "screenshots": [
+    "desktop-intelligence.png",
+    "desktop-economy.png",
+    "tablet-intelligence.png",
+    "mobile-intelligence.png"
+  ],
+  "viewports": [
+    1440,
+    768,
+    390
+  ],
+  "browser_errors": [],
+  "paid_requests": 0,
+  "transactions": 0
+}
