@@ -197,7 +197,7 @@ assertions come from the browser tests, not a complete REA runtime trace.
 A viewport-sized, non-interactive canvas connects the code mascot to the mouse
 with a warm-ivory dashed line and cursor box. The former pointer listener stored
 coordinates without rendering them. The tether now follows those coordinates,
-hides on pointer exit/window blur, touch input, intro and portal transitions, and
+hides on pointer exit/window blur, touch input and portal transitions, and
 is removed with the scene. Reduced motion follows deliberate pointer input
 without adding easing or a continuous animation loop.
 
@@ -231,3 +231,20 @@ running animation: [desktop](evidence/2026-10-28/supa-animated-branches-desktop.
 Evidence IDs: `ev_fa5cff7184049adec7499deb8a52ddcc57308a75c321a31c9ffa52279a9dd2a1`
 and `ev_d2b78c22bb05680b24dad08fddbd1e8cb617e16c2c9866e43c0cdea23410a228`.
 Screenshots establish appearance; browser pixel comparisons establish motion.
+
+### Opening-screen mouse pointer
+
+The same dotted mascot-to-mouse tether and small outlined cursor box now appear
+on the typing intro. Its origin follows the code robot's responsive bounds;
+entering the portal suppresses it and entering the workspace switches its anchor
+to the workspace mascot. It never intercepts input and remains suppressed for
+touch input. Pointer-driven updates also work with reduced motion.
+
+REA inspected the rendered intro with a mouse at desktop and mobile widths:
+[desktop](evidence/2026-10-28/supa-intro-pointer-desktop.png) /
+[mobile with mouse](evidence/2026-10-28/supa-intro-pointer-mobile.png).
+Evidence IDs: `ev_3015f07e664b3bbfcf92266cbe66cadeb8b5f23000794201ffd2ddcb1c6bad08`
+and `ev_64be3207f30818c79d6104a8644b3ab2d63d30a6cd9c4f68d118b8754592a12d`.
+Screenshots establish appearance; browser tests check responsive anchor positions,
+painted pixels, touch suppression and transitions between intro and workspace.
+Syntax/build and all 15 focused desktop/tablet/mobile browser tests passed.
