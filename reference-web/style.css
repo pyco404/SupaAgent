@@ -39,6 +39,7 @@ body[data-view=intro] .frame-top,.intro-bottom{font-size:clamp(12px,1vw,16px);li
 .intro-modes[data-mode=INSERT] .mode-label{background:var(--green)}
 .intro-file{overflow:hidden;text-overflow:ellipsis}.intro-position{margin-left:auto;padding-right:5px!important}
 .intro-command{position:fixed;top:calc(70dvh + clamp(15px,1.2vw,21px));left:18vw;margin:0;color:var(--dim);font-size:clamp(11px,.93vw,16px);line-height:1.2}
+.transition.active{pointer-events:auto}
 html[data-motion=still] .intro-modes{top:70dvh;bottom:auto;display:flex}
 html[data-motion=still] .intro-modes span+span{display:block}
 @media(max-width:700px){
