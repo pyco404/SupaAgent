@@ -126,6 +126,7 @@ body[data-view=projects] .stage{height:100dvh;min-height:0;padding-bottom:0}
 .autonomy-form textarea:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
 .autonomy-consent{display:flex;align-items:flex-start;gap:10px}.autonomy-consent input{flex:none;width:18px;height:18px;margin:3px 0;accent-color:var(--green)}
 .autonomy-panel button{min-height:44px;padding:8px 10px;border:1px solid var(--line);text-align:left;white-space:normal}.autonomy-panel>button{margin:8px 8px 8px 0}
+.schedule-form select,.schedule-form input[type=number]{display:block;min-height:44px;width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;color-scheme:dark}.schedule-policy{display:grid;gap:14px;min-width:0;margin:0;padding:12px;border:1px solid var(--line)}.schedule-policy legend{padding:0 6px}.schedule-form :disabled{opacity:.6}.schedule-form select:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
 /* Keep native scrolling, with a single-pixel terminal line in supporting browsers. */
 @supports selector(::-webkit-scrollbar){
   .buffer,.agent-options{scrollbar-width:auto;scrollbar-color:auto}
