@@ -112,6 +112,16 @@ The detector also reported an advisory about repeating stripes. Those stripes ar
 
 The appropriate next step is review of these baseline captures and outstanding fidelity decisions before integrating Supa branding or product capabilities. This report does not mark exact reference equivalence complete.
 
+## Follow-up: slow top-to-bottom opening code
+
+The requested opening now reveals characters from the first line downward, in both desktop panes and the single mobile pane. Its typing budget is 30ms per character with eight additional character intervals (240ms) between lines. Completed lines stay in place; the previous periodic line rotation is removed. A caret follows the active line. The sequence starts again on page load/source initialization, pauses while the tab is hidden, and leaves Enter navigation available throughout. Reduced motion reveals all text immediately and keeps it complete when normal motion is restored.
+
+Actual REA normal-motion captures at 1440×1000 showed approximately two partially revealed lines after the early wait and seven lines after the later wait, with lower rows unpainted. Evidence IDs: `ev_ac2c19e34aec6542bef94dd9f8085f9e9369cc00f7a4a26b5017475b863f1bc3` (1.8s requested wait) and `ev_4c5037229bc03864f4a91ed961ceb26f7c57aa164f02c90661ac2bfd4d2082fd` (8s requested wait). These are sampled browser observations, not frame-exact timings. The earlier committed screenshots and hash manifest remain historical baseline evidence, not refreshed artifacts for this change.
+
+A new browser regression verifies gradual character/row progress and immediate completion under reduced motion across desktop, tablet and mobile. The first full run passed 41/42 cases; one existing desktop navigation case exceeded its total timeout amid slow startup and browser commands. Its trace recorded the expected selection change. A complete rerun was performed after closing the independent inspection browser, with automatic retries still disabled.
+
+The final complete rerun passed **42/42 tests**, with no failed, skipped, flaky or automatically retried cases. Syntax checks, static build and whitespace validation also passed. The original 39-test validation JSON above documents the earlier baseline; the latest full result is in the ignored local `test-results/results.json`.
+
 ## Git handling
 
 All new eligible files are committed individually on `main` through `scripts/commit-one`, with one descriptive Conventional Commit per file and hooks enabled. Secret scanning and the one-file history audit are required before completion. The pre-existing root `.gitignore` edit is preserved and excluded from these commits. No archival branch, private evaluation files or credentials are added. No push or deployment is authorized by this task.
