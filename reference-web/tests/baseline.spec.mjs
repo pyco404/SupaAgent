@@ -68,21 +68,15 @@ test("command input is keyboard accessible and does not navigate externally", as
   expect(await page.evaluate(() => globalThis.__supaCommandExecuted)).toBeUndefined();
 });
 
-test("project hashes restore direct and nested project selections", async ({ page }) => {
-  await open(page, "/site/#waybar-themes");
-  await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("data-index", "3");
-  await expect(page.locator('.wheel-item[aria-selected="true"]')).toContainText("waybar-themes");
-  await page.locator(".buffer").focus();
-  await page.keyboard.press(":");
-  await page.locator(".command-input").fill("e GitHub-Traffic-Board");
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/site\/#GitHub-Traffic-Board$/i);
-  await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("aria-label", "more/");
-  await expect(page.locator(".buffer")).toContainText("open GitHub-Traffic-Board");
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
-  await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("aria-label", "more/");
-  await expect(page.locator(".buffer")).toContainText("open GitHub-Traffic-Board");
+test("Supa hashes and navigational commands restore saved selections", async ({ page }) => {
+  await open(page, "/site/#economy");
+  await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("data-index", "4");
+  await page.locator(".buffer").focus();await page.keyboard.press(":");
+  await page.locator(".command-input").fill("supa social");await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#social$/);
+  await expect(page.locator(".buffer")).toContainText("Select an agent");
+  await page.reload({waitUntil:"domcontentloaded"});
+  await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("aria-label", "Social");
 });
 
 test("dark palette survives reload and live motion preference changes are respected", async ({ page }) => {
@@ -118,7 +112,7 @@ test("normal terminal boot restores complete accessible text when motion is redu
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(buffer).toHaveAttribute("aria-busy", "false");
   await expect(buffer).toHaveAttribute("aria-live", "polite");
-  await expect(buffer.getByRole("link", { name: "github", exact: true })).toBeVisible();
+  await expect(buffer).toContainText("Born to think. Built to survive.");
   expect(await buffer.locator("[hidden]").count()).toBe(0);
   await expect(page.locator(".entity-state b").nth(1)).toHaveText("idle");
 });
@@ -147,7 +141,7 @@ test("opening uses one file status bar and keeps it inside the viewport", async 
   const status = page.locator(".intro-modes");
   await expect(status.locator(".mode-label")).toHaveCount(1);
   await expect(status.locator(".mode-label")).toHaveText("NORMAL");
-  await expect(status.locator(".intro-file")).toHaveText("reference-web/app.js");
+  await expect(status.locator(".intro-file")).toHaveText("supa-agent/app.js");
   await expect(status.locator(".intro-position")).toHaveText(/\d+:\d+/);
   await expect(page.locator(".intro-command")).toBeVisible();
   const box = await status.boundingBox();
@@ -292,9 +286,9 @@ test("changing projects cancels the previous terminal boot without restoring sta
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator(".buffer")).toHaveAttribute("aria-busy", "false");
-  await expect(page.locator(".buffer")).toContainText("open Shibumi-Shell");
-  await expect(page.locator(".buffer")).not.toContainText("fetch HANCORE-linux");
-  await expect(page.locator(".buffer").getByRole("link", { name: "view repository ↗" })).toBeVisible();
+  await expect(page.locator(".buffer")).toContainText("Existing agents");
+  await expect(page.locator(".buffer")).not.toContainText("Platform vision");
+  await expect(page.locator(".buffer")).toContainText("saved records");
   await expect(page.locator(".entity-state b").nth(1)).toHaveText("idle");
 });
 
@@ -325,7 +319,7 @@ test("project wheel responds to pointer scrolling and card selection", async ({ 
   await expect(selected()).toHaveAttribute("data-index", initial);
 });
 
-test("reference preview has no backend, analytics or paid API requests", async ({ page }) => {
+test("Supa browser uses same-origin read APIs without paid or external requests", async ({ page }) => {
   const requests = [];
   const errors = [];
   page.on("request", request => requests.push(request.url()));
@@ -334,8 +328,8 @@ test("reference preview has no backend, analytics or paid API requests", async (
   await page.locator("a.enter").click();
   await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
   await expect(page.locator(".bar")).toBeVisible();
-  for (const url of requests) expect(["http://127.0.0.1:3201", "https://hancore.dev"]).toContain(new URL(url).origin);
-  expect(requests.some(url => /(?:api\.openai|solana|\/api\/|analytics|plausible)/i.test(url))).toBe(false);
+  for (const url of requests) expect(["http://127.0.0.1:3201"]).toContain(new URL(url).origin);
+  expect(requests.some(url => /(?:api\.openai|solana|analytics|plausible)/i.test(url))).toBe(false);
   expect(errors).toEqual([]);
 });
 
@@ -353,7 +347,7 @@ test("responsive scenes fit all supported widths with reduced motion", async ({ 
 test("preview is read only and cannot expose project secrets or parent paths", async ({ request }) => {
   const health = await request.get("/healthz");
   expect(health.status()).toBe(200);
-  expect(await health.json()).toMatchObject({ mode: "isolated-reference", host: "127.0.0.1" });
+  expect(await health.json()).toMatchObject({ mode: "supa-read-only", host: "127.0.0.1" });
   expect(health.headers()["content-security-policy"]).toContain("connect-src 'self'");
   expect(health.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   for (const path of ["/.env", "/.env.eval", "/server.mjs", "/package.json", "/public/.env", "/%2e%2e/.env.eval", "/public/%2e%2e/%2e%2e/.env.eval", "/%2f%2e%2e%2f.env.eval"]) {
