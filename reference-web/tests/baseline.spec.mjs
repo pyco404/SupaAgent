@@ -351,7 +351,7 @@ test("responsive scenes fit all supported widths with reduced motion", async ({ 
 test("preview is read only and cannot expose project secrets or parent paths", async ({ request }) => {
   const health = await request.get("/healthz");
   expect(health.status()).toBe(200);
-  expect(await health.json()).toMatchObject({ mode: "supa-read-only", host: "127.0.0.1" });
+  expect(await health.json()).toMatchObject({ mode: "supa-bounded-offline", host: "127.0.0.1" });
   expect(health.headers()["content-security-policy"]).toContain("connect-src 'self'");
   expect(health.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   for (const path of ["/.env", "/.env.eval", "/server.mjs", "/package.json", "/public/.env", "/%2e%2e/.env.eval", "/public/%2e%2e/%2e%2e/.env.eval", "/%2f%2e%2e%2f.env.eval"]) {
