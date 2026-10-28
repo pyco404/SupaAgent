@@ -1,0 +1,701 @@
+{
+  "date": "2026-10-28",
+  "reference": "https://hancore.dev",
+  "local": "http://127.0.0.1:3200",
+  "tools": [
+    "list_browser_targets",
+    "inspect_web_page",
+    "capture_web_screenshot",
+    "capture_browser_scenario",
+    "compare_web_screenshots"
+  ],
+  "captures": [
+    {
+      "side": "ref",
+      "view": "intro",
+      "viewport": "desktop",
+      "path": "reference-web/evidence/2026-10-28/ref-intro-desktop.png",
+      "evidence_id": "ev_bb3a3dacee955858fcbbd13bd0d1ae6bcab284b31b6579b45162ecd2b69f7fd1",
+      "bytes": 168324,
+      "sha256": "92f480cbc315b790e373ac698d1dd560c32a29cfb1103903de3cc91612d300d5",
+      "measurement": {
+        "url": "https://hancore.dev/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "motion": true
+      },
+      "requested_environment": {
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "reduced_motion": "reduce"
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "local",
+      "view": "intro",
+      "viewport": "desktop",
+      "path": "reference-web/evidence/2026-10-28/local-intro-desktop.png",
+      "evidence_id": "ev_11ee47b6949db865f928853830121a9b0c2968af319029912b8302999ea9d634",
+      "bytes": 188633,
+      "sha256": "61debb0905d55434d206321d0ce62d4fa0319fb3678167093363522e5452b616",
+      "measurement": {
+        "url": "http://127.0.0.1:3200/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "requested_environment": {
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "reduced_motion": "reduce"
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "ref",
+      "view": "projects",
+      "viewport": "desktop",
+      "path": "reference-web/evidence/2026-10-28/ref-projects-desktop.png",
+      "evidence_id": "ev_9a3423f4ea98f5c75f364caceb1abadca52107415fe92e9e3c6cb26a0a87cb5f",
+      "bytes": 244068,
+      "sha256": "21b0b941a5fffbc3576b8cc47e28431832fd05e5002b5c3ad15738ec7b8f8df6",
+      "measurement": {
+        "url": "https://hancore.dev/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "requested_environment": {
+        "viewport": {
+          "width": 1440,
+          "height": 1000
+        },
+        "reduced_motion": "reduce"
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "local",
+      "view": "projects",
+      "viewport": "desktop",
+      "path": "reference-web/evidence/2026-10-28/local-projects-desktop.png",
+      "evidence_id": "ev_4d8ffd8a3bccf535aac98a36bd61b022e62806ea6029c76c99502a731e784093",
+      "bytes": 212807,
+      "sha256": "98f408a4f7eb1ed75af68dddfcde3300e17045f8af5dbf7b00ca752a372f5227",
+      "measurement": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": true
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "ref",
+      "view": "intro",
+      "viewport": "mobile",
+      "path": "reference-web/evidence/2026-10-28/ref-intro-mobile.png",
+      "evidence_id": "ev_ec4a6f219522d4d8111b2680b7e6f9d8594029f09d140172734fbefe906b9a1f",
+      "bytes": 54700,
+      "sha256": "63a50c2cd4b63b1b633ece82c8d700b25e598e874411a52b55816a28aa3262bc",
+      "measurement": {
+        "url": "https://hancore.dev/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "motion": true
+      },
+      "requested_environment": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "reduced_motion": "reduce"
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "local",
+      "view": "intro",
+      "viewport": "mobile",
+      "path": "reference-web/evidence/2026-10-28/local-intro-mobile.png",
+      "evidence_id": "ev_f91f4473c03fe9338305a8059fa642defe4bb4ecaf21d19ee9f75756a92c2e49",
+      "bytes": 86510,
+      "sha256": "b248bdbded9090f39d7b491e61e85e9c39e669a26bed11c65275441ffc70d997",
+      "measurement": {
+        "url": "http://127.0.0.1:3200/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "requested_environment": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "reduced_motion": "reduce"
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "ref",
+      "view": "projects",
+      "viewport": "mobile",
+      "path": "reference-web/evidence/2026-10-28/ref-projects-mobile.png",
+      "evidence_id": "ev_abf42e5873efa43f3bb5601820371376394fe699977fcf707d7b685578c73f26",
+      "bytes": 82907,
+      "sha256": "64a2c351ee23f86aa95915a37c92cd23e680d7e0cff3fe5acf828bb098e510a9",
+      "measurement": {
+        "url": "https://hancore.dev/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "requested_environment": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "reduced_motion": "reduce"
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "local",
+      "view": "projects",
+      "viewport": "mobile",
+      "path": "reference-web/evidence/2026-10-28/local-projects-mobile.png",
+      "evidence_id": "ev_549932c84945bedd4c380605943ce25320c8072926e0f1efed9e44df7dea767d",
+      "bytes": 71445,
+      "sha256": "c8991df2abc2a7aa23053908108faee843f2332c05f2f0ff2247655bfe7215cf",
+      "measurement": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "requested_environment": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "reduced_motion": "reduce"
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "ref",
+      "view": "drawer",
+      "viewport": "mobile",
+      "path": "reference-web/evidence/2026-10-28/ref-drawer-mobile.png",
+      "evidence_id": "ev_60b8db37e5679e1898d25a3692bf8c8266666ccb8bb6b867b288deaba41b1e97",
+      "bytes": 102571,
+      "sha256": "ef0ed57f45f20af0e3c6a3201acf2de493052582a19d4d2bd91cf030c51d2e29",
+      "measurement": {
+        "url": "https://hancore.dev/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "open-project-tree",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "local",
+      "view": "drawer",
+      "viewport": "mobile",
+      "path": "reference-web/evidence/2026-10-28/local-drawer-mobile.png",
+      "evidence_id": "ev_1288d2847380ee2f698f0c3f0d217c22fb020ecedf3cc86175aff3acf9d84faa",
+      "bytes": 104205,
+      "sha256": "46d992dfd8556bd29ce6e57546a1eaa3dec860f05d9c8969c25a9f864e9d4f99",
+      "measurement": {
+        "url": "http://127.0.0.1:3200/site/",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "drawer": "false",
+        "motion": true
+      },
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "open-project-tree",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "settle",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "ref",
+      "view": "interaction",
+      "viewport": "desktop",
+      "path": "reference-web/evidence/2026-10-28/ref-interaction-desktop.png",
+      "evidence_id": "ev_fef2070a52065841d6e299d6ae8b8b5d01ef2a9a0c06bc618b2801956c9ecf06",
+      "bytes": 177297,
+      "sha256": "884a5c4c0528100e262604ac7b1181013070146de5de5a0966261118aeea84ae",
+      "measurement": {
+        "url": "https://hancore.dev/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "motion": false
+      },
+      "duration_ms": 16959,
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 1129
+        },
+        {
+          "id": "opening-motion",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 2020
+        },
+        {
+          "id": "enter-projects",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 153
+        },
+        {
+          "id": "identity-ready",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 10392
+        },
+        {
+          "id": "next-project",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 314
+        },
+        {
+          "id": "terminal-settle",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 2619
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    },
+    {
+      "side": "local",
+      "view": "interaction",
+      "viewport": "desktop",
+      "path": "reference-web/evidence/2026-10-28/local-interaction-desktop.png",
+      "evidence_id": "ev_b977906b927c2ad4de0c94f5af8bbf74ec657fdb655f7b9798aa96a3e37a5cf2",
+      "bytes": 159883,
+      "sha256": "4976b307ce420111a00c6ea44e9563631f3238f10d6ed23a5f8d2fccaf016aff",
+      "measurement": {
+        "url": "http://127.0.0.1:3200/",
+        "width": 1440,
+        "height": 1000,
+        "scrollWidth": 1440,
+        "drawer": "false",
+        "motion": false
+      },
+      "duration_ms": 18099,
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 846
+        },
+        {
+          "id": "opening-motion",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 2028
+        },
+        {
+          "id": "enter-projects",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 159
+        },
+        {
+          "id": "identity-ready",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 8724
+        },
+        {
+          "id": "next-project",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 48
+        },
+        {
+          "id": "terminal-settle",
+          "status": "completed",
+          "error": null,
+          "elapsed_ms": 6240
+        }
+      ],
+      "completeness": {
+        "status": "incomplete",
+        "equality_eligible": false,
+        "missing_sections": [
+          "events"
+        ],
+        "truncated_sections": []
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "view": "intro",
+      "viewport": "desktop",
+      "evidence_id": "ev_b81b86e0f3e2b8e14eaf5624c995763c0dc6b1f5ff6ca4d811119dbff230b127",
+      "before": {
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "width": 1440,
+        "height": 1000
+      },
+      "channel_threshold": 0,
+      "limitations": [
+        "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+        "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+        "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+      ],
+      "status": "different",
+      "compared_pixels": 1440000,
+      "changed_pixels": 138375,
+      "changed_ratio": 0.09609375,
+      "maximum_channel_delta": 204,
+      "mean_absolute_channel_delta": 2.330409548611111
+    },
+    {
+      "view": "projects",
+      "viewport": "desktop",
+      "evidence_id": "ev_da12e48e532ae396ad2099386b4406e339842ce706c6adb29e10202f2e3300b8",
+      "before": {
+        "width": 1440,
+        "height": 1000
+      },
+      "after": {
+        "width": 1440,
+        "height": 1000
+      },
+      "channel_threshold": 0,
+      "limitations": [
+        "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+        "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+        "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+      ],
+      "status": "different",
+      "compared_pixels": 1440000,
+      "changed_pixels": 192141,
+      "changed_ratio": 0.13343125,
+      "maximum_channel_delta": 220,
+      "mean_absolute_channel_delta": 3.246970486111111
+    },
+    {
+      "view": "intro",
+      "viewport": "mobile",
+      "evidence_id": "ev_13e5880a67aabe59703741416e59b9d2cba88323483edc441a26e3eba75002e2",
+      "before": {
+        "width": 390,
+        "height": 844
+      },
+      "after": {
+        "width": 390,
+        "height": 844
+      },
+      "channel_threshold": 0,
+      "limitations": [
+        "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+        "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+        "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+      ],
+      "status": "different",
+      "compared_pixels": 329160,
+      "changed_pixels": 60463,
+      "changed_ratio": 0.18368878357030016,
+      "maximum_channel_delta": 204,
+      "mean_absolute_channel_delta": 4.620592568963422
+    },
+    {
+      "view": "projects",
+      "viewport": "mobile",
+      "evidence_id": "ev_e598f535001f552405b881c5fbc60935ed9a356fa0534db8ca07cc5af450075f",
+      "before": {
+        "width": 390,
+        "height": 844
+      },
+      "after": {
+        "width": 390,
+        "height": 844
+      },
+      "channel_threshold": 0,
+      "limitations": [
+        "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+        "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+        "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+      ],
+      "status": "different",
+      "compared_pixels": 329160,
+      "changed_pixels": 90215,
+      "changed_ratio": 0.27407643699112894,
+      "maximum_channel_delta": 209,
+      "mean_absolute_channel_delta": 6.143083910560214
+    },
+    {
+      "view": "drawer",
+      "viewport": "mobile",
+      "evidence_id": "ev_bf0824d57b20cd1c422736a14683987b0295c20d945f76af3b21259abeb7c583",
+      "before": {
+        "width": 390,
+        "height": 844
+      },
+      "after": {
+        "width": 390,
+        "height": 844
+      },
+      "channel_threshold": 0,
+      "limitations": [
+        "Pixel comparison does not perform OCR, semantic layout analysis, or perceptual color correction.",
+        "Only non-interlaced 8-bit RGB and RGBA PNG screenshots are accepted.",
+        "PNG tRNS transparency is accepted only as a six-byte RGB color key; tRNS on RGBA or with another length is rejected."
+      ],
+      "status": "different",
+      "compared_pixels": 329160,
+      "changed_pixels": 92962,
+      "changed_ratio": 0.28242192246931586,
+      "maximum_channel_delta": 235,
+      "mean_absolute_channel_delta": 5.837594179122616
+    }
+  ],
+  "limitations": [
+    "REA reported incomplete events coverage; these artifacts do not establish full runtime or frame-by-frame equality.",
+    "Physical viewport was prepared through the caller-owned CDP browser before matching REA scenarios; earlier mismatched calibration frames were discarded.",
+    "Measurement records describe pre-scenario viewport and motion configuration, not the final selected URL or drawer state.",
+    "Pixel differences measure exact channels, not semantic similarity or a fidelity score."
+  ]
+}
