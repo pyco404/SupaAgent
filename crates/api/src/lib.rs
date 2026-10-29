@@ -1,5 +1,6 @@
 mod access;
 mod autonomy;
+mod controlled;
 pub use access::{OperatorCredential, Principal};
 use axum::Extension;
 use supa_persistence::Role;
@@ -24,6 +25,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub controlled: Option<supa_runtime::controlled::ControlledInference>,
     pub store: Store,
     pub runtime: Runtime,
     token: Arc<String>,
@@ -43,6 +45,7 @@ impl AppState {
             return Err(Error::Invalid);
         }
         Ok(Self {
+            controlled: None,
             store,
             runtime,
             token: Arc::new(token),
@@ -135,6 +138,7 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
 pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(access::routes())
+        .merge(controlled::routes())
         .merge(wallet::routes())
         .merge(autonomy::routes())
         .merge(scheduling::routes())
