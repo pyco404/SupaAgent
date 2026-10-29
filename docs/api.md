@@ -116,3 +116,11 @@ are recorded independently of the existing lifecycle actor enum.
 a fresh associated worker; authorization alone is insufficient. Health is one of
 `healthy`, `delayed`, `unavailable`, `recovery_required`. The frontend continues
 idle polling every 15 seconds. Scheduling remains opt-in and offline-only.
+
+Controlled GPT inference is a separate, owner-authorized single-request workflow:
+`GET/POST /agents/{id}/live` and `POST /agents/{id}/live/{session}/approval`.
+Reads never contact OpenAI. Writes require explicit paid consent or separate tool
+review; the only allowlisted tool is `read_memory`. Configuration defaults off,
+uses an existing cumulative budget, and never enables live scheduling. See
+[controlled-inference.md](controlled-inference.md) for contracts, limits,
+project verification, conservative charge recovery and mocked validation.
