@@ -98,7 +98,7 @@ npm --prefix web run typecheck
 npm --prefix web run build
 ```
 
-`controlled_fixture` requires an explicit fixture flag, loopback bind, a `_test` database and an isolated `controlled_browser_` schema. It cannot use the historical evaluation database. Its mock summary and agent name identify the fixture clearly; no real key is read. Fixture budget rows are isolated test data, not replacement authorizations. Browser evidence records 120 input + 60 output **mock** tokens, a 42-microUSD **mock estimate**, separately approved memory read, and no simulated-ledger changes. Actual OpenAI HTTP requests and charges during this milestone: **zero**.
+`controlled_fixture` requires an explicit fixture flag, loopback bind, a `_test` database and an isolated `controlled_browser_` schema. It cannot use the historical evaluation database. Its mock summary and agent name identify the fixture clearly; no real key is read. Fixture budget rows are isolated test data, not replacement authorizations. Browser evidence records 120 input + 60 output **mock** tokens, a 42-microUSD **mock estimate**, separately approved memory read, and no simulated-ledger changes. Actual OpenAI API requests and charges during this milestone: **zero**.
 
 See `artifacts/controlled-inference/` for system/browser evidence and final validation results. REA evidence proves rendered behavior, not actual GPT intelligence or comprehensive accessibility certification. No new visual assets, animation dependencies, CSS or branding were introduced.
 
