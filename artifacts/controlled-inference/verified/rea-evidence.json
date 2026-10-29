@@ -1,0 +1,128 @@
+{
+  "actual_openai_requests": 0,
+  "provider": "mock",
+  "tools": [
+    "list_browser_targets",
+    "inspect_web_page",
+    "capture_browser_scenario",
+    "capture_web_screenshot"
+  ],
+  "scenarios": [
+    {
+      "viewport": "mobile",
+      "evidence_id": "ev_8f6196bc858e2c52fb8a3b5fca7299ca690fc349793028c9fba3f4800a9b40d0",
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "picker",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "picker-open",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "choose-fixture",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "live-control",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "expand-live",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "reload-sessions",
+          "status": "completed",
+          "error": null
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "evidence_id": "ev_537f575136548b27693ad806c8e827087f78071282145ee9eb1f918d36c2e66b",
+      "steps": [
+        {
+          "id": "scenario_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "picker",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "picker-open",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "choose-fixture",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "live-control",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "expand-live",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "id": "reload-sessions",
+          "status": "completed",
+          "error": null
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "rea-desktop.png",
+      "evidence_id": "ev_820d4b4f9583da607f4715edcdeb7c3f465d673ba49302d58d2a15ccbec166ac",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "4908398016fcff771598fb3ff30d280027a6641141cc43e910f2870f097e6721"
+    },
+    {
+      "file": "rea-mobile.png",
+      "evidence_id": "ev_be3a72bbed85c446b5b0b6c8291ca1dfc60ecf12941db1e207650c78b2dfd91a",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "852beb8841e277f0de345eb3984b63d847f2256e38835d4bc9c8da8fb762fc09"
+    }
+  ],
+  "keyboard_focus_order": true,
+  "reduced_motion": "still",
+  "mobile_overflow": false,
+  "minimum_reservation_microusd": 3536,
+  "initial_paid_consent_checked": false,
+  "limitations": [
+    "Mock inference validates controls, not live intelligence or account access.",
+    "No raw network bodies, headers, cookies or storage values were retained.",
+    "REA attachment cannot recover earlier network events.",
+    "An early selector matched nested summaries; the final explicit direct-child selector passed."
+  ],
+  "model_control_height_px": 44,
+  "visual_fix": "Reused the existing schedule-form class for approved dark, inherited-font controls; no stylesheet or assets changed.",
+  "operator_controls_label_verified": true
+}
