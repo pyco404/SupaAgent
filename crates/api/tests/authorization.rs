@@ -682,3 +682,64 @@ async fn lease_expiry_is_rechecked_after_waiting_for_agent_lock() {
     );
     f.close().await;
 }
+
+#[tokio::test]
+#[ignore = "requires TEST_DATABASE_URL; synthetic identities only"]
+async fn forged_owner_identity_fields_never_replace_server_credentials() {
+    let f = Fixture::new().await;
+    for (token, expected) in [
+        (OTHER, StatusCode::FORBIDDEN),
+        (SERVICE, StatusCode::FORBIDDEN),
+        ("invalid-token", StatusCode::UNAUTHORIZED),
+        (OWNER, StatusCode::OK),
+    ] {
+        let response = f
+            .app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(f.path("memory"))
+                    .header("authorization", format!("Bearer {token}"))
+                    .header("x-supa-principal", f.owner.to_string())
+                    .header("x-supa-role", "owner")
+                    .header("x-user-id", f.owner.to_string())
+                    .header("x-forwarded-user", f.owner.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), expected);
+    }
+    // A viewer cannot promote itself by putting owner claims in a valid JSON body.
+    f.store
+        .grant_access(f.id, f.owner, f.reader, Role::Viewer)
+        .await
+        .unwrap();
+    let response = f
+        .app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(f.path("access"))
+                .header("authorization", format!("Bearer {READER}"))
+                .header("x-supa-principal", f.owner.to_string())
+                .header("x-supa-role", "owner")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({"principal_id":f.reader,"role":"owner"}).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    assert!(
+        f.store
+            .require_access(f.id, f.reader, Role::Owner)
+            .await
+            .is_err()
+    );
+    f.close().await;
+}
