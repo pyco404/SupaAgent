@@ -29,7 +29,7 @@ createServer(async (request, response) => {
   response.setHeader("Referrer-Policy", "no-referrer");
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
-  if (request.method !== "GET" && request.method !== "HEAD" && !(request.method === 'POST' && (request.url === '/api/autonomy'||/^\/api\/agents\/[0-9a-f-]{36}\/schedule$/i.test(request.url)))) {
+  if (request.method !== "GET" && request.method !== "HEAD" && !(request.method === 'POST' && (request.url === '/api/autonomy'||/^\/api\/agents\/[0-9a-f-]{36}\/(?:schedule|live(?:\/[0-9a-f-]{36}\/approval)?)$/i.test(request.url)))) {
     response.setHeader("Allow", "GET, HEAD");
     return finish(response, 405, "Operation not permitted");
   }
