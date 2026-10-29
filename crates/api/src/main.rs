@@ -34,8 +34,13 @@ async fn run() -> Result<()> {
     let epoch = store.application_epoch().await?;
     let expected = std::env::var("SUPA_EXPECTED_EPOCH_ID").ok();
     let preview = flag("SUPA_EPOCH_READONLY_PREVIEW", false)?;
-    if epoch.is_some() || expected.is_some() || preview {
-        if !preview
+    let epoch_mode = std::env::var("SUPA_EPOCH_MODE").ok();
+    if epoch.is_some() || expected.is_some() || preview || epoch_mode.is_some() {
+        let mode = epoch_mode
+            .as_deref()
+            .unwrap_or(if preview { "preview" } else { "disabled" });
+        if !matches!(mode, "preview" | "active_read_only")
+            || (mode == "active_read_only" && preview)
             || provider != "offline"
             || scheduler_enabled
             || flag("SUPA_ALLOW_OPENAI", false)?
@@ -49,9 +54,17 @@ async fn run() -> Result<()> {
             .ok_or(Error::Denied)?
             .parse()
             .map_err(|_| Error::Invalid)?;
-        store.require_epoch_preview(id).await?;
+        let approval = std::env::var("SUPA_EPOCH_APPROVAL_ID")
+            .ok()
+            .map(|value| value.parse().map_err(|_| Error::Invalid))
+            .transpose()?;
+        store.require_read_only_epoch(id, mode, approval).await?;
         let runtime = Runtime::new(store.clone(), Arc::new(Offline));
-        let state = AppState::new(store, runtime, token)?;
+        let mut state = AppState::new(store, runtime, token)?;
+        if let Ok(value) = std::env::var("SUPA_OPERATOR_CREDENTIALS") {
+            state = state
+                .with_credentials(serde_json::from_str(&value).map_err(|_| Error::Invalid)?)?;
+        }
         let listener = tokio::net::TcpListener::bind(bind)
             .await
             .map_err(|_| Error::Invalid)?;
