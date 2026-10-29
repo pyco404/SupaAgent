@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "real_postgres": true,
+  "real_rust_api": true,
+  "real_frontend_adapter": true,
+  "provider": "mock",
+  "actual_openai_requests": 0,
+  "paid_charges": 0,
+  "mock_generation_attempts": 1,
+  "mock_usage": {
+    "cache_write_tokens": 0,
+    "cached_input_tokens": 0,
+    "input_tokens": 120,
+    "output_tokens": 60
+  },
+  "mock_accounted_microusd": 42,
+  "session_status": "completed",
+  "tool_actions": 1,
+  "simulated_ledger_unchanged": true,
+  "consent_cleared_after_limit_change": true,
+  "mobile_overflow": false,
+  "browser_errors": [],
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ]
+}
