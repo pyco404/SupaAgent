@@ -1,4 +1,5 @@
 mod authentication;
+pub mod controlled;
 mod social;
 pub mod solana;
 pub mod vault;
@@ -107,6 +108,7 @@ impl Reasoner for Offline {
 pub struct OpenAi {
     client: reqwest::Client,
     api_key: String,
+    project: Option<String>,
     model: String,
     policy: InferencePolicy,
     #[cfg(test)]
@@ -190,6 +192,7 @@ impl OpenAi {
         Ok(Self {
             client,
             api_key,
+            project: None,
             policy: InferencePolicy {
                 model: model.clone(),
                 input_token_bound: 24192,
@@ -210,7 +213,7 @@ impl OpenAi {
             let endpoint="https://api.openai.com/v1/responses";
             #[cfg(test)]
             let endpoint=self.endpoint.as_deref().unwrap_or(endpoint);
-            let mut response=self.client.post(endpoint).bearer_auth(&self.api_key).json(&body).send().await.map_err(|_|Error::ProviderTransport)?;
+            let mut response=self.client.post(endpoint).bearer_auth(&self.api_key).headers(self.project.as_ref().map(|p| { let mut h=reqwest::header::HeaderMap::new(); h.insert("OpenAI-Project",p.parse().expect("validated project")); h }).unwrap_or_default()).json(&body).send().await.map_err(|_|Error::ProviderTransport)?;
             if !response.status().is_success() {return Err(Error::ProviderHttp(response.status().as_u16()));}
             let mut bytes=vec![];
             while let Some(chunk)=response.chunk().await.map_err(|_|Error::ProviderTransport)? {
@@ -222,6 +225,13 @@ impl OpenAi {
             Ok(bytes) => {
                 let usage = parse_usage(&bytes).ok();
                 let result = parse_response(&bytes).and_then(|v| {
+                    if self.project.is_some() {
+                        let envelope: Value =
+                            serde_json::from_slice(&bytes).map_err(|_| Error::Provider)?;
+                        if envelope["model"] != self.model {
+                            return Err(Error::Provider);
+                        }
+                    }
                     if self.policy.live && usage.is_none() {
                         return Err(Error::Provider);
                     }
