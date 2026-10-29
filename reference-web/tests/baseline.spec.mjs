@@ -547,3 +547,25 @@ test('every workspace view anchors the keyboard below content and enlarges archi
   const keyboard=await page.locator('.workspace-hands').boundingBox();expect(keyboard.y+keyboard.height).toBeCloseTo(640,0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+
+test('Home and About have distinct concept visuals with stable reduced motion', async ({page})=>{
+  await open(page,'/site/#home');
+  const diagram=page.locator('.blueprint');
+  const pixels=()=>diagram.evaluate(canvas=>{const bytes=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;let hash=0;for(let i=0;i<bytes.length;i+=4)hash=(Math.imul(hash,31)+bytes[i]+bytes[i+3])|0;return hash;});
+  await expect(diagram).toHaveAttribute('data-concept','architecture');
+  const home=await pixels();
+  await page.evaluate(()=>location.hash='about');
+  await expect(diagram).toHaveAttribute('data-concept','identity');
+  await expect(diagram).toHaveAccessibleName(/identity, memory, goals, policy and limits/);
+  const about=await pixels();expect(about).not.toBe(home);
+  await page.waitForTimeout(150);expect(await pixels()).toBe(about);
+  const box=await diagram.boundingBox();expect(box.width).toBeGreaterThan(200);
+  expect(box.x+box.width).toBeLessThanOrEqual(page.viewportSize().width);
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await expect(diagram).toHaveAttribute('data-motion-state','running');
+  const moving=await pixels();await page.waitForTimeout(250);expect(await pixels()).not.toBe(moving);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.evaluate(()=>location.hash='home');
+  await expect(diagram).toHaveAttribute('data-concept','architecture');
+  expect(await pixels()).toBe(home);
+});
