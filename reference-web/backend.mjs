@@ -2,7 +2,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { parseEnv } from 'node:util';
 import { resolve } from 'node:path';
-import { schemas, autonomyRequestSchema, scheduleCommandSchema } from '../web/src/lib/contracts.ts';
+import { schemas, autonomyRequestSchema, scheduleCommandSchema, liveConsentSchema, liveApprovalSchema, liveSessionSchema } from '../web/src/lib/contracts.ts';
 import { operatorAuthorized, operatorToken, localRequest } from '../web/src/lib/auth.ts';
 
 export async function loadLocalEnvironment() {
@@ -29,7 +29,7 @@ export function resource(path) {
   if (parts[0] !== 'agents' || !uuid.test(parts[1] ?? '')) return null;
   let schema;
   if (parts.length === 2) schema = schemas.agent;
-  if (parts.length === 3 && ['access','authorizations','execution-health','schedule','financials','memory','goals','activity','cycles','actions','simulated-ledger','social','drafts','wallet'].includes(parts[2])) schema = schemas[parts[2]];
+  if (parts.length === 3 && ['live','access','authorizations','execution-health','schedule','financials','memory','goals','activity','cycles','actions','simulated-ledger','social','drafts','wallet'].includes(parts[2])) schema = schemas[parts[2]];
   if (parts.length === 4 && parts[2] === 'wallet' && ['balances','treasury','payments'].includes(parts[3])) schema = schemas[parts[3]];
   return schema ? { path:'/'+parts.join('/'), schema, public:false } : null;
 }
@@ -82,6 +82,7 @@ export { operatorAuthorized, localRequest };
 
 /** Closed offline mutations only: rehearsal or revision-checked lifecycle authorization. */
 export async function runAutonomy(path, headers, body, fetcher=fetch) {
+  if(/^\/api\/agents\/[0-9a-f-]{36}\/live(?:\/[0-9a-f-]{36}\/approval)?$/i.test(path))return runLive(path,headers,body,fetcher);
   const request=new Request('http://127.0.0.1'+path,{headers});
   const parts=path.split('/'),scheduled=parts.length===5&&parts[1]==='api'&&parts[2]==='agents'&&uuid.test(parts[3])&&parts[4]==='schedule';
   if(path!=='/api/autonomy'&&!scheduled)return fail('write_not_permitted',403);
@@ -107,4 +108,27 @@ export async function runAutonomy(path, headers, body, fetcher=fetch) {
     if(!result.success||result.data.agent_id!==identity)return fail('workflow_contract_invalid',502);
     return {status:200,body:result.data};
   }catch{return {status:503,body:{error:'workflow_outcome_unknown_inspect_saved_run',agent_id:scheduled?parts[3]:input.data.request_id}};}
+}
+
+/** Separate explicit paid consent. Credentials and provider URLs cannot be supplied by clients. */
+async function runLive(path,headers,body,fetcher){
+  const request=new Request('http://127.0.0.1'+path,{headers});
+  if(!localRequest(request)||!request.headers.get('origin'))return fail('same_origin_required',403);
+  const token=operatorToken(request.headers.get('authorization'));
+  if(!token)return fail('operator_authentication_required',401);
+  if(request.headers.get('x-supa-action')!=='controlled-inference'||request.headers.get('content-type')?.split(';')[0].trim()!=='application/json')return fail('explicit_json_action_required',400);
+  if(Buffer.byteLength(body)>4096)return fail('request_too_large',413);
+  const approval=path.endsWith('/approval');let input,base;
+  try{input=(approval?liveApprovalSchema:liveConsentSchema).parse(JSON.parse(body));}catch{return fail('invalid_live_consent',400);}
+  try{base=new URL(process.env.SUPA_BACKEND_URL);const staging=process.env.SUPA_SITE_MODE==='staging'&&/^[a-z0-9][a-z0-9-]*\.railway\.internal$/.test(base.hostname);if(base.protocol!=='http:'||!(['127.0.0.1','[::1]'].includes(base.hostname)||staging)||base.username||base.password||base.pathname!=='/'||base.search||base.hash)throw Error();}catch{return fail('backend_configuration_invalid',503);}
+  try{
+    const response=await fetcher(new URL(path.slice(4),base),{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(input),cache:'no-store',redirect:'error',signal:AbortSignal.timeout(60000)});
+    if(!response.ok)return fail('live_request_rejected_inspect_saved_sessions',[400,401,403,409].includes(response.status)?response.status:502);
+    if(!response.headers.get('content-type')?.includes('application/json'))throw Error();
+    const reader=response.body?.getReader();if(!reader)throw Error();let size=0;const chunks=[];
+    try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>128000){await reader.cancel();throw Error();}chunks.push(value);}}finally{reader.releaseLock();}
+    const result=liveSessionSchema.parse(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+    if(result.agent_id!==path.split('/')[3]||(!approval&&result.id!==input.request_id))throw Error();
+    return {status:200,body:scrub(result)};
+  }catch{return fail('live_outcome_unknown_reload_saved_sessions_no_retry',503);}
 }
