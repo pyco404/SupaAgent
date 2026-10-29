@@ -1,7 +1,9 @@
 mod access;
 mod controlled;
+mod epoch;
 mod intelligence;
 pub use access::Role;
+pub use epoch::ApplicationEpoch;
 mod health;
 mod scheduling;
 mod social;
