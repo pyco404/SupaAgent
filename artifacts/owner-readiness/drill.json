@@ -1,0 +1,53 @@
+{
+  "fixture_database": "supa_cutover_test_613533ad567d4979ad44c7e9a9d5a6e0",
+  "epoch_id": "fd2f52e0-33fc-4c0d-893a-7b08b26ab748",
+  "synthetic_owner_only": true,
+  "real_owner_granted": false,
+  "real_credentials_installed": false,
+  "real_pending_credentials_rejected": true,
+  "primary_frontend_repointed": false,
+  "real_candidate_activated": false,
+  "activation": {
+    "rendered_activation_verified": true,
+    "unsafe_or_duplicate_requests_rejected": 4,
+    "synthetic_owner_only": true
+  },
+  "rollback": {
+    "prepared_again": true,
+    "duplicate_rollback_rejected": true,
+    "audit_entries": 2,
+    "data_preserved": true,
+    "private_configuration_bytes_restored": true,
+    "real_candidate_unchanged": true,
+    "pending_owner_unchanged": true,
+    "primary_frontend_unchanged": true
+  },
+  "backup": {
+    "backup_restore_verified": true,
+    "restored_database": "supa_cutover_test_restore_e46c1b0c2c1348c89beff4c7ac317151",
+    "read_only": true
+  },
+  "restart_verified": true,
+  "spoofed_identity_rejected": true,
+  "shared_service_cannot_be_owner": true,
+  "owner_mutations_denied": true,
+  "unauthorized_browser_access_rejected": true,
+  "unsafe_flags_rejected": 4,
+  "worker_rejected": true,
+  "stale_active_profile_rejected": true,
+  "active_view_checks": 30,
+  "rollback_view_checks": 10,
+  "viewports": [
+    1440,
+    768,
+    390
+  ],
+  "browser_errors": [],
+  "agents_created": 0,
+  "agent_ownership_grants": 0,
+  "execution_authorizations": 0,
+  "new_budgets": 0,
+  "paid_requests": 0,
+  "external_mutations": 0,
+  "uploads": 0
+}
