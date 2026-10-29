@@ -1,0 +1,39 @@
+{
+  "epoch_id": "fd2f52e0-33fc-4c0d-893a-7b08b26ab748",
+  "preview_origin": "http://127.0.0.1:36563",
+  "primary_frontend_repointed": false,
+  "activated": false,
+  "inspection_evidence_id": "ev_7e118d67873d857951b3c5c466a3af08334d0d4225a4fcc595ba44df496ed528",
+  "tools": [
+    "list_browser_targets",
+    "inspect_web_page",
+    "capture_web_screenshot"
+  ],
+  "screenshots": [
+    {
+      "file": "desktop.png",
+      "evidence_id": "ev_e8b02d2ba7becc59e170a27cc4491301bc43108bc18bd715097837d1a582ebd4",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "9351d972fd6d036f4f54f027ea0b10d12dbaea8543f33a64a0a1796b4697850d"
+    },
+    {
+      "file": "mobile.png",
+      "evidence_id": "ev_0735d5f572f4033991568a1db67bad102181aaad87ff2f7f2777c59401f6e172",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "e9ff3aacef675a8ceaa4d837209c1dc0349fd44ec6f91560a6bd428b11dc0924"
+    }
+  ],
+  "mobile_menu_keyboard_verified": true,
+  "reduced_motion_verified": "still after explicit media emulation",
+  "limitations": [
+    "Read-only preview on random localhost ports; no production or primary-site cutover.",
+    "REA performed passive inspection and screenshots. Playwright performed navigation, sizing and keyboard tests.",
+    "REA default accessibility-text capture was filtered."
+  ]
+}
