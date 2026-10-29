@@ -51,7 +51,7 @@ export const schemas = {
   schedule:scheduleStatusSchema,
   autonomy:autonomyPolicySchema, "autonomy-result":autonomyResultSchema,
   health: z.object({ status: text, economic_mode: z.literal("simulation"), publishing_enabled: z.literal(false).optional(),
-    epoch:z.object({id,accounting_namespace:id,label:z.string().min(1).max(80),kind:z.literal("development"),state:z.literal("prepared"),historical_database:z.literal("unrecovered")}).nullable().optional(),
+    epoch:z.object({id,accounting_namespace:id,label:z.string().min(1).max(80),kind:z.literal("development"),state:z.enum(["prepared","active_read_only"]),historical_database:z.literal("unrecovered"),revision:integer.nonnegative().optional(),approval_id:id.nullable().optional()}).nullable().optional(),
     historical_database:z.literal("unrecovered").optional(),
   }),
   agents: z.array(agentSchema).max(100),
