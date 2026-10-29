@@ -88,6 +88,13 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
     if principal.is_none() && !token.is_some_and(|t| token_matches(t, &state.token)) {
         return ApiError(Error::Unauthorized).into_response();
     }
+    // Prepared epochs are read-only even for authenticated owners.
+    if request.method() != axum::http::Method::GET
+        && request.method() != axum::http::Method::HEAD
+        && !matches!(state.store.application_epoch().await, Ok(None))
+    {
+        return ApiError(Error::Denied).into_response();
+    }
     let path = request.uri().path();
     let public = request.method() == axum::http::Method::GET
         && matches!(path, "/health" | "/directory" | "/autonomy");
@@ -213,7 +220,7 @@ async fn ready(State(s): State<AppState>) -> (StatusCode, Json<Value>) {
 async fn health(State(s): State<AppState>) -> ApiResult {
     s.store.ping().await?;
     Ok(Json(
-        json!({"status":"ok","economic_mode":"simulation","publishing_enabled":false}),
+        json!({"status":"ok","economic_mode":"simulation","publishing_enabled":false,"epoch":s.store.application_epoch().await?,"historical_database":"unrecovered"}),
     ))
 }
 async fn directory(State(s): State<AppState>) -> ApiResult {
