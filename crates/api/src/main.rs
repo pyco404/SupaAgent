@@ -41,6 +41,16 @@ async fn run() -> Result<()> {
         state =
             state.with_credentials(serde_json::from_str(&value).map_err(|_| Error::Invalid)?)?;
     }
+    if flag("SUPA_CONTROLLED_INFERENCE", false)? {
+        if scheduler_enabled || provider != "offline" {
+            return Err(Error::Denied);
+        }
+        state = state.with_controlled_inference(supa_runtime::controlled::ControlledInference {
+            store: store.clone(),
+            provider: Arc::new(supa_providers::OpenAi::controlled_from_env()?),
+        });
+    }
+    store.recover_live_sessions().await?;
     state.wallet_read_operator = std::env::var("SUPA_WALLET_READ_OPERATOR_ID")
         .ok()
         .map(|value| value.parse().map_err(|_| Error::Invalid))
