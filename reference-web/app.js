@@ -138,7 +138,7 @@ async function select(index,background=false){
   }
   const rows=await sectionView(item.id,state,agentId);
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
-  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='autonomy')?'offline controls':'read-only'}`;
+  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='autonomy')?'offline controls':'read-only'}`;
   const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
   if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
   viewFingerprint=fingerprint;if(background)cancelTyping();
@@ -147,6 +147,7 @@ async function select(index,background=false){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
     }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
+    else if(row.kind==='live')buffer.append(livePanel(row.view,row.role,row.agentId));
     else if(row.kind==='schedule')buffer.append(schedulePanel(row.status,row.goals,row.role));
     else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
@@ -242,6 +243,35 @@ function autonomyPanel(policy){
   });
   reset.addEventListener('click',()=>{if(autonomyAttempt?.status==='pending')return;autonomyAttempt=null;goal.value='';consent.checked=false;try{sessionStorage.removeItem('supa.offline-request');}catch{}sync();goal.focus();});
   details.append(form,status,inspect,reset);sync();return details;
+}
+function livePanel(view,role,id){
+  const panel=node('details','calculation autonomy-panel live-panel');panel.append(node('summary','','Controlled GPT session'));
+  panel.append(node('p','prompt','One explicitly authorized request. Provider charges are separate from simulated expenses. No continuous live scheduling. The model proposes; tools require a second approval.'));
+  const feedback=node('p','terminal-notice');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
+  const reload=node('button','','Reload saved GPT sessions');reload.type='button';reload.addEventListener('click',()=>void select(itemIndex));
+  async function send(path,body,button){button.disabled=true;feedback.textContent='Saving request. Do not resubmit while its outcome is unknown.';
+    try{const response=await fetch(path,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Supa-Action':'controlled-inference'},body:JSON.stringify(body),signal:AbortSignal.timeout(65000)});const result=await response.json();if(!response.ok||result.agent_id!==id)throw Error();feedback.textContent=`Saved session ${result.id} / ${result.status}. Reload saved GPT sessions to inspect the result.`;}
+    catch{feedback.textContent='Rejected or uncertain outcome. Reload saved GPT sessions and inspect accounting before another request. No automatic retry.';}
+  }
+  if(view.enabled&&view.policy){const p=view.policy;panel.append(node('p','terminal-notice',`Configured model / ${p.model}\nMaximum requests / 1\nInput token ceiling / ${p.input_token_bound}\nOutput token ceiling / ${p.max_output_tokens}\nCumulative budget / ${p.budget_limit_microusd} microUSD\nBudget reference / ${p.budget_id}\nMaximum reservation / ${view.minimum_reservation_microusd} microUSD`));
+    if(role==='owner'){
+      const form=node('form','autonomy-form schedule-form live-form'),goalLabel=node('label','','Goal for this session'),goal=node('textarea');goal.name='live-goal';goal.required=true;goal.maxLength=500;goal.rows=3;goalLabel.append(goal);
+      const costLabel=node('label','','Session ceiling / real API microUSD'),cost=node('input');cost.type='number';cost.name='live-ceiling';cost.min=String(view.minimum_reservation_microusd??1);cost.max=String(Math.min(100000,p.budget_limit_microusd));cost.required=true;cost.step='1';costLabel.append(cost);
+      const modelLabel=node('label','','Approved model'),model=node('select'),option=node('option','',p.model);option.value=p.model;model.append(option);model.name='live-model';modelLabel.append(model);
+      const consentLabel=node('label','autonomy-consent'),consent=node('input');consent.type='checkbox';consent.required=true;consent.name='authorize-paid';consentLabel.append(consent,document.createTextNode('I authorize one paid GPT request for this goal and these limits, valid for five minutes. Relevant private memories from this agent will be sent to the configured OpenAI project. No retry, financial action, or automatic tool execution.'));
+      const submit=node('button','','Authorize one paid GPT request');submit.type='submit';form.append(goalLabel,modelLabel,costLabel,consentLabel,submit);
+      for(const input of [goal,cost,model])input.addEventListener('input',()=>{consent.checked=false;});
+      form.addEventListener('submit',event=>{event.preventDefault();event.stopPropagation();if(submit.disabled||!form.reportValidity()||!consent.checked)return;const now=new Date();const request={request_id:crypto.randomUUID(),goal:goal.value.trim(),model:model.value,authorize_paid:true,consented_at:now.toISOString(),expires_at:new Date(now.getTime()+300000).toISOString(),max_requests:1,max_input_tokens:p.input_token_bound,max_output_tokens:p.max_output_tokens,max_cost_microusd:Number(cost.value)};for(const input of [goal,cost,model,consent])input.disabled=true;void send(`/api/agents/${id}/live`,request,submit);});panel.append(form);
+    }else panel.append(node('p','prompt','Only the agent owner can authorize paid inference or approve its proposed tool.'));
+  }else panel.append(node('p','terminal-notice','Paid inference is disabled on this server. Saved sessions remain readable.'));
+  for(const session of view.sessions){const entry=node('details','calculation');entry.append(node('summary','',`${session.policy.model} / ${session.status} / ${session.created_at}`));
+    entry.append(node('p','',`Session ${session.id}\nApproved by ${session.approved_by}\nGoal / ${session.consent.goal}\nMetadata requests / ${session.metadata_requests}\nGeneration attempts / ${session.generation_requests}\nProject-scoped metadata access / ${session.project_verified?'verified before request':'not verified'}\nRetrieved memories / ${session.memory_ids.join(', ')||'none'}\nAccounted estimate / ${session.accounted_microusd} microUSD; reserved ${session.reserved_microusd}\nUsage / ${session.usage?`${session.usage.input_tokens} input + ${session.usage.output_tokens} output tokens`:'unavailable; reservation retained if uncertain'}${session.failure_code?'\nFailure / '+session.failure_code:''}`));
+    if(session.proposal)entry.append(node('p','',`Model decision summary / ${session.proposal.summary}\nCited memories / ${session.proposal.memory_ids.join(', ')||'none'}\nProposed actions / ${session.proposal.actions.map(a=>a.tool).join(', ')||'abstain'}`));
+    if(session.tool_result)entry.append(node('p','',`Tool outcome / ${session.tool_result.result}; ${session.tool_result.executed_actions} actions`));
+    if(view.enabled&&role==='owner'&&session.status==='awaiting_approval')for(const [approve,label]of [[true,'Approve proposed memory read'],[false,'Decline proposed actions']]){const button=node('button','',label);button.type='button';button.addEventListener('click',()=>{entry.querySelectorAll('button').forEach(b=>b.disabled=true);void send(`/api/agents/${id}/live/${session.id}/approval`,{approve,confirm_review:true},button);});entry.append(button);}
+    panel.append(entry);
+  }
+  panel.append(feedback,reload);return panel;
 }
 function schedulePanel(view,goals,role){
   const details=node('details','calculation autonomy-panel schedule-panel');details.append(node('summary','','Agent lifecycle and bounded scheduling'));
