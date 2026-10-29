@@ -1,0 +1,45 @@
+{
+  "fixture_database": "supa_cutover_test_f1acf4044299428eb05806a7a46144e1",
+  "real_candidate_activated": false,
+  "inspection_evidence_id": "ev_2b45bc5211b732a57c18db7722061c06f5f709d9da13e7665b74150cd2fd7d4a",
+  "tools": [
+    "list_browser_targets",
+    "inspect_web_page",
+    "capture_web_screenshot"
+  ],
+  "screenshots": [
+    {
+      "file": "active-desktop.png",
+      "evidence_id": "ev_2c3abd5137d575337483ffe0dd4b8051f1f3d83c110ac18181cafba5fb8a6ee8",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "963034d96e4fb6e67ccc29f0817b6e009e2a1e0d0df750cd89da660910ec6bdb"
+    },
+    {
+      "file": "active-mobile.png",
+      "evidence_id": "ev_0868e75d06665c8e8d9e5d6941c5058876fe1e188940eeeaf704ae12b9c28089",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "54e468f0b5dceec258ee764f576e76b60cc944ef5b5ab63131c596bf939ff05d"
+    },
+    {
+      "file": "rollback-mobile.png",
+      "evidence_id": "ev_58b52e11fc642ffde036649bffc295e1297be5630cdc70cafa8796919de68407",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "363e98b9678445f0878ff55944aebc714b2ffffa30050ba3eb624cf7103d3fe9"
+    }
+  ],
+  "actions": "Playwright navigated all views and resized the browser; REA passively inspected and captured real pixels.",
+  "limitations": [
+    "Screenshots show a disposable clone retaining the candidate UUID, not the actual prepared candidate.",
+    "Default REA accessibility text was filtered; direct browser assertions verify status text.",
+    "No actual service-role provisioning or primary frontend cutover was tested."
+  ]
+}
