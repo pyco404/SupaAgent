@@ -10,6 +10,9 @@ impl Store {
         policy: &InferencePolicy,
         simulated_cost: i64,
     ) -> Result<Uuid> {
+        if policy.live {
+            writable_inference_budget(policy.budget_id)?;
+        }
         if !matches!(purpose, "plan" | "draft") {
             return Err(Error::Invalid);
         }
@@ -104,11 +107,15 @@ impl Store {
         }
         let mut tx = self.pool.begin().await.map_err(db)?;
         locked(&mut tx, id).await?;
-        let r=sqlx::query("SELECT policy,reserved_microusd,cycle_id,status FROM inference_calls WHERE id=$1 AND agent_id=$2 FOR UPDATE").bind(call).bind(id).fetch_optional(&mut *tx).await.map_err(db)?.ok_or(Error::NotFound)?;
+        let r=sqlx::query("SELECT policy,reserved_microusd,cycle_id,status,budget_id FROM inference_calls WHERE id=$1 AND agent_id=$2 FOR UPDATE").bind(call).bind(id).fetch_optional(&mut *tx).await.map_err(db)?.ok_or(Error::NotFound)?;
+        writable_inference_budget(r.get(4))?;
         if r.get::<String, _>(3) != "reserved" {
             return Err(Error::Stale);
         }
         let p: InferencePolicy = serde_json::from_value(r.get(0)).map_err(|_| Error::Database)?;
+        if p.live {
+            writable_inference_budget(p.budget_id)?;
+        }
         let reserved: i64 = r.get(1);
         let cycle: Uuid = r.get(2);
         let rejected = matches!(failure, Some(Error::ProviderHttp(429)));
