@@ -1,3 +1,4 @@
+pub mod controlled;
 pub mod evaluation;
 pub mod health;
 pub mod wallet;
