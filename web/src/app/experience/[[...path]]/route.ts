@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request, context: { params: Promise<{ path?: string[] }> }) {
   if(process.env.SUPA_SITE_MODE!=="staging")return new Response("Not found",{status:404});
   const path='/'+((await context.params).path??[]).join('/');
-  if((path!=="/api/autonomy"&&!/^\/api\/agents\/[0-9a-f-]{36}\/schedule$/i.test(path))||new URL(request.url).search)return new Response("Method not allowed",{status:405});
+  if((path!=="/api/autonomy"&&!/^\/api\/agents\/[0-9a-f-]{36}\/(?:schedule|live(?:\/[0-9a-f-]{36}\/approval)?)$/i.test(path))||new URL(request.url).search)return new Response("Method not allowed",{status:405});
   if(!operatorAuthorized(request.headers.get("authorization")))return Response.json({error:"operator_authentication_required"},{status:401});
   const reader=request.body?.getReader();let size=0;const chunks:Uint8Array[]=[];
   if(!reader)return new Response("Invalid request",{status:400});
