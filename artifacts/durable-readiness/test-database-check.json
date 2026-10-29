@@ -1,0 +1,127 @@
+{
+  "ready_for_paid": false,
+  "paid_authorization_supplied": false,
+  "generation_requests": 0,
+  "provider_requests": 0,
+  "database_changed": false,
+  "schema_changed": false,
+  "reservations_changed": false,
+  "configuration": {
+    "environment_file_loaded": true,
+    "key_present": true,
+    "key_format_valid": true,
+    "shell_key_present": false,
+    "file_key_present": true,
+    "shell_key_overrides_file": false,
+    "shell_key_matches_file": null,
+    "project_configured": false,
+    "project_format_valid": false,
+    "configured_budget_matches": false,
+    "configured_ceiling_matches": true,
+    "prepared_output_limit_configured": false,
+    "admin_credentials_present": false,
+    "explicit_model_configured": false,
+    "model": null,
+    "controlled_inference_enabled": false,
+    "live_opt_in": false,
+    "api_scheduler_enabled": false,
+    "project_spending_limits_verified": false,
+    "model_access_verified": false,
+    "billing_access_verified": false
+  },
+  "database": {
+    "connected": true,
+    "host": "127.0.0.1",
+    "port": "55439",
+    "name": "supa_controlled_test",
+    "scope": "explicit_read_only_override",
+    "test_database": true,
+    "missing_tables": [],
+    "migrations": [
+      {
+        "version": 1,
+        "success": true,
+        "checksum_matches": true
+      },
+      {
+        "version": 2,
+        "success": true,
+        "checksum_matches": true
+      },
+      {
+        "version": 3,
+        "success": true,
+        "checksum_matches": true
+      },
+      {
+        "version": 4,
+        "success": true,
+        "checksum_matches": true
+      },
+      {
+        "version": 5,
+        "success": true,
+        "checksum_matches": true
+      },
+      {
+        "version": 6,
+        "success": true,
+        "checksum_matches": true
+      },
+      {
+        "version": 7,
+        "success": true,
+        "checksum_matches": true
+      }
+    ],
+    "migrations_current": true,
+    "inventory": {
+      "agents": 140,
+      "owned_agents": 8,
+      "memories": 96,
+      "authorizations": 0,
+      "cycles": 114,
+      "actions": 69,
+      "live_sessions": 0
+    },
+    "budget": null,
+    "uncertain_calls": {
+      "legacy": 0,
+      "controlled": 0
+    }
+  },
+  "prepared_session": {
+    "agent_id": null,
+    "request_id": null,
+    "consented_at": null,
+    "expires_at": null,
+    "model": "gpt-6-luna",
+    "max_requests": 1,
+    "max_input_tokens": 24192,
+    "max_output_tokens": 1024,
+    "max_cost_microusd": 5000,
+    "budget_id": "ad91e475-f1da-495a-8247-139643d2d8b1",
+    "cumulative_ceiling_microusd": 100000,
+    "authorize_paid": false,
+    "continuous_live": false,
+    "tools": [
+      "read_memory"
+    ],
+    "goal": "Compare safe ways to review the available memories, identify evidence gaps, and propose at most one read_memory action. Do not claim completion or modify data."
+  },
+  "blockers": [
+    "expected_project_not_configured",
+    "existing_budget_identity_and_ceiling_must_be_explicit",
+    "prepared_output_limit_must_be_explicit",
+    "explicit_luna_model_required_for_prepared_session",
+    "historical_budget_missing_do_not_recreate",
+    "project_limits_and_billing_require_verification",
+    "fresh_operator_paid_consent_required"
+  ],
+  "archived_budget": {
+    "source": "preserved_local_snapshots_not_current_database_or_invoice",
+    "snapshots": 2,
+    "last_observed_committed_microusd": 10299,
+    "unknown_accounted_microusd": 4048
+  }
+}
