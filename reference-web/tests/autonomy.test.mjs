@@ -47,3 +47,13 @@ test('renewal requires fresh finite goals and consent; unknown actor claims cann
   for(const bad of [{...command,policy:null},{...command,authorize_offline:false},{...command,approved_by:id},{...command,role:'owner'},{...command,policy:{...command.policy,goal_ids:[]}}])assert.equal((await runAutonomy(path,headers,JSON.stringify(bad),fetcher)).status,400);
   assert.equal(calls,0);assert.equal((await runAutonomy(path,headers,JSON.stringify(command),fetcher)).status,200);assert.equal(calls,1);
 });
+test('controlled inference requires separate paid consent and cannot override provider routing',async()=>{
+ const path=`/api/agents/${id}/live`,h={...headers,'x-supa-action':'controlled-inference'};
+ const input={request_id:id,goal:'Review permitted memories',model:'gpt-6-luna',authorize_paid:true,consented_at:new Date().toISOString(),expires_at:new Date(Date.now()+300000).toISOString(),max_requests:1,max_input_tokens:24192,max_output_tokens:1024,max_cost_microusd:10000};
+ let calls=0;const fetcher=async()=>{calls++;throw Error('private upstream detail');};
+ for(const changed of [{authorize_paid:false},{max_requests:2},{api_key:'forbidden'},{endpoint:'https://outside.invalid'},{max_output_tokens:9999}])assert.equal((await runAutonomy(path,h,JSON.stringify({...input,...changed}),fetcher)).status,400);
+ for(const changed of [{authorization:''},{origin:'https://outside.invalid'},{'x-supa-action':'offline-autonomy'}])assert.ok((await runAutonomy(path,{...h,...changed},JSON.stringify(input),fetcher)).status>=400);
+ assert.equal(calls,0);const failed=await runAutonomy(path,h,JSON.stringify(input),fetcher);assert.equal(calls,1);assert.equal(failed.status,503);assert.ok(!JSON.stringify(failed).includes('private upstream detail'));
+ assert.equal((await runAutonomy(path+'/ignored',h,JSON.stringify(input),fetcher)).status,403);
+ const approval=await runAutonomy(path+'/'+id+'/approval',h,JSON.stringify({approve:true,confirm_review:false}),fetcher);assert.equal(approval.status,400);assert.equal(calls,1);
+});
