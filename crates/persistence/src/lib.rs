@@ -13,6 +13,14 @@ use supa_domain::*;
 use uuid::Uuid;
 
 type Tx<'a> = Transaction<'a, Postgres>;
+/// Quarantined after loss of the original cluster. No automatic recreation or settlement.
+/// Removing this gate requires an explicitly reviewed historical reconciliation.
+fn writable_inference_budget(id: Option<Uuid>) -> Result<()> {
+    if id == Some(uuid::uuid!("ad91e475-f1da-495a-8247-139643d2d8b1")) {
+        return Err(Error::LiveBudget);
+    }
+    Ok(())
+}
 fn db(_: sqlx::Error) -> Error {
     Error::Database
 }
