@@ -85,6 +85,9 @@ async fn run() -> Result<()> {
         &std::env::var("SUPA_PROVIDER").unwrap_or_else(|_| "offline".into()),
     )?;
     let store = Store::connect(&std::env::var("DATABASE_URL").map_err(|_| Error::Invalid)?).await?;
+    if store.application_epoch().await?.is_some() {
+        return Err(Error::Denied); // Prepared epochs cannot start workers, even paused heartbeats.
+    }
     store.migrate().await?;
     store.ping().await?;
     let listener = tokio::net::TcpListener::bind(bind)
