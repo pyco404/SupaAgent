@@ -1,0 +1,43 @@
+{
+  "target": "http://127.0.0.1:3200/site/#intelligence",
+  "inspection_evidence_id": "ev_004cb475b9b1123e1f8dafa17e20872cd902df0d46b1089f1d053305aeca573d",
+  "rea_tools": [
+    "list_browser_targets",
+    "inspect_web_page",
+    "capture_web_screenshot"
+  ],
+  "screenshots": [
+    {
+      "file": "desktop.png",
+      "evidence_id": "ev_b4e07b622430364897055bf83630f93dbc2c3ebe5c79fb339afd1020a649470e",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "sha256": "28a1d27bc24d71aa37df011752ad0956c9c450ba7b0b8b3934c6a9ec45182893"
+    },
+    {
+      "file": "mobile.png",
+      "evidence_id": "ev_344fafaceeee62184a726145f5f52c465bc0b3b9d8484a9903ee28b6b8fc8003",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "813113fb8d9e68000f58864838bba14b11889a9ef6143c4505b8e997a68e555e"
+    }
+  ],
+  "observed_api_status": 503,
+  "observed_api_error": "backend_disconnected",
+  "agent_records": "unavailable",
+  "autonomy_controls": "unavailable",
+  "desktop_overflow": false,
+  "mobile_overflow": false,
+  "interaction_method": "Playwright resized the owned CDP browser and waited for typing; REA independently inspected and captured screenshots.",
+  "frontend_source_modified": false,
+  "paid_requests": 0,
+  "limitations": [
+    "No historical database recovered or linked.",
+    "REA accessibility text was policy-filtered; wording and overflow were separately checked using Playwright.",
+    "This is disconnected-state validation, not recovered-agent end-to-end validation."
+  ]
+}
