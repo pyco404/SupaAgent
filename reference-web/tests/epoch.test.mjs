@@ -11,8 +11,8 @@ test('health preserves explicit epoch identity and rejects activated or recovere
 test('all ten prepared views distinguish fresh state without fetching private history or exposing controls',async()=>{
  const before=globalThis.fetch;let calls=0;globalThis.fetch=()=>{calls++;throw Error('unexpected request');};
  try{
-  for(const {id} of navigation){
-   const rows=await sectionView(id,{status:{data:{epoch}},agents:{data:[]},retrievedAt:'test'},'');
+  for(const state of ['prepared','active_read_only'])for(const {id} of navigation){
+   const rows=await sectionView(id,{status:{data:{epoch:{...epoch,state}}},agents:{data:[]},retrievedAt:'test'},'');
    assert.ok(rows.some(row=>row.text?.includes(epoch.id)&&row.text.includes('historical database unrecovered')));
    assert.equal(rows.some(row=>['autonomy','schedule','live'].includes(row.kind)),false);
   }
@@ -24,4 +24,10 @@ test('unidentified and disconnected epochs never imply historical recovery',asyn
   const rows=await sectionView('agents',{status,agents:{data:[]}},'');
   assert.ok(rows.some(row=>/Epoch (unidentified|unavailable)/.test(row.text??'')));
  }
+});
+
+test('active read-only health is explicit and does not authorize writes',()=>{
+ const data=schemas.health.parse({status:'ok',economic_mode:'simulation',epoch:{...epoch,state:'active_read_only',revision:1,approval_id:'43f197d6-7f55-4876-b71f-c23804e0e35c'}});
+ assert.equal(data.epoch.state,'active_read_only');
+ assert.equal(data.epoch.revision,1);
 });
