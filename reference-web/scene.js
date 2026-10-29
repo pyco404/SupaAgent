@@ -1,3 +1,4 @@
+import { navigation } from './platform.js';
 // Independently authored procedural scenes, informed by observed browser behavior.
 // No reference scripts, filmed portrait or tracking code are included.
 export function createScenes({ intro, blueprint, entity, transition, spark, reduced, data }) {
@@ -179,11 +180,49 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     drawHands(ctx,w,h,!reduced.matches&&revealedRows<rows,typedKey);
     ctx.globalAlpha=1;
   }
+  function drawAbout({ctx,w,h},phase) {
+    // A conceptual identity plate, not a measurement of connected services.
+    const cx=w/2,cy=h*.43,r=Math.min(w*.2,h*.25),small=w<400;
+    ctx.font='11px Plex,monospace';ctx.globalAlpha=.75;
+    ctx.fillText('SUPA / identity & boundaries',9,16);
+    ctx.lineWidth=.6;
+    for(let i=0;i<3;i++){
+      const radius=r+9+i*8;
+      ctx.globalAlpha=.18+i*.1;ctx.beginPath();
+      for(let side=0;side<4;side++){
+        const start=side*Math.PI/2+.12+phase*.12*(i%2?-1:1),end=start+Math.PI/2-.24;
+        ctx.arc(cx,cy,radius,start,end);
+      }
+      ctx.stroke();
+    }
+    ascii(ctx,cx-r*.7,cy-r*.7,r*1.4,r*1.4,phase*1000);
+    const labels=[['MEMORY',12,cy-r*.55,-1],['GOALS',w-12,cy-r*.55,1],['POLICY',12,cy+r*.65,-1],['LIMITS',w-12,cy+r*.65,1]];
+    for(const [label,x,y,side] of labels){
+      const edge=cx+side*(r+28),end=x-side*(small?49:66);
+      ctx.globalAlpha=.4;ctx.beginPath();ctx.moveTo(edge,cy+Math.sign(y-cy)*r*.45);ctx.lineTo(end,y-4);ctx.stroke();
+      ctx.globalAlpha=.8;ctx.textAlign=side<0?'left':'right';ctx.fillText(label,x,y);
+    }
+    ctx.textAlign='center';
+    const base=h*.78,gap=Math.min(140,w*.31),box=Math.min(90,w*.25);
+    ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(cx-gap,base);ctx.lineTo(cx+gap,base);ctx.stroke();
+    ['RUST','POSTGRES','API'].forEach((label,i)=>{
+      const x=cx+(i-1)*gap;
+      ctx.globalAlpha=1;ctx.fillStyle=bg();ctx.fillRect(x-box/2,base-12,box,24);ctx.fillStyle=ink();
+      ctx.globalAlpha=.5;ctx.strokeRect(x-box/2,base-12,box,24);
+      ctx.globalAlpha=.85;ctx.fillText(label,x,base+4);
+    });
+    ctx.textAlign='left';ctx.globalAlpha=.65;
+    ctx.fillText('Conceptual foundation / not live activity',12,h-12);ctx.globalAlpha=1;
+  }
   function drawBlueprint() {
     const view = fit(blueprint); if (!view) return;
     const { ctx, w, h } = view, compact = w < 400, split = compact ? w : w * .62, rootX = w * (compact ? .3 : .15), baseY = h * (compact ? .88 : .92);
     const phase=reduced.matches?0:diagramTime/1000;
     blueprint.dataset.motionPhase=String(phase);
+    const about=navigation[selected]?.id==='about';
+    blueprint.dataset.concept=about?'identity':'architecture';
+    blueprint.setAttribute('aria-label',about?'Conceptual Supa identity, memory, goals, policy and limits over Rust, PostgreSQL and API; not live agent activity':'Decorative architecture branches; not live agent activity');
+    if(about){drawAbout(view,phase);return;}
     ctx.font = '11px Plex,monospace'; ctx.globalAlpha = .7;
     ctx.fillText('SUPA / architecture · decorative branches', 9, 16);
     if(!compact) ctx.fillText('section A—A', split + 10, 24);
