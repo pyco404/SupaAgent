@@ -1,4 +1,5 @@
 mod access;
+mod controlled;
 mod intelligence;
 pub use access::Role;
 mod health;
