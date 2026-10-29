@@ -98,3 +98,15 @@ test('separate operator accounts forward distinct server-side credentials and re
     assert.equal((await readResource(`/api/agents/${agentId}/memory`,headers,async()=>{throw Error('must not reach upstream');})).status,401);
   } finally {if(previous===undefined)delete process.env.SUPA_WEB_OPERATORS;else process.env.SUPA_WEB_OPERATORS=previous;}
 });
+
+test('frontend identity and role claims cannot choose the upstream operator credential',async()=>{
+  const forged={...publicHeaders,'x-supa-principal':agentId,'x-supa-role':'owner','x-user-id':agentId};
+  let called=false;
+  assert.equal((await readResource(`/api/agents/${agentId}/memory`,forged,async()=>{called=true;throw Error('must not call');})).status,401);
+  assert.equal(called,false);
+  let forwarded;
+  const result=await readResource(`/api/agents/${agentId}/memory`,{...headers,...forged},async(url,options)=>{forwarded=options.headers;return response([]);});
+  assert.equal(result.status,200);
+  assert.deepEqual(Object.keys(forwarded).sort(),['Accept','Authorization']);
+  assert.equal(forwarded.Authorization,`Bearer ${process.env.SUPA_API_TOKEN}`);
+});
