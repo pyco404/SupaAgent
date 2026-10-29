@@ -8,6 +8,6 @@
     "build": "node build.mjs",
     "check": "node --check backend.mjs && node --check platform.js && node --check server.mjs && node --check build.mjs && node --check app.js && node --check scene.js && node --check wheel.js && node --check playwright.config.mjs && node --check tests/baseline.spec.mjs",
     "test": "../web/node_modules/.bin/playwright test",
-    "test:unit": "node tests/backend.test.mjs && node tests/autonomy.test.mjs"
+    "test:unit": "node tests/backend.test.mjs && node tests/autonomy.test.mjs && node tests/epoch.test.mjs"
   }
 }
