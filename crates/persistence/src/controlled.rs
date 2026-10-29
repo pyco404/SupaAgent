@@ -20,6 +20,7 @@ impl Store {
         consent: &LiveConsent,
         policy: &InferencePolicy,
     ) -> Result<(LiveSession, Vec<Memory>)> {
+        writable_inference_budget(policy.budget_id)?;
         consent.validate()?;
         policy.validate()?;
         if !policy.live
@@ -109,6 +110,7 @@ impl Store {
             return Err(Error::Denied);
         }
         let mut s = live_locked(&mut tx, agent, id).await?;
+        writable_inference_budget(s.policy.budget_id)?;
         live_owner(&mut tx, agent, s.approved_by).await?;
         if s.status != "reserved" || s.consent.expires_at <= Utc::now() {
             return Err(Error::Stale);
@@ -254,15 +256,19 @@ async fn live_owner(tx: &mut Tx<'_>, agent: Uuid, actor: Uuid) -> Result<()> {
     Ok(())
 }
 async fn live_locked(tx: &mut Tx<'_>, agent: Uuid, id: Uuid) -> Result<LiveSession> {
-    let v: Value =
-        sqlx::query_scalar("SELECT data FROM live_sessions WHERE agent_id=$1 AND id=$2 FOR UPDATE")
-            .bind(agent)
-            .bind(id)
-            .fetch_optional(&mut **tx)
-            .await
-            .map_err(db)?
-            .ok_or(Error::NotFound)?;
-    serde_json::from_value(v).map_err(|_| Error::Database)
+    let row = sqlx::query(
+        "SELECT data,budget_id FROM live_sessions WHERE agent_id=$1 AND id=$2 FOR UPDATE",
+    )
+    .bind(agent)
+    .bind(id)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(db)?
+    .ok_or(Error::NotFound)?;
+    writable_inference_budget(row.get(1))?;
+    let s: LiveSession = serde_json::from_value(row.get(0)).map_err(|_| Error::Database)?;
+    writable_inference_budget(s.policy.budget_id)?;
+    Ok(s)
 }
 async fn save_live(tx: &mut Tx<'_>, s: &LiveSession) -> Result<()> {
     sqlx::query("UPDATE live_sessions SET status=$2,data=$3 WHERE id=$1")
