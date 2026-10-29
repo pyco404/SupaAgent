@@ -1,0 +1,18 @@
+{
+  "metadata_gets": 1,
+  "http_status": 200,
+  "model": "gpt-6-luna",
+  "key_source": "owner-only .env.eval",
+  "shell_key_override": false,
+  "key_format_valid": true,
+  "model_metadata_access_verified": true,
+  "intended_project_verified": false,
+  "inference_permission_verified": false,
+  "project_spending_limit_verified": false,
+  "generation_requests": 0,
+  "automatic_retries": 0,
+  "reservations_created": 0,
+  "historical_budget_changed": false,
+  "provider_token_usage": null,
+  "invoice_charges_verified": false
+}
