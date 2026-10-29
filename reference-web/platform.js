@@ -32,6 +32,8 @@ export async function sectionView(id, state, agentId) {
   };
   const agents=state.agents.data;
   add(`supa ${id==='home'?'status':id}`,'command');
+  const epoch=state.status.data?.epoch;
+  add(epoch?`Development epoch / ${epoch.id}. Prepared, read-only; historical database unrecovered.`:state.status.data?'Epoch unidentified. Historical recovery is not verified.':'Epoch unavailable while the backend is disconnected.','notice');
   if(id==='home') {
     add('Supa Agent / SUPA','heading');add('Born to think. Built to survive.','heading');
     add('Persistent AI agents with bounded reasoning, memory and economic awareness. Explore saved records; this site cannot start paid operations.');
@@ -105,7 +107,8 @@ export async function sectionView(id, state, agentId) {
     }
     record('Retrieved',new Date().toISOString());
   }
-  if(id==='intelligence'){
+  if(id==='intelligence' && epoch?.state==='prepared')add('Prepared epoch: ownership changes, authorizations and execution controls are disabled. No activation has been approved.','notice');
+  if(id==='intelligence' && epoch?.state!=='prepared'){
     const workflow=await read('/api/autonomy');
     if(workflow.data)rows.splice(1,0,{kind:'autonomy',policy:workflow.data});
     else add('Offline autonomy controls unavailable. Operator sign-in and a backend supporting this workflow are required.','notice');
