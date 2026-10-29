@@ -30,6 +30,36 @@ async fn run() -> Result<()> {
     let reasoner = configured_provider(&provider, private_staging)?;
     let url = std::env::var("DATABASE_URL").map_err(|_| Error::Invalid)?;
     let store = Store::connect(&url).await?;
+    // Identity is checked BEFORE migrations, recovery, heartbeats, or provider calls.
+    let epoch = store.application_epoch().await?;
+    let expected = std::env::var("SUPA_EXPECTED_EPOCH_ID").ok();
+    let preview = flag("SUPA_EPOCH_READONLY_PREVIEW", false)?;
+    if epoch.is_some() || expected.is_some() || preview {
+        if !preview
+            || provider != "offline"
+            || scheduler_enabled
+            || flag("SUPA_ALLOW_OPENAI", false)?
+            || flag("SUPA_CONTROLLED_INFERENCE", false)?
+            || flag("SUPA_WALLET_ENABLED", false)?
+            || private_staging
+        {
+            return Err(Error::Denied);
+        }
+        let id = expected
+            .ok_or(Error::Denied)?
+            .parse()
+            .map_err(|_| Error::Invalid)?;
+        store.require_epoch_preview(id).await?;
+        let runtime = Runtime::new(store.clone(), Arc::new(Offline));
+        let state = AppState::new(store, runtime, token)?;
+        let listener = tokio::net::TcpListener::bind(bind)
+            .await
+            .map_err(|_| Error::Invalid)?;
+        return axum::serve(listener, router(state))
+            .with_graceful_shutdown(shutdown())
+            .await
+            .map_err(|_| Error::Invalid);
+    }
     store.migrate().await?;
     store.recover().await?;
     let runtime = Runtime::new(store.clone(), reasoner);
