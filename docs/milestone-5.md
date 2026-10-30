@@ -1,5 +1,9 @@
 # Milestone 5 — full-stack integration and private staging preparation
 
+> Current status: see [revalidation on 2026-10-30](#revalidation-on-2026-10-30).
+> The original results below are historical. Scoped authentication has superseded
+> the original shared-token staging recipe. No staging deployment is active.
+
 The approved experience now runs through a Next.js server with the existing Rust
 API and PostgreSQL. No redesign, logo change, deployment, paid inference, signing,
 transfer, trade, publication or token launch was performed.
@@ -187,3 +191,234 @@ configuration, fresh shared variables, exact approved
 domain, private connectivity, backup/restore and deployed readiness still need
 verification in an explicitly approved staging workflow. No push or deployment
 has been performed.
+
+## Revalidation on 2026-10-30
+
+### Outcome and preserved boundaries
+
+The full stack operates in an isolated test environment: PostgreSQL 16, the Rust
+API, a globally paused worker, Next.js serving the approved experience, and Chrome.
+This is not activation of the prepared development epoch or a Railway deployment.
+The primary cluster stayed stopped. Its offline control-file fingerprint, pending
+owner files, development intent and archived accounting evidence remained unchanged.
+The historical database remains unrecovered. The quarantined budget
+`ad91e475-f1da-495a-8247-139643d2d8b1`, $0.10 ceiling and unresolved $0.004048 hold
+were not imported, refunded, reused or reconciled. Independent backups remain unset.
+
+All twelve checked visual source/asset files match baseline
+`ecf6b163f375aa459eac3ed23e618357ddbf901b` byte for byte. All ten sections, logo,
+intro, portal, typing hands, branch motion, wheel, typography and layouts are
+preserved. No visual application component was edited.
+
+### Current integrations
+
+| Section | Genuine integration | Static, simulated or planned boundary |
+| --- | --- | --- |
+| Home | Authenticated API health and public identity projection | Architecture diagram is decorative; product vision is editorial. |
+| Agents | Persisted identity, UUID, lifecycle and creation time | Public projection excludes private instructions, goals and memory. |
+| Intelligence | Scoped profile, goals, cycles, actions, execution health, authorization history and bounded offline controls | Live GPT remains disabled in staging. A heartbeat or authorization is not proof of execution. |
+| Memory | Scoped saved observations, hypotheses and event/cycle references | Hypotheses remain unverified; no invented lessons on page load. |
+| Economy | Scoped simulated financials and ledger; saved wallet identity/observation endpoints | Hypothetical USD is not real money. Absent wallet records remain unavailable. |
+| Social | Scoped stored drafts, provenance and review status | Empty data remains empty. No draft generation or X publishing on visits. |
+| Trading | Navigation and explicit availability disclosure | Planned; no executable trading API. |
+| Token Launch | Navigation and explicit availability disclosure | Planned; no Pump.fun launch action. |
+| Factory | Navigation and explicit availability disclosure | Planned; no child-agent creation. |
+| About | Existing identity diagram and explanatory content | Editorial explanation, not an observed runtime. |
+
+Existing read-only polling retains the 15-second cadence and pauses around hidden
+tabs and active editing/navigation. Database and HTTP permission tests cover
+private memory, execution history, social records, financial data and wallet reads.
+No browser identity/role field chooses an upstream Rust principal.
+
+### Implementation changes
+
+The staging IaC still used the original shared-token recipe. That token now has
+only public-service scope in Rust, so it could not operate the scoped console.
+The corrected plan supplies `SUPA_OPERATOR_CREDENTIALS` to the API and
+`SUPA_WEB_OPERATORS` to Next.js through separate secret references. Each operator's
+Basic account maps to its own server-side Rust token. Public-service, visitor and
+operator credentials cannot be shared. Legacy shared operator authentication is
+disabled specifically in staging; local compatibility is preserved.
+
+Staging preflight validates bounded JSON arrays, unique non-nil UUIDs, allowed
+roles, token/password formats, matching frontend/backend operator tokens and
+separation from visitor credentials. Diagnostics report configuration names,
+not values. The API rejects missing/ambiguous staging credentials, paid providers,
+controlled inference, embedded scheduling, wallet execution and legacy owner
+configuration before database access. Existing ownership and per-tool checks remain.
+
+The smoke harness now creates only synthetic test principals and uses the current
+finite schedule authorization contract. Its offline panel selector is explicit
+because Intelligence now contains three separate control panels. Test credentials
+are generated in memory, local dotenv loading is disabled, and no real owner
+identity, grants, configuration profiles or spending authorizations are installed.
+
+### Actual end-to-end demonstrations
+
+The final fresh test database persisted two test identities:
+
+- One explicitly authorized offline cycle: two memories, two tool-action records,
+  1,100 simulated microUSD of expenses, then explicit pause.
+- The bounded offline rehearsal: three cycles, six memories, eight action records,
+  3,300 simulated microUSD of expenses and 6,700 simulated microUSD remaining.
+  It finished paused with scheduling disabled.
+
+The frontend performed the rehearsal against the actual Rust API and PostgreSQL.
+Replay returned HTTP 409 without another identity, cycle or charge. The public
+service token and an unrelated principal could not read private memory, even with
+forged owner headers. Visitors could read the minimal directory but not private
+records. Arbitrary frontend mutation routes were rejected. After API restart,
+paused lifecycle, cycles, memories and simulated accounting persisted unchanged.
+The separate worker reported readiness while globally disabled. No paid request,
+transfer, trade, publication, token launch or child agent occurred.
+
+The social and wallet rendering tests use explicit synthetic fixtures. Rust tests
+verify persisted social review and read-only wallet contracts. The final full-stack
+database had no wallet observations or social drafts to invent; its UI showed
+unavailable/empty states. These are distinct from the live chain observations below.
+
+### Real Devnet versus mocked verification
+
+Read-only calls to the public Solana Devnet endpoint succeeded at
+`2026-10-30T19:35:34Z`. The genesis matched
+`EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG`. The canonical USDC mint
+`4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU` had the expected token-program
+owner and six decimals. The documented public wallet
+`4imA97URQuuFYbSKNum5dWCqUmRNenmscEcVpAju5S7U` held zero SOL lamports at slot
+516881507 and zero USDC atoms at slot 516881509, using finalized reads.
+
+These observations were not written into the historical or prepared database and
+did not require custody files. No actual token receipt was verified: suitable
+funding and a specifically authorized transfer/signature were not available.
+Mint/owner/network validation, finalization, receipt idempotency, concurrency,
+restart recovery and signing denial remain covered by mocked-RPC/database tests.
+They do not establish that a new real receipt occurred. GPT inference tests use
+mocked providers; this review made no live paid inference request.
+
+### Backup, restoration and service plan
+
+After shutting down the owned smoke services, a private custom-format dump of
+the disposable database was restored into a different, newly created test
+database. All non-system schemas, data, constraints, indexes and sequence state
+matched the source fingerprint. The source fingerprint stayed unchanged:
+`8798b2996d7418bdb318be3df4bd2b1fb9b4e6446df6f2a5845fc73d4bd81bbd`.
+The dump was mode 0600 inside a private directory. Both the disposable cluster and
+primary cluster were stopped afterward. This same-disk test is not proof of
+Railway volume recovery or protection from disk loss. No private dump was uploaded.
+
+The four-service plan remains Next.js, Rust API, paused worker and fresh PostgreSQL
+with a persistent database volume. Only the frontend may later receive an approved
+HTTPS domain. API/worker/PostgreSQL remain private, with no public TCP proxies.
+Use a new isolated staging environment, never the unrecovered history or prepared
+local epoch. Startup/migrations on an actual staging database still require approval;
+runtime image rollback does not reverse database migrations.
+
+The exact environment table, migration order, health checks, backup requirements,
+and rollback boundaries are maintained in [railway-staging.md](railway-staging.md).
+Required configuration groups are:
+
+- Frontend: `SUPA_SITE_MODE`, exact `SUPA_SITE_ORIGIN`, visitor username/password,
+  `SUPA_WEB_OPERATORS`, public-service `SUPA_API_TOKEN`, private `SUPA_BACKEND_URL`,
+  and `PORT`.
+- API: private `DATABASE_URL`, `SUPA_PRIVATE_STAGING=true`,
+  `SUPA_OPERATOR_CREDENTIALS`, the matching public-service token, bind/port,
+  `SUPA_PROVIDER=offline`, and explicit false settings for API scheduling, wallets,
+  `SUPA_ALLOW_OPENAI` and `SUPA_CONTROLLED_INFERENCE`.
+- Worker: private database URL, private bind/port, offline provider,
+  `SUPA_WORKER_ENABLED=false`, bounded poll interval, paid/controlled inference false.
+  It receives no API/operator secret through the IaC definition.
+
+No actual staging identity, secret or account resource was created. A real
+administrator must choose and approve staging principals/roles, configure fresh
+secret values and explicitly grant any future agent access. Do not use the
+pending local KI Daniel credentials for this new environment.
+
+### Browser and focused design evidence
+
+The final passive REA screenshots, after restoring the owning browser's viewport
+and reduced-motion settings, show real PostgreSQL-backed screens:
+
+| Capture | Viewport | REA Evidence ID |
+| --- | --- | --- |
+| [Desktop Intelligence](../artifacts/staging-revalidation-2026-10-30/rea-desktop-intelligence.png) | 1440×1000 | `ev_6a19b628b4778b4a4d3dd0d606ded8d4ff79a44ab76d610e5b4c01a0aea2f32a` |
+| [Tablet Economy](../artifacts/staging-revalidation-2026-10-30/rea-tablet-economy.png) | 768×1024 | `ev_819fed93e80d1f84b9dd255e347e5b9dae4a98dd335634c2619e73e4bc1d56d3` |
+| [Mobile Home](../artifacts/staging-revalidation-2026-10-30/rea-mobile-home.png) | 390×844 | `ev_ed6ef6ae3d3e8512799223ebbaf86884c51f31a135d3f3ca42cc386b021f0f65` |
+
+REA itself executed the terminal `supa memory` navigation
+(`ev_68093a53ded299b7d90e4f2fe5ad025fa1264a16fd472f8ce3103abd57e1d04a`) and
+mobile navigation open/Escape-close checks
+(`ev_ed369d810c8cccf712db7326171bf23f89037fd99263d0f766a1899a25635b04`). Every
+declared interaction step completed. Attached-session event coverage is incomplete;
+it cannot establish absence of earlier browser errors. Transient scenario screenshot
+emulation was inconsistent, so those screenshots are not the final viewport evidence.
+The final passive captures follow independently verified CSS viewport measurements,
+reduced motion, readiness and no horizontal document overflow. Chromium emulation
+is not a physical-device test or accessibility certification.
+
+The Impeccable detector reported four warnings: a real 3.5:1 status-label contrast
+issue and three possible SVG/wheel-label overlaps. The latter were not reproduced
+as painted occlusion in the final desktop capture and remain unsuppressed. These
+are existing visual concerns, not claimed regressions; no design change or broad
+ignore rule was introduced. The contrast issue needs a narrowly approved
+accessibility pass before claiming WCAG AA compliance.
+
+Focused audit: accessibility 2/4, performance 3/4, theming 4/4, responsive behavior
+3/4, implementation integrity 4/4: **16/20, provisional Good**. The product-specific
+system is preserved. This is a bounded review, not a complete-site certification or
+Lighthouse/Core Web Vitals result. Recommended later workflows: targeted
+`impeccable harden` for verified contrast/accessibility concerns, then
+`impeccable polish`, preserving the approved identity.
+
+### Validation results
+
+| Check | Result |
+| --- | --- |
+| Rust workspace excluding migration-admin, including opt-in PostgreSQL/socket tests | 121 passed; zero failed or ignored |
+| Migration-admin unit/security tests | 3 passed; 1 specialized Stage 2 clone test intentionally not rerun |
+| Final API staging-policy unit tests | All 4 passed; includes malformed/duplicate identities and unsafe launch flags |
+| Real process startup gates | Seven unsafe staging settings rejected before database access |
+| Adapter, workflow and epoch unit tests | 24 passed |
+| Railway SDK graph/security checks | 6 passed, no account requests |
+| Railway TypeScript authoring check | Passed |
+| Next.js production build | Passed with sanitized environment and local dotenv loading disabled |
+| Frontend ESLint and TypeScript | Passed |
+| Original console browser suite | 144 passed |
+| Approved experience browser suite | 153 passed |
+| Rust formatting and all-target Clippy with warnings denied | Passed |
+| Compiled browser secret scan | 26 JavaScript bundles, zero findings |
+| PostgreSQL backup/restore and protected-file fingerprints | Passed |
+
+The initial restricted build failed to parse TypeScript CLI configuration; the
+sanitized host build succeeded. Initial smoke attempts exposed stale shared-token,
+unauthorized manual-cycle and ambiguous panel-selector assumptions. The harness
+was corrected to current contracts and the final fresh-database run passed. No
+permission assertion or application security control was weakened to pass tests.
+
+Full reruns and additional checks were limited to changed paths or observed
+failures. The specialized migration-only clone test requires its dedicated Stage 2
+port/storage profile and was not invoked against this differently isolated cluster.
+No primary migration or epoch transition was performed.
+
+### Git, evidence retention and remaining release blockers
+
+Generated screenshots, JSON, logs, database files and backups remain local and
+untracked. The local evidence directory is
+`artifacts/staging-revalidation-2026-10-30/`; it contains system, Devnet, startup,
+backup, preservation, REA and scanner results. It is intentionally absent from the
+public repository. Source and documentation changes use individual Conventional
+Commits on `main`; the final secrets scan and one-file history audit are retained
+there after completion. No push, history rewrite, deployment or account apply is
+authorized by this review.
+
+Private staging still requires an explicit deployment decision, verified account
+and environment, approved named principals, fresh secret provisioning, reviewed
+domain/origin, Docker image build and image scan, least-privilege database runtime
+roles with an approved migration procedure, actual PostgreSQL-image validation,
+and a Railway-volume backup/restore drill. Docker is unavailable in this environment;
+matching Dockerfile source copies pass native-platform locked Cargo metadata checks,
+which is not a container build. Local tests use PostgreSQL 16, while the selected
+Railway helper image must be verified separately. Image digest pinning, database
+resource limits, monitoring, Basic-auth rate limiting and MFA/session-based access
+remain operational/security follow-ups. Never import local evaluation secrets,
+treasuries or test credentials. Paid inference, signing/transfers, trading,
+token launches, X publication, child agents and worker enablement stay disabled.
