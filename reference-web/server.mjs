@@ -3,7 +3,7 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { loadLocalEnvironment, readResource, runAutonomy, operatorAuthorized, localRequest } from './backend.mjs';
+import { loadLocalEnvironment, readResource, runAutonomy, isEconomicPath, operatorAuthorized, localRequest } from './backend.mjs';
 await loadLocalEnvironment();
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -29,7 +29,7 @@ createServer(async (request, response) => {
   response.setHeader("Referrer-Policy", "no-referrer");
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
-  if (request.method !== "GET" && request.method !== "HEAD" && !(request.method === 'POST' && (request.url === '/api/autonomy'||/^\/api\/agents\/[0-9a-f-]{36}\/(?:schedule|live(?:\/[0-9a-f-]{36}\/approval)?)$/i.test(request.url)))) {
+  if (request.method !== "GET" && request.method !== "HEAD" && !(request.method === 'POST' && (isEconomicPath(request.url)||request.url === '/api/autonomy'||/^\/api\/agents\/[0-9a-f-]{36}\/(?:schedule|live(?:\/[0-9a-f-]{36}\/approval)?)$/i.test(request.url)))) {
     response.setHeader("Allow", "GET, HEAD");
     return finish(response, 405, "Operation not permitted");
   }
@@ -43,7 +43,7 @@ createServer(async (request, response) => {
   if(request.method==='POST'){
     if(!operatorAuthorized(request.headers.authorization))return finish(response,401,'Operator authentication required');
     const chunks=[];let size=0;
-    try{for await(const chunk of request){size+=chunk.length;if(size>4096)return finish(response,413,'Request too large');chunks.push(chunk);}}
+    try{for await(const chunk of request){size+=chunk.length;if(size>(isEconomicPath(request.url)?12000:4096))return finish(response,413,'Request too large');chunks.push(chunk);}}
     catch{return finish(response,400,'Invalid request');}
     const result=await runAutonomy(request.url,request.headers,Buffer.concat(chunks).toString('utf8'));
     response.writeHead(result.status,{'Content-Type':'application/json; charset=utf-8'});return response.end(JSON.stringify(result.body));
