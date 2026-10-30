@@ -1,4 +1,5 @@
 pub mod controlled;
+pub mod economy;
 pub mod evaluation;
 pub mod health;
 pub mod wallet;
