@@ -14,6 +14,8 @@ export default defineRailway((ctx) => {
     DATABASE_URL: db.env.DATABASE_URL,
     SUPA_PRIVATE_STAGING: "true",
     SUPA_PROVIDER: "offline",
+    SUPA_ALLOW_OPENAI: "false",
+    SUPA_CONTROLLED_INFERENCE: "false",
   };
   const api = service("supa-api", {
     source,
@@ -25,6 +27,7 @@ export default defineRailway((ctx) => {
       ...backend,
       PORT: "8080", SUPA_BIND: "[::]:8080",
       SUPA_API_TOKEN: ctx.shared.SUPA_API_TOKEN,
+      SUPA_OPERATOR_CREDENTIALS: ctx.shared.SUPA_OPERATOR_CREDENTIALS,
       SUPA_API_SCHEDULER_ENABLED: "false",
       SUPA_WALLET_ENABLED: "false",
     },
@@ -53,8 +56,7 @@ export default defineRailway((ctx) => {
       SUPA_SITE_ORIGIN: ctx.shared.SUPA_SITE_ORIGIN,
       SUPA_STAGING_USERNAME: ctx.shared.SUPA_STAGING_USERNAME,
       SUPA_STAGING_PASSWORD: ctx.shared.SUPA_STAGING_PASSWORD,
-      SUPA_WEB_USERNAME: ctx.shared.SUPA_WEB_USERNAME,
-      SUPA_WEB_PASSWORD: ctx.shared.SUPA_WEB_PASSWORD,
+      SUPA_WEB_OPERATORS: ctx.shared.SUPA_WEB_OPERATORS,
       SUPA_API_TOKEN: ctx.shared.SUPA_API_TOKEN,
       SUPA_BACKEND_URL: "http://supa-api.railway.internal:8080",
     },
