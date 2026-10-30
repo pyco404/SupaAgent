@@ -1,4 +1,4 @@
-//! Identity only. There is deliberately no activation, adoption, or budget provisioning method.
+//! Epoch identity and independently approved, fenced read-only transitions. No budget provisioning.
 use super::*;
 use serde::{Deserialize, Serialize};
 
@@ -84,8 +84,12 @@ impl Store {
         {
             return Err(Error::Denied);
         }
-        let audited: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM epoch_transitions WHERE epoch_id=$1 AND revision=$2 AND approval_id=$3 AND operation='activate_read_only' AND to_state='active_read_only')")
-            .bind(epoch.id).bind(epoch.revision).bind(approval).fetch_one(&self.pool).await.map_err(db)?;
+        let audited: bool = sqlx::query_scalar("SELECT epoch_guard.verify_active($1,$2)")
+            .bind(epoch.id)
+            .bind(approval)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(db)?;
         if !audited {
             return Err(Error::Denied);
         }
@@ -99,7 +103,7 @@ impl Store {
         approval: Uuid,
         revision: i64,
         operation: &str,
-        plan_sha256: &str,
+        plan_text: &str,
     ) -> Result<ApplicationEpoch> {
         let database: String = sqlx::query_scalar("SELECT current_database()")
             .fetch_one(&self.pool)
@@ -109,53 +113,29 @@ impl Store {
             || actor.is_nil()
             || approval.is_nil()
             || revision < 0
-            || plan_sha256.len() != 64
-            || !plan_sha256
-                .bytes()
-                .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+            || plan_text.len() > 32768
+            || serde_json::from_str::<Value>(plan_text).is_err()
         {
             return Err(Error::Denied);
         }
-        let next_revision = revision.checked_add(1).ok_or(Error::Invalid)?;
+        // The independent database authority owns the immutable approval. Caller hashes are insufficient.
         let mut tx = self.pool.begin().await.map_err(db)?;
-        let value: Value=sqlx::query_scalar("SELECT to_jsonb(e)-'singleton'-'created_at' FROM application_epoch e WHERE id=$1 FOR UPDATE")
-            .bind(expected).fetch_optional(&mut *tx).await.map_err(db)?.ok_or(Error::Denied)?;
-        let current: ApplicationEpoch =
-            serde_json::from_value(value).map_err(|_| Error::Database)?;
-        let next = match (operation, current.state.as_str()) {
-            ("activate_read_only", "prepared") => "active_read_only",
-            ("rollback", "active_read_only") => "prepared",
-            _ => return Err(Error::Stale),
-        };
-        if current.revision != revision {
-            return Err(Error::Stale);
-        }
-        let used: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM epoch_transitions WHERE approval_id=$1)",
-        )
-        .bind(approval)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(db)?;
-        if used {
-            return Err(Error::Stale);
-        }
-        sqlx::query("INSERT INTO epoch_transitions(approval_id,epoch_id,revision,operation,approved_by,plan_sha256,from_state,to_state) VALUES($1,$2,$3,$4,$5,$6,$7,$8)")
-            .bind(approval).bind(expected).bind(revision+1).bind(operation).bind(actor).bind(plan_sha256).bind(&current.state).bind(next)
-            .execute(&mut *tx).await.map_err(db)?;
-        sqlx::query(
-            "UPDATE application_epoch SET state=$2,revision=revision+1,approval_id=$3 WHERE id=$1",
-        )
-        .bind(expected)
-        .bind(next)
-        .bind(approval)
-        .execute(&mut *tx)
-        .await
-        .map_err(db)?;
-        let mut result = current;
-        result.state = next.into();
-        result.revision = next_revision;
-        result.approval_id = Some(approval);
+        sqlx::query("SET TRANSACTION READ WRITE")
+            .execute(&mut *tx)
+            .await
+            .map_err(db)?;
+        let value: Value =
+            sqlx::query_scalar("SELECT epoch_guard.execute_transition($1,$2,'owner',$3,$4,$5,$6)")
+                .bind(approval)
+                .bind(actor)
+                .bind(expected)
+                .bind(revision)
+                .bind(operation)
+                .bind(plan_text)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db)?;
+        let result = serde_json::from_value(value).map_err(|_| Error::Database)?;
         tx.commit().await.map_err(db)?;
         Ok(result)
     }
