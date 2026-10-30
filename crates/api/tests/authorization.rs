@@ -35,15 +35,18 @@ impl Fixture {
     async fn new() -> Self {
         let base = std::env::var("TEST_DATABASE_URL").expect("dedicated test database required");
         let admin = Store::connect(&base).await.unwrap();
-        let schema = format!("authorization_{}", Uuid::new_v4().simple());
-        sqlx::query(&format!("CREATE SCHEMA {schema}"))
+        let schema = format!("supa_test_authorization_{}", Uuid::new_v4().simple());
+        sqlx::query(&format!("CREATE DATABASE {schema} TEMPLATE template0"))
             .execute(admin.pool())
             .await
             .unwrap();
-        let url = format!(
-            "{base}{}options=-csearch_path%3D{schema}",
-            if base.contains('?') { '&' } else { '?' }
-        );
+        let url = sqlx::ConnectOptions::to_url_lossy(
+            &base
+                .parse::<sqlx::postgres::PgConnectOptions>()
+                .unwrap()
+                .database(&schema),
+        )
+        .to_string();
         let store = Store::connect(&url).await.unwrap();
         store.migrate().await.unwrap();
         let owner = Uuid::new_v4();
@@ -142,7 +145,7 @@ impl Fixture {
     }
     async fn close(self) {
         self.store.pool().close().await;
-        sqlx::query(&format!("DROP SCHEMA {} CASCADE", self.schema))
+        sqlx::query(&format!("DROP DATABASE {} WITH (FORCE)", self.schema))
             .execute(self.admin.pool())
             .await
             .unwrap();
@@ -538,15 +541,20 @@ async fn renewal_rejects_old_consent_and_unresolved_leases() {
 async fn additive_migration_preserves_unowned_legacy_records_and_allowances() {
     let base = std::env::var("TEST_DATABASE_URL").unwrap();
     let admin = Store::connect(&base).await.unwrap();
-    let schema = format!("legacy_upgrade_{}", Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE SCHEMA {schema}"))
+    let schema = format!("supa_test_legacy_upgrade_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE DATABASE {schema} TEMPLATE template0"))
         .execute(admin.pool())
         .await
         .unwrap();
-    let store = Store::connect(&format!(
-        "{base}{}options=-csearch_path%3D{schema}",
-        if base.contains('?') { '&' } else { '?' }
-    ))
+    let store = Store::connect(
+        sqlx::ConnectOptions::to_url_lossy(
+            &base
+                .parse::<sqlx::postgres::PgConnectOptions>()
+                .unwrap()
+                .database(&schema),
+        )
+        .as_str(),
+    )
     .await
     .unwrap();
     let mut old = sqlx::migrate!("../../migrations");
@@ -633,7 +641,7 @@ async fn additive_migration_preserves_unowned_legacy_records_and_allowances() {
     ));
     assert_eq!(json!(store.get(agent.id).await.unwrap()), before);
     store.pool().close().await;
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+    sqlx::query(&format!("DROP DATABASE {schema} WITH (FORCE)"))
         .execute(admin.pool())
         .await
         .unwrap();
