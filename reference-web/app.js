@@ -3,7 +3,7 @@
 // Persistent agents. Application-enforced permissions.
 import { createWheel } from './wheel.js';
 import { createScenes } from './scene.js';
-import { navigation, overview, sectionView } from './platform.js';
+import { navigation, overview, sectionView, read, units } from './platform.js';
 
 const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
@@ -138,7 +138,7 @@ async function select(index,background=false){
   }
   const rows=await sectionView(item.id,state,agentId);
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
-  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='autonomy')?'offline controls':'read-only'}`;
+  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='economy')?'bounded economic controls':rows.some(row=>row.kind==='autonomy')?'offline controls':'read-only'}`;
   const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
   if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
   viewFingerprint=fingerprint;if(background)cancelTyping();
@@ -147,6 +147,7 @@ async function select(index,background=false){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
     }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
+    else if(row.kind==='economy')buffer.append(economyPanel(row.view,row.agentId));
     else if(row.kind==='live')buffer.append(livePanel(row.view,row.role,row.agentId));
     else if(row.kind==='schedule')buffer.append(schedulePanel(row.status,row.goals,row.role));
     else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
@@ -211,6 +212,52 @@ function typeTerminal() {
   typingTimer=setTimeout(tick,150);
 }
 function openCommand(prefix=''){closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
+function economyPanel(view,id){
+  const details=node('details','calculation autonomy-panel');details.dataset.economy='jobs';details.append(node('summary','','Services, jobs and earned revenue'));
+  details.append(node('p','terminal-notice','Operator-controlled offline work. Simulated units and Devnet test USDC stay separate. No real spending or transfers. Reload records after an uncertain response; never retry automatically.'));
+  details.append(node('p','prompt',view.accounts.policy?`Configured simulated reserve: ${units(view.accounts.policy.reserve_atoms)}. Cumulative spending ceiling: ${units(view.accounts.policy.ceiling_atoms)}.`:'No simulated spending policy is approved; cost-bearing acceptance is disabled.'));
+  for(const account of view.accounts.networks){
+    details.append(node('h3','terminal-heading',account.network==='simulated'?'Simulated contracts':'Devnet test contracts'));
+    for(const [key,label]of [['cash_atoms','Cash'],['liability_atoms','Customer liabilities'],['earned_atoms','Earned revenue'],['inference_atoms','Inference expense'],['infrastructure_atoms','Infrastructure expense'],['available_atoms','Available operating capital'],['net_result_atoms','Net result']])details.append(node('p','prompt',`${label}: ${units(account[key])}`));
+    details.append(node('p','terminal-notice',account.runway_reason));
+  }
+  const status=node('p','terminal-notice');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+  async function send(path,body,button){
+    button.disabled=true;status.textContent='Saving explicit economic action…';
+    try{const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Supa-Action':'economic-workflow'},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});const result=await response.json();if(!response.ok){status.textContent=`Action not confirmed: ${result.error??'backend unavailable'}. Reload saved records before another action.`;return null;}status.textContent=`Saved job ${result.id} / ${result.state}. Reload Economy to inspect current records.`;return result;}catch{status.textContent='Outcome uncertain. Reload saved records before another action. No automatic retry.';return null;}
+  }
+  const refresh=node('button','','Reload economic records');refresh.type='button';refresh.addEventListener('click',()=>void select(navigation.findIndex(n=>n.id==='economy')));details.append(refresh);
+  const services=view.services;
+  if(!services.length)details.append(node('p','terminal-notice','No services are registered for this agent. An owner must explicitly offer a bounded service.'));
+  else{
+    const form=node('form','autonomy-form'),selectService=node('select'),label=node('label','','Service');selectService.id='economic-service';label.htmlFor=selectService.id;
+    for(const service of services){const option=node('option','',`${service.spec.name} / ${units(service.spec.price_atoms)} per job`);option.value=service.id;selectService.append(option);}
+    const network=node('select');network.id='economic-network';const networkLabel=node('label','','Job network');networkLabel.htmlFor=network.id;for(const [value,text]of [['simulated','Simulated contract'],['devnet','Devnet test tokens / registered wallet required']]){const option=node('option','',text);option.value=value;network.append(option);}
+    const input=node('textarea');input.id='economic-input';input.rows=3;input.maxLength=8000;input.required=true;const inputLabel=node('label','','Supplied input / no secrets');inputLabel.htmlFor=input.id;
+    const consent=node('input');consent.type='checkbox';consent.required=true;const consentLabel=node('label','autonomy-consent');consentLabel.append(consent,document.createTextNode('Create one contract on the selected test network under my authenticated identity. No real funds or paid inference.'));
+    const submit=node('button','','Create simulated job');submit.type='submit';network.addEventListener('change',()=>{submit.textContent=network.value==='devnet'?'Create Devnet test job':'Create simulated job';});form.append(label,selectService,networkLabel,network,inputLabel,input,consentLabel,submit);details.append(form);
+    form.addEventListener('submit',async event=>{event.preventDefault();event.stopPropagation();if(!form.reportValidity()||!consent.checked)return;await send('/api/jobs',{request_id:crypto.randomUUID(),service_id:selectService.value,network:network.value,input:input.value,valid_for_seconds:3600},submit);});
+  }
+  for(const job of view.jobs){
+    const block=node('details','calculation');block.dataset.jobId=job.id;block.append(node('summary','',`${job.spec.name} / ${job.state} / ${job.network}`),node('p','prompt',`Job ${job.id} / revision ${job.revision} / attempts ${job.attempts}`),node('p','prompt',`Payment ${units(job.received_atoms)} / required ${units(job.spec.price_atoms)}. Expires ${job.expires_at}.`));
+    if(job.network==='devnet')block.append(node('p','terminal-notice',`Devnet payment requires the registered public wallet, canonical Devnet USDC mint and exactly one memo: ${job.id}. No transaction is constructed or signed here.`));
+    const refundable=['completed','failed','expired','cancelled','disputed'].includes(job.state)?job.received_atoms-job.earned_atoms:0;block.append(node('p','prompt',`Refund eligibility: ${units(refundable)}. Refund transfer is disabled.`));
+    if(job.output){const pre=node('pre','',JSON.stringify(job.output,null,2));pre.style.whiteSpace='pre-wrap';pre.style.overflowWrap='anywhere';block.append(pre,node('p','prompt',`Output SHA-256 ${job.output_sha256}`));}
+    if(job.failure_code)block.append(node('p','terminal-notice',job.failure_code));
+    const consent=node('input');consent.type='checkbox';const label=node('label','autonomy-consent');label.append(consent,document.createTextNode('I explicitly authorize the selected bounded action; acceptance reserves simulated costs.'));block.append(label);
+    const ops={created:['request_payment','cancel'],awaiting_payment:['cancel','expire'],funded:['accept','cancel','dispute'],accepted:['execute','cancel'],executing:['recover'],failed:['retry','dispute'],completed:['dispute']}[job.state]??[];
+    for(const op of ops){const button=node('button','',op.replaceAll('_',' '));button.type='button';button.addEventListener('click',async()=>{if(!consent.checked){status.textContent='Explicit authorization is required.';return;}await send(`/api/jobs/${job.id}/commands`,{request_id:crypto.randomUUID(),expected_revision:job.revision,operation:op,authorize:true},button);});block.append(button);}
+    if(job.network==='simulated'&&job.state==='awaiting_payment'){const pay=node('button','','Record simulated payment');pay.type='button';pay.addEventListener('click',async()=>{if(!consent.checked){status.textContent='Explicit authorization is required.';return;}await send(`/api/jobs/${job.id}/simulated-payment`,{request_id:crypto.randomUUID(),amount_atoms:Math.max(1,job.spec.price_atoms-job.received_atoms),authorize_simulated:true},pay);});block.append(pay);}
+    if(job.network==='devnet'){
+      const instructions=node('p','prompt','Expand to load read-only payment instructions.');block.append(instructions);let loaded=false;
+      block.addEventListener('toggle',async()=>{if(!block.open||loaded)return;loaded=true;const result=await read(`/api/jobs/${job.id}`);const p=result.data?.payment_request;instructions.textContent=p?`Devnet test USDC / mint ${p.mint}. Recipient ${p.recipient??'unavailable'}. Amount ${units(p.amount_atoms)}; memo ${p.memo}. Expires ${p.expires_at}.`:(result.error??'Payment instructions unavailable.');});
+      const signature=node('input');signature.id=`signature-${job.id}`;signature.maxLength=90;const signatureLabel=node('label','','Finalized Devnet transaction signature');signatureLabel.htmlFor=signature.id;const verify=node('button','','Verify read-only Devnet receipt');verify.type='button';verify.addEventListener('click',async()=>{if(!consent.checked||!signature.value){status.textContent='Authorization and a finalized signature are required.';return;}await send(`/api/jobs/${job.id}/verify-payment`,{signature:signature.value,authorize_read_only_verification:true},verify);});block.append(signatureLabel,signature,verify);
+    }
+    details.append(block);
+  }
+  if(!view.jobs.length)details.append(node('p','terminal-notice','No customer jobs have been saved.'));
+  details.append(status);return details;
+}
 function autonomyPanel(policy){
   const details=node('details','calculation autonomy-panel'),summary=node('summary','','Run an offline autonomy workflow');details.append(summary);
   details.append(node('p','terminal-notice','A new test agent receives your goal, selects permitted tools for three deterministic cycles, then pauses. No GPT calls, external actions or real spending.'));
