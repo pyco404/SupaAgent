@@ -1,4 +1,4 @@
-//! Real process scheduling against a fresh isolated PostgreSQL schema; deterministic provider only.
+//! Real process scheduling against a fresh isolated PostgreSQL database; deterministic provider only.
 use std::{
     process::{Child, Command, Stdio},
     time::Duration,
@@ -85,13 +85,18 @@ async fn offline_worker_runs_persists_and_restarts_paused_without_reactivation()
     let base_url = std::env::var("TEST_DATABASE_URL").expect("disposable database required");
     let admin = Store::connect(&base_url).await.unwrap();
     // Isolate the entire scheduler so it cannot select or charge another test's identities.
-    let schema = format!("worker_active_{}", Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE SCHEMA {schema}"))
+    let schema = format!("supa_test_worker_active_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE DATABASE {schema} TEMPLATE template0"))
         .execute(admin.pool())
         .await
         .unwrap();
-    let separator = if base_url.contains('?') { '&' } else { '?' };
-    let url = format!("{base_url}{separator}options=-csearch_path%3D{schema}");
+    let url = sqlx::ConnectOptions::to_url_lossy(
+        &base_url
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .unwrap()
+            .database(&schema),
+    )
+    .to_string();
     let store = Store::connect(&url).await.unwrap();
     store.migrate().await.unwrap();
     let agent = Agent::new(
@@ -201,7 +206,7 @@ async fn offline_worker_runs_persists_and_restarts_paused_without_reactivation()
         .unwrap();
     reconnected.pool().close().await;
     store.pool().close().await;
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+    sqlx::query(&format!("DROP DATABASE {schema} WITH (FORCE)"))
         .execute(admin.pool())
         .await
         .unwrap();
