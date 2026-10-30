@@ -1,4 +1,4 @@
-//! Isolated schemas only. These fixtures are never adopted by the prepared candidate.
+//! Isolated databases only. These fixtures are never adopted by the prepared candidate.
 use axum::{
     body::{Body, to_bytes},
     http::{Request, StatusCode},
@@ -19,13 +19,18 @@ async fn prepared_epoch_is_identified_read_only_and_never_adopts_owners_or_conse
     let base = std::env::var("TEST_DATABASE_URL").unwrap();
     assert!(base.contains("_test"));
     let admin = Store::connect(&base).await.unwrap();
-    let schema = format!("epoch_{}", Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE SCHEMA {schema}"))
+    let schema = format!("supa_test_epoch_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE DATABASE {schema} TEMPLATE template0"))
         .execute(admin.pool())
         .await
         .unwrap();
-    let prefix = if base.contains('?') { '&' } else { '?' };
-    let url = format!("{base}{prefix}options=-csearch_path%3D{schema}");
+    let url = sqlx::ConnectOptions::to_url_lossy(
+        &base
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .unwrap()
+            .database(&schema),
+    )
+    .to_string();
     let store = Store::connect(&url).await.unwrap();
     store.migrate().await.unwrap();
     assert!(store.application_epoch().await.unwrap().is_none());
@@ -60,7 +65,7 @@ async fn prepared_epoch_is_identified_read_only_and_never_adopts_owners_or_conse
     let namespace = Uuid::new_v4();
     sqlx::query("INSERT INTO application_epoch(id,accounting_namespace,label,kind,state,historical_database) VALUES($1,$2,'Isolated epoch fixture','development','prepared','unrecovered')").bind(id).bind(namespace).execute(store.pool()).await.unwrap();
     let frozen = Store::connect(&format!(
-        "{base}{prefix}options=-csearch_path%3D{schema}%20-cdefault_transaction_read_only%3Don"
+        "{url}&options=-cdefault_transaction_read_only%3Don"
     ))
     .await
     .unwrap();
@@ -150,7 +155,7 @@ async fn prepared_epoch_is_identified_read_only_and_never_adopts_owners_or_conse
     );
     frozen.pool().close().await;
     store.pool().close().await;
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+    sqlx::query(&format!("DROP DATABASE {schema} WITH (FORCE)"))
         .execute(admin.pool())
         .await
         .unwrap();
