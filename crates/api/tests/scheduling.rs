@@ -114,19 +114,24 @@ async fn due(store: &Store, id: Uuid) {
 }
 
 #[tokio::test]
-#[ignore = "requires disposable local TEST_DATABASE_URL; uses a fresh schema"]
+#[ignore = "requires disposable local TEST_DATABASE_URL; uses a fresh database"]
 async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     let base = std::env::var("TEST_DATABASE_URL").expect("local test database");
     assert!(base.contains("127.0.0.1") || base.contains("localhost"));
     assert!(!base.contains("options="));
     let admin = Store::connect(&base).await.unwrap();
-    let schema = format!("scheduling_{}", Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE SCHEMA {schema}"))
+    let schema = format!("supa_test_scheduling_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE DATABASE {schema} TEMPLATE template0"))
         .execute(admin.pool())
         .await
         .unwrap();
-    let sep = if base.contains('?') { '&' } else { '?' };
-    let url = format!("{base}{sep}options=-csearch_path%3D{schema}");
+    let url = sqlx::ConnectOptions::to_url_lossy(
+        &base
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .unwrap()
+            .database(&schema),
+    )
+    .to_string();
     let store = Store::connect(&url).await.unwrap();
     store.migrate().await.unwrap();
     let calls = Arc::new(AtomicUsize::new(0));
@@ -518,7 +523,7 @@ async fn bounded_scheduling_lifecycle_concurrency_recovery_and_permissions() {
     assert_eq!(calls.load(Ordering::SeqCst), 0); // even a configured provider is never invoked
     reconnect.pool().close().await;
     store.pool().close().await;
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+    sqlx::query(&format!("DROP DATABASE {schema} WITH (FORCE)"))
         .execute(admin.pool())
         .await
         .unwrap();
