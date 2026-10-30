@@ -41,7 +41,8 @@ missing context. No generated domain or database dump is imported.
 The official `railway` IaC SDK is pinned to **3.12.0** in `.railway/package.json`
 and its lockfile. Install it using `npm ci --prefix .railway --ignore-scripts`.
 The SDK supports Node 22+; local authoring validation uses Node 24. The actual IaC
-engine requires Railway CLI **5.42.1 or newer**. No CLI login, link, plan, apply,
+engine requires a compatible current Railway CLI; verify its version against
+the official IaC guide before any approved account planning. No CLI login, link, plan, apply,
 push or deployment has been run. Legacy per-service JSON manifests are not used:
 current official documentation says new services cannot opt into that deprecated
 format and legacy support ends on 2026-12-01.
@@ -50,7 +51,7 @@ Secrets and the exact future site origin reference pre-existing Railway **shared
 variables**, with no literal secret values and no local dotenv loading. Create
 these new staging shared variables through an approved account workflow:
 `SUPA_SITE_ORIGIN`, `SUPA_STAGING_USERNAME`, `SUPA_STAGING_PASSWORD`,
-`SUPA_WEB_USERNAME`, `SUPA_WEB_PASSWORD`, `SUPA_API_TOKEN`. SDK references do not
+`SUPA_WEB_OPERATORS`, `SUPA_OPERATOR_CREDENTIALS`, `SUPA_API_TOKEN`. SDK references do not
 create their values. After account setup is authorized, verify the references
 resolve before approving any plan. Do not use CLI value-printing options.
 
@@ -65,7 +66,7 @@ Optional local format/presence preflight (no dotenv loading, no network, no valu
 printed): `npm --prefix .railway run preflight`. It exits nonzero with missing
 variable names when none are provided. Passing local preflight does not prove
 that Railway account shared variables exist. It also checks separate passwords,
-minimum password/token lengths and an exact HTTPS origin. Do not paste credentials
+minimum password/token lengths, an exact HTTPS origin, unique non-nil principal IDs, matching frontend/backend operator tokens, valid roles, and separation from visitors and the public-service credential. Legacy `SUPA_WEB_USERNAME`, `SUPA_WEB_PASSWORD`, and `SUPA_OPERATOR_ID` are rejected by staging preflight. Do not paste credentials
 into shell command arguments or commit them.
 
 After explicit staging account authorization, link **a new isolated project** and
@@ -89,12 +90,14 @@ a `NEXT_PUBLIC_` prefix for sensitive configuration.
 | Frontend | `SUPA_SITE_MODE` | `staging` (also present during the frontend build; contains no secret) |
 | Frontend | `SUPA_SITE_ORIGIN` | Exact `https://` staging origin, no alternate or wildcard hosts |
 | Frontend | `SUPA_STAGING_USERNAME`, `SUPA_STAGING_PASSWORD` | Separate whole-site viewer gate; password at least 24 characters |
-| Frontend | `SUPA_WEB_USERNAME`, `SUPA_WEB_PASSWORD` | Separate operator credentials; password at least 24 characters. Viewer access does not grant private records. |
+| Frontend | `SUPA_WEB_OPERATORS` | Secret JSON array of `{username,password,api_token}` accounts; each password at least 24 characters, each token bound to a configured Rust principal. |
+| API | `SUPA_OPERATOR_CREDENTIALS` | Secret JSON array of `{id,role,token}`; real approved UUIDs and least-privilege `viewer`, `operator`, or `owner` roles. No automatic agent ownership grants. |
 | Frontend | `SUPA_BACKEND_URL` | `http://supa-api.railway.internal:8080` |
-| Frontend + API | `SUPA_API_TOKEN` | Same newly generated server-only API bearer token, at least 32 printable ASCII characters |
+| Frontend + API | `SUPA_API_TOKEN` | Same newly generated public-service bearer token, 32–256 printable ASCII characters; must differ from every operator token |
 | API + worker | `DATABASE_URL` | IaC reference to `supa-staging-postgres` private `DATABASE_URL`; verify it resolves to the private host |
 | API + worker | `SUPA_PRIVATE_STAGING` | `true` |
 | API + worker | `SUPA_PROVIDER` | `offline`; paid providers rejected by the staging runtime |
+| API + worker | `SUPA_ALLOW_OPENAI`, `SUPA_CONTROLLED_INFERENCE` | Both `false`; the private API rejects enabling either before database access |
 | API | `SUPA_BIND`, `PORT` | `[::]:8080`, `8080` |
 | API | `SUPA_API_SCHEDULER_ENABLED` | `false`; worker is the only future scheduler |
 | API | `SUPA_WALLET_ENABLED` | `false`; no vault, master-key file or signing material is provisioned |
@@ -192,3 +195,31 @@ trading, token launch or agent creation is implied by staging preparation.
 - [Private networking and internal service DNS](https://docs.railway.com/networking/private-networking)
 - [Readiness behavior and `PORT`](https://docs.railway.com/deployments/healthchecks)
 - [Volumes and separate service setup](https://docs.railway.com/guides/docker-compose)
+
+## Scoped authentication update — 2026-10-30
+
+The original shared-token staging recipe no longer matches the scoped Rust API.
+`SUPA_API_TOKEN` grants only public-service reads; it must never be an operator
+credential. Stage operator accounts are now exclusively `SUPA_WEB_OPERATORS`,
+with each token independently bound in Rust through `SUPA_OPERATOR_CREDENTIALS`.
+Rust API tokens and principal mappings never enter browser JavaScript.
+Browser Basic credentials are checked server-side; visitor identity and role
+headers do not establish a Rust principal.
+
+An administrator must explicitly choose the staging principals and roles, generate
+new credentials, and approve any agent access grants. Do not reuse KI Daniel's
+pending local epoch credentials or silently activate the prepared local epoch.
+Private staging fails before database access when credentials are missing or
+ambiguous, or when paid providers, controlled inference, the embedded scheduler,
+wallet execution, or legacy shared-owner identity are enabled.
+
+The read-only Solana validation used the public Devnet endpoint and documented
+public wallet; it did not read custody files or change any database. See
+[the current revalidation report](milestone-5.md#revalidation-on-2026-10-30) for actual
+checks, limitations, and untracked local browser evidence.
+
+Official references verified for this review: [Railway IaC reference](https://docs.railway.com/infrastructure-as-code/reference),
+[private networking](https://docs.railway.com/networking/private-networking), and
+[PostgreSQL](https://docs.railway.com/databases/postgresql). Account resources,
+volumes, actual PostgreSQL image behavior, backup schedules, and deployed health
+remain unverified until an approved deployment workflow.
