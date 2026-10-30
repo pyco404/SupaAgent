@@ -1,0 +1,23 @@
+{
+  "disposable_cluster_only": true,
+  "synthetic_credentials_only": true,
+  "actual_scram_select_only_backend": true,
+  "view_checks": 30,
+  "viewports": [
+    1440,
+    768,
+    390
+  ],
+  "browser_errors": [],
+  "overflow": false,
+  "unauthorized_and_spoofed_identity_denied": true,
+  "shared_service_cannot_be_owner": true,
+  "owner_mutations_denied": true,
+  "unsafe_startup_flags_rejected": 4,
+  "invalid_connection_startups_rejected": 2,
+  "worker_rejected": true,
+  "restart_preserved_approval": true,
+  "primary_frontend_repointed": false,
+  "real_credentials_installed": false,
+  "paid_requests": 0
+}
