@@ -1,8 +1,0 @@
-{
-  "pre_push_hook_blocks_push": true,
-  "push_command_executed": false,
-  "network_request_from_hook_test": false,
-  "original_git_empty": true,
-  "original_git_mode": "0o555",
-  "recovery_metadata_mode": "0o700"
-}
