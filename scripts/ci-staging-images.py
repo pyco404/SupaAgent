@@ -240,7 +240,7 @@ def validate(service, trivy):
             assert sql('SELECT count(*) FROM worker_health WHERE enabled') == '0'
             assert sql('SELECT count(*) FROM cycles') == '0'
         if service != 'frontend':
-            assert sql('SELECT count(*) FROM _sqlx_migrations WHERE success') == '10'
+            assert sql('SELECT count(*) FROM _sqlx_migrations WHERE success') == '11'
             docker('restart', database)
         docker('restart', application)
         for _ in range(120):
