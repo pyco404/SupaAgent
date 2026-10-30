@@ -27,11 +27,65 @@ PATTERNS = {
 PLACEHOLDERS = {b'change-me', b'your-local-password', b'password', b'local-password', b'your-password'}
 SECRET_NAME = re.compile(r'(?i)(api.?key|secret|password|private.?key|api.?token|access.?token|database.?url)$')
 
-def git(*args):
-    result = subprocess.run(GIT + list(args), cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def git(*args, input=None):
+    result = subprocess.run(GIT + list(args), cwd=ROOT, input=input, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode:
         raise RuntimeError('git_scan_read_failed')
     return result.stdout
+
+
+def history_snapshots(commits):
+    # Compare every complete snapshot to the empty tree, including merge commits.
+    # One Git process replaces a process per commit; no persistent scan cache.
+    empty = git('hash-object', '-t', 'tree', '--stdin', input=b'').strip()
+    trees = git('log', '--no-walk=unsorted', '--format=%T', *commits).splitlines() if commits else []
+    if len(trees) != len(commits) or any(not re.fullmatch(rb'[0-9a-f]{40}', tree) for tree in trees):
+        raise RuntimeError('invalid_history_tree_inventory')
+    requests = b''.join(empty + b' ' + tree + b'\n' for tree in trees)
+    snapshots = git('diff-tree', '--stdin', '--no-commit-id', '--raw', '--no-renames', '--no-abbrev',
+                    '-r', '-z', input=requests)
+    if requests and not snapshots:
+        raise RuntimeError('missing_history_snapshots')
+    entries = snapshots.split(b'\0')
+    index = 0
+    while index < len(entries):
+        metadata = entries[index]
+        if not metadata:
+            if index != len(entries) - 1:
+                raise RuntimeError('invalid_history_snapshot')
+            break
+        # Git prefixes each snapshot with its requested tree/commit pair.
+        metadata = metadata.rsplit(b'\n', 1)[-1]
+        if not metadata and index == len(entries) - 1:
+            break
+        fields = metadata.split()
+        if len(fields) != 5 or fields[0] != b':000000' or fields[4] != b'A':
+            raise RuntimeError('invalid_history_snapshot')
+        if index + 1 >= len(entries) or not entries[index + 1]:
+            raise RuntimeError('invalid_history_path')
+        mode, oid = fields[1].decode(), fields[3].decode()
+        yield mode, 'commit' if mode == '160000' else 'blob', oid, entries[index + 1].decode()
+        index += 2
+
+
+def read_blobs(oids):
+    requests = b''.join(oid.encode() + b'\n' for oid in oids)
+    data = git('cat-file', '--batch', input=requests)
+    offset = 0
+    for oid in oids:
+        end = data.index(b'\n', offset)
+        fields = data[offset:end].split()
+        if len(fields) != 3 or fields[:2] != [oid.encode(), b'blob']:
+            raise RuntimeError('invalid_scan_blob')
+        size = int(fields[2])
+        start = end + 1
+        offset = start + size
+        if size < 0 or data[offset:offset + 1] != b'\n':
+            raise RuntimeError('invalid_scan_blob_size')
+        yield oid, data[start:offset]
+        offset += 1
+    if offset != len(data):
+        raise RuntimeError('unexpected_scan_blob_data')
 
 def entropy(value):
     return -sum((value.count(c) / len(value)) * math.log2(value.count(c) / len(value)) for c in set(value))
@@ -39,6 +93,12 @@ def entropy(value):
 def rules(data, known):
     found = set()
     for name, pattern in PATTERNS.items():
+        if name == 'secret_assignment':
+            # Every assignment alternative contains one of these literal words.
+            # Avoid the costly case-insensitive regex on unrelated binary data.
+            lower = data.lower()
+            if not any(word in lower for word in (b'key', b'token', b'password', b'secret')):
+                continue
         for match in pattern.finditer(data):
             if name == 'credential_url' and match[1] in PLACEHOLDERS:
                 continue
@@ -106,21 +166,19 @@ def scan():
     # All reachable commit trees, including historical versions of deleted/renamed files.
     commits = git('rev-list', '--all').decode().splitlines()
     history_entries = 0
-    for commit in commits:
-        for entry in git('ls-tree', '-rz', commit).split(b'\0'):
-            if not entry:
-                continue
-            metadata, path = entry.split(b'\t', 1)
-            mode, kind, oid = metadata.decode().split()
-            path = path.decode()
-            history_entries += 1
+    checked_history = set()
+    for mode, kind, oid, path in history_snapshots(commits):
+        history_entries += 1
+        identity = (mode, kind, path)
+        if identity not in checked_history:
+            checked_history.add(identity)
             if protected(path) or kind != 'blob' or mode not in {'100644', '100755'}:
                 findings.append({'path': path, 'rule': 'historical_protected_path_or_nonregular_file'})
-            if kind == 'blob':
-                blob_paths.setdefault(oid, path)
-    for oid, path in blob_paths.items():
-        for rule in rules(git('cat-file', 'blob', oid), known):
-            findings.append({'path': path, 'rule': rule})
+        if kind == 'blob':
+            blob_paths.setdefault(oid, path)
+    for oid, data in read_blobs(blob_paths):
+        for rule in rules(data, known):
+            findings.append({'path': blob_paths[oid], 'rule': rule})
     # Verify local sensitive paths remain ignored even if they do not exist yet.
     ignored = ['.env', '.env.eval', '.env.devnet', '.env.wallet', '.supa-secrets/devnet-master', '.supa-vault/devnet/wallet.json', '.git-recovery/config', 'local.db', 'local.sqlite3', 'data.dump', 'pgdata/PG_VERSION', 'web/.env.local', 'web/.browser-profile/Default/Cookies', 'web/.next/server/private.json', 'web/test-results/trace.zip', 'web/node_modules/package/index.js']
     for path in ignored:
@@ -138,7 +196,11 @@ def self_test():
     assert not rules(b'postgresql://supa:your-local-password@localhost/db', [])
     assert protected('.env.eval') and protected('.supa-vault/devnet/x.json') and protected('local.db') and protected('backup.sql.gz') and not protected('.env.example') and not protected('migrations/0004_wallet.sql')
     assert protected('web/.env.local') and protected('web/.browser-profile/Default/Cookies') and protected('web/.next/server/private.json') and protected('web/test-results/trace.zip') and not protected('web/tests/fixtures.ts')
-    print(json.dumps({'self_tests_passed': 8}))
+    value = b'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789'
+    for name in (b'API_KEY', b'access-token', b'privateKey', b'master_key', b'PASSWORD', b'SeCrEt'):
+        assert 'secret_assignment' in rules(name + b'="' + value + b'"', [])
+    assert not rules(b'\x00\xffunrelated binary payload', [])
+    print(json.dumps({'self_tests_passed': 15}))
 
 def main():
     parser = argparse.ArgumentParser()
