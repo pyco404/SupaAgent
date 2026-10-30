@@ -124,7 +124,7 @@ def validate(binary, library, evidence, offline=False):
         checksums = json.loads(sql("SELECT json_agg(json_build_object('version',version,"
                                    "'checksum',encode(checksum,'hex'),'success',success) ORDER BY version) "
                                    'FROM _sqlx_migrations'))
-        assert [item['version'] for item in checksums] == list(range(1, 11))
+        assert [item['version'] for item in checksums] == list(range(1, 12))
         for item in checksums:
             source = next((ROOT / 'migrations').glob(f"{item['version']:04d}_*.sql"))
             assert item['success'] and hashlib.sha384(source.read_bytes()).hexdigest() == item['checksum']
