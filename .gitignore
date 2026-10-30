@@ -4,8 +4,8 @@
 !.env.example
 *.log
 __pycache__/
-# Audited, secret-free logs from the controlled demonstration are evidence artifacts.
-!artifacts/demo/*.log
+# Generated evidence stays local; this does not untrack existing Git history.
+/artifacts/
 
 # Encrypted wallet envelopes and local custody master material.
 /.supa-vault/
