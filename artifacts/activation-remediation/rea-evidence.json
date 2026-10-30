@@ -1,0 +1,52 @@
+{
+  "desktop": {
+    "inspection": "ev_9f29cedeaf2f0c28a33c08790ee560411a0eca191afd84857e7d43856f53e5a9",
+    "screenshot": "ev_4a6849ba2414247a5bc3390a0b937316b34a26578e86c1a79c2f493b7f39c581",
+    "sha256": "cdb4f28ecfa69847de410c2623945426168ba1389eaf60ba32ea3aa2f89f300d",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "The screenshot contains the visible viewport, including on-screen content.",
+      "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport.",
+      "Browser host platform and architecture were not observed."
+    ],
+    "inspection_limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "Observation starts when REA attaches; prior network and console activity is unavailable.",
+      "Worker targets are a final inventory snapshot, not worker-session observation. Their attached flag describes any debugging client; this page-session collector does not observe worker network, console, or script events, and short-lived workers may be absent from the snapshot.",
+      "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
+      "Source maps are reported only as declarative URLs and are not fetched.",
+      "URL-less scripts and console events without an allowed source URL are excluded because their origin cannot be proven.",
+      "CDP discovery omitted the target attachment state; attached is reported as unknown.",
+      "Browser host platform and architecture were not observed."
+    ]
+  },
+  "mobile": {
+    "inspection": "ev_16a6d9ab37db342883e81ad141738075ba21d0dc48c20a2d669ba39d1026e9e6",
+    "screenshot": "ev_85a8ae6790956ca5712c8db4d7d744a5d2e61fdd763338cb3c7aa473ef2f5d06",
+    "sha256": "23ab5fbac6bfd96e3732c5bc1fd6a62bd4f382a6c6ff5ba9db11b5c914b845ff",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "The screenshot contains the visible viewport, including on-screen content.",
+      "REA does not scroll, evaluate JavaScript, or capture beyond the current viewport.",
+      "Browser host platform and architecture were not observed."
+    ],
+    "inspection_limitations": [
+      "Artifact identity is unavailable for this observation.",
+      "Observation starts when REA attaches; prior network and console activity is unavailable.",
+      "Worker targets are a final inventory snapshot, not worker-session observation. Their attached flag describes any debugging client; this page-session collector does not observe worker network, console, or script events, and short-lived workers may be absent from the snapshot.",
+      "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
+      "Source maps are reported only as declarative URLs and are not fetched.",
+      "URL-less scripts and console events without an allowed source URL are excluded because their origin cannot be proven.",
+      "CDP discovery omitted the target attachment state; attached is reported as unknown.",
+      "Browser host platform and architecture were not observed."
+    ]
+  }
+}
