@@ -1,4 +1,0 @@
-    Checking supa-providers v0.1.0 (/home/pikoo/Desktop/supa-agent/crates/providers)
-    Checking supa-runtime v0.1.0 (/home/pikoo/Desktop/supa-agent/crates/runtime)
-    Checking supa-api v0.1.0 (/home/pikoo/Desktop/supa-agent/crates/api)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.67s
