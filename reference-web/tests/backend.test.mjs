@@ -110,3 +110,24 @@ test('frontend identity and role claims cannot choose the upstream operator cred
   assert.deepEqual(Object.keys(forwarded).sort(),['Accept','Authorization']);
   assert.equal(forwarded.Authorization,`Bearer ${process.env.SUPA_API_TOKEN}`);
 });
+
+test('staging requires named operator credentials separate from public service and visitors',async()=>{
+  const keys=['SUPA_SITE_MODE','SUPA_SITE_ORIGIN','SUPA_WEB_OPERATORS','SUPA_STAGING_USERNAME','SUPA_STAGING_PASSWORD'];
+  const previous=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+  try {
+    Object.assign(process.env,{SUPA_SITE_MODE:'staging',SUPA_SITE_ORIGIN:'https://staging.example.test',SUPA_STAGING_USERNAME:'visitor',SUPA_STAGING_PASSWORD:'v'.repeat(24)});
+    const scoped={...headers,host:'staging.example.test'};
+    let forwarded;
+    const fetcher=async(url,options)=>{forwarded=options.headers.Authorization;return response([]);};
+    delete process.env.SUPA_WEB_OPERATORS;
+    assert.equal((await readResource(`/api/agents/${agentId}/memory`,scoped,fetcher)).status,401);
+    const account={username:process.env.SUPA_WEB_USERNAME,password:process.env.SUPA_WEB_PASSWORD,api_token:'o'.repeat(32)};
+    process.env.SUPA_WEB_OPERATORS=JSON.stringify([account]);
+    assert.equal((await readResource(`/api/agents/${agentId}/memory`,scoped,fetcher)).status,200);
+    assert.equal(forwarded,`Bearer ${account.api_token}`);
+    for(const changed of [{api_token:process.env.SUPA_API_TOKEN},{username:'visitor'},{password:process.env.SUPA_STAGING_PASSWORD}]) {
+      const bad={...account,...changed};process.env.SUPA_WEB_OPERATORS=JSON.stringify([bad]);
+      assert.equal((await readResource(`/api/agents/${agentId}/memory`,{...scoped,authorization:'Basic '+Buffer.from(`${bad.username}:${bad.password}`).toString('base64')},fetcher)).status,401);
+    }
+  }finally{for(const key of keys){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
+});
