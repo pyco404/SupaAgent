@@ -42,7 +42,8 @@ The official `railway` IaC SDK is pinned to **3.12.0** in `.railway/package.json
 and its lockfile. Install it using `npm ci --prefix .railway --ignore-scripts`.
 The SDK supports Node 22+; local authoring validation uses Node 24. The actual IaC
 engine requires a compatible current Railway CLI; verify its version against
-the official IaC guide before any approved account planning. No CLI login, link, plan, apply,
+the official IaC guide before any approved account planning. During Milestone 6, CLI 5.71.0 read-only authentication and project-list checks
+succeeded; the repository remains unlinked. No CLI login, link, plan, apply,
 push or deployment has been run. Legacy per-service JSON manifests are not used:
 current official documentation says new services cannot opt into that deprecated
 format and legacy support ends on 2026-12-01.
@@ -123,7 +124,10 @@ remain disabled.
 
 ## Database and recovery
 
-API and worker apply embedded SQLx migrations `0001`–`0004` at startup. SQLx tracks
+API and worker apply embedded SQLx migrations `0001`–`0010` at startup on a fresh,
+unidentified staging database. This is not permission to migrate or activate the
+prepared local development epoch. Migrations 9–10 create approval safeguards, not
+owner grants, credentials or an activation approval. SQLx tracks
 applied checksums and serializes its migration operations; readiness is unavailable
 until initialization succeeds. Bring PostgreSQL up first, then API, frontend and
 the disabled worker. Back up the staging database before subsequent migrations;
