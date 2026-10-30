@@ -48,6 +48,9 @@ export async function sectionView(id, state, agentId) {
     if(!agents) add(state.agents.error,'notice');
     else if(!agents.length)empty('agents');
     else for(const agent of agents) rows.push({kind:'agent',agent,text:`${agent.name} / ${agent.lifecycle}`});
+    const offers=epoch?{data:{services:[]}}:await read('/api/services');
+    add('Available services','heading');
+    if(offers.data?.services.length)for(const offer of offers.data.services)add(`${offer.spec.name} / ${offer.spec.kind} / ${units(offer.spec.price_atoms)} per job. Supplied-input analysis; requires evaluate_goal permission.`);else add(offers.error??'No agent services have been offered.');
     add('Choose an agent to inspect its saved records. Network and activity counts appear only when authorized records are available.');
   } else if(['trading','token-launch','factory'].includes(id)) {
     add('Planned / non-executable','heading');
@@ -86,6 +89,8 @@ export async function sectionView(id, state, agentId) {
       const memories=await load('memory');
       if(memories){if(!memories.length)empty('memories');memories.forEach(m=>add(`${m.kind==='verified_observation'?'Verified observation':'Hypothesis / unverified'}\n${m.lesson}\n${m.created_at}\nevents ${m.source_event_ids.join(', ') || 'none'}\ncycle ${m.cycle_id ?? 'not recorded'}`));}
     } else if(id==='economy') {
+      const economic=await load('economy');
+      if(economic)rows.push({kind:'economy',view:economic,agentId});
       const [financials,ledger,wallet,balances,treasury,payments]=await Promise.all(['financials','simulated-ledger','wallet','wallet/balances','wallet/treasury','wallet/payments'].map(load));
       add('Simulated ledger / hypothetical USD','heading');
       if(financials){for(const [key,label]of [['balance_microusd','Balance'],['revenue_microusd','Revenue'],['inference_microusd','Inference expense'],['operating_microusd','Operating expense']])record(`${label} / simulated USD`,units(financials[key]));record('Runway',financials.runway_days===null?'Unavailable: a usable recurring-cost estimate is not established.':`${financials.runway_days} days (estimate)`);rows.push({kind:'detail',text:'Runway calculation',body:financials.runway_assumption});}
