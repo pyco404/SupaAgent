@@ -123,56 +123,30 @@ def plan():
         'public_service_token': '<distinct_pending_service_token>'}
     candidate['blockers'] = ['explicit approval of owner UUID binding and credential installation',
         'approved SELECT-only database role and local authentication setup',
-        'approved migration 9 on the real candidate', 'approval-bound transition parameters and private configuration snapshots',
+        'approved migrations 9 and 10 on the real candidate', 'independent trusted approval authority and database-bound executor', 'approval-bound transition parameters and private configuration snapshots',
         'operational backup profile and explicit acceptance of same-disk-only backups',
         'fresh explicit approval for activation and primary frontend repointing']
     return candidate
 
 
 def render_transition(database, principal, operation):
-    """No database I/O: exact psql transaction, parameterized approval, digest and revision."""
+    """No database I/O: exact psql transaction, independently approved plan bytes and revision."""
     canonical(principal)
     real_database = 'supa_epoch_dev_' + uuid.UUID(EPOCH).hex
     if database != real_database and not re.fullmatch(r'supa_cutover_test_[a-z0-9_]+', database):
         raise ValueError('review_target_required')
     if operation not in ['activate_read_only', 'rollback']:
         raise ValueError('review_operation_required')
-    before, after = ('prepared', 'active_read_only') if operation == 'activate_read_only' else ('active_read_only', 'prepared')
-    return f'''-- REVIEW ONLY. No approval is implied by generating this file.
--- Requires separately approved migration 9 and exact owner binding.
--- Supply psql variables approval_id, expected_revision, plan_sha256 after consent.
+    return f'''-- REVIEW ONLY. Requires migration 10 and an independent immutable approval.
+-- Supply approval_id, expected_revision and the exact approved plan_text; never a caller hash alone.
 \\set ON_ERROR_STOP on
 BEGIN READ WRITE;
 SET LOCAL statement_timeout = '10s';
 SET LOCAL lock_timeout = '5s';
-SELECT set_config('supa.review.approval', :'approval_id', true);
-SELECT set_config('supa.review.revision', :'expected_revision', true);
-SELECT set_config('supa.review.digest', :'plan_sha256', true);
-DO $review$
-DECLARE
-    current_epoch application_epoch%ROWTYPE;
-    consent uuid := current_setting('supa.review.approval')::uuid;
-    expected bigint := current_setting('supa.review.revision')::bigint;
-    digest text := current_setting('supa.review.digest');
-BEGIN
-    IF current_database() <> '{database}' OR current_setting('default_transaction_read_only') <> 'on'
-       OR expected < 0 OR consent = '00000000-0000-0000-0000-000000000000'
-       OR digest !~ '^[0-9a-f]{{64}}$'
-       OR (SELECT count(*) FROM _sqlx_migrations WHERE success) <> 9 THEN
-        RAISE EXCEPTION 'cutover_target_or_approval_mismatch';
-    END IF;
-    SELECT * INTO STRICT current_epoch FROM application_epoch WHERE id='{EPOCH}' FOR UPDATE;
-    IF current_epoch.state <> '{before}' OR current_epoch.revision <> expected
-       OR current_epoch.kind <> 'development' OR current_epoch.historical_database <> 'unrecovered'
-       OR current_epoch.accounting_namespace <> '641457b2-5fd8-4b31-b85f-c58839626831'
-       OR EXISTS(SELECT 1 FROM epoch_transitions WHERE approval_id=consent) THEN
-        RAISE EXCEPTION 'cutover_state_or_replay_mismatch';
-    END IF;
-    INSERT INTO epoch_transitions(approval_id,epoch_id,revision,operation,approved_by,plan_sha256,from_state,to_state)
-    VALUES(consent,current_epoch.id,expected+1,'{operation}','{principal}',digest,'{before}','{after}');
-    UPDATE application_epoch SET state='{after}', revision=expected+1, approval_id=consent WHERE id=current_epoch.id;
-END;
-$review$;
+DO $target$ BEGIN IF current_database()<>'{database}' THEN RAISE EXCEPTION 'wrong_epoch_database'; END IF; END; $target$;
+SELECT epoch_guard.execute_transition(
+    :'approval_id'::uuid, '{principal}'::uuid, 'owner', '{EPOCH}'::uuid,
+    :'expected_revision'::bigint, '{operation}', :'plan_text');
 COMMIT;
 '''
 
