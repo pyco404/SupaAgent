@@ -4,7 +4,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 export function operatorToken(header:string|null):string|null {
   if (!header?.startsWith("Basic ") || header.length>2048) return null;
   const accounts: {username:string;password:string;api_token:string}[]=[];
-  if(process.env.SUPA_WEB_USERNAME && process.env.SUPA_WEB_PASSWORD && process.env.SUPA_API_TOKEN)
+  const staging = process.env.SUPA_SITE_MODE === "staging";
+  if(!staging && process.env.SUPA_WEB_USERNAME && process.env.SUPA_WEB_PASSWORD && process.env.SUPA_API_TOKEN)
     accounts.push({username:process.env.SUPA_WEB_USERNAME,password:process.env.SUPA_WEB_PASSWORD,api_token:process.env.SUPA_API_TOKEN});
   try {
     const configured:unknown=JSON.parse(process.env.SUPA_WEB_OPERATORS??"[]");
@@ -17,6 +18,7 @@ export function operatorToken(header:string|null):string|null {
   if(new Set(accounts.map(a=>a.username)).size!==accounts.length || new Set(accounts.map(a=>a.api_token)).size!==accounts.length) return null;
   const hash=(value:string)=>createHash("sha256").update(value).digest();
   for(const account of accounts) {
+    if(staging && (account.api_token===process.env.SUPA_API_TOKEN || account.username===process.env.SUPA_STAGING_USERNAME || account.password===process.env.SUPA_STAGING_PASSWORD)) continue;
     if(account.password.length<24 || account.api_token.length<32 || account.api_token.length>256 || !/^[\x21-\x7e]+$/.test(account.api_token)) continue;
     if(timingSafeEqual(hash(header),hash(`Basic ${Buffer.from(`${account.username}:${account.password}`).toString("base64")}`))) return account.api_token;
   }
