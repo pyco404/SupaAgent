@@ -2,7 +2,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { parseEnv } from 'node:util';
 import { resolve } from 'node:path';
-import { schemas, autonomyRequestSchema, scheduleCommandSchema, liveConsentSchema, liveApprovalSchema, liveSessionSchema } from '../web/src/lib/contracts.ts';
+import { schemas, autonomyRequestSchema, scheduleCommandSchema, liveConsentSchema, liveApprovalSchema, liveSessionSchema, economicCreateSchema, economicCommandSchema, economicPaymentSchema, economicJobSchema, economicVerifySchema } from '../web/src/lib/contracts.ts';
 import { operatorAuthorized, operatorToken, localRequest } from '../web/src/lib/auth.ts';
 
 export async function loadLocalEnvironment() {
@@ -22,6 +22,9 @@ export async function loadLocalEnvironment() {
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function resource(path) {
+  if(path==='/api/jobs')return {path:'/jobs',schema:schemas.jobs,public:false};
+  if(/^\/api\/jobs\/[0-9a-f-]{36}$/i.test(path))return {path:path.slice(4),schema:schemas['job-payment'],public:false};
+  if (path === '/api/services') return {path:'/services',schema:schemas.services,public:true};
   if (path === '/api/autonomy') return {path:'/autonomy',schema:schemas.autonomy,public:false};
   if (path === '/api/status') return { path:'/health', schema:schemas.health, public:true };
   if (path === '/api/agents') return { path:'/directory', schema:schemas.directory, public:true };
@@ -29,7 +32,7 @@ export function resource(path) {
   if (parts[0] !== 'agents' || !uuid.test(parts[1] ?? '')) return null;
   let schema;
   if (parts.length === 2) schema = schemas.agent;
-  if (parts.length === 3 && ['live','access','authorizations','execution-health','schedule','financials','memory','goals','activity','cycles','actions','simulated-ledger','social','drafts','wallet'].includes(parts[2])) schema = schemas[parts[2]];
+  if (parts.length === 3 && ['live','access','authorizations','execution-health','schedule','economy','financials','memory','goals','activity','cycles','actions','simulated-ledger','social','drafts','wallet'].includes(parts[2])) schema = schemas[parts[2]];
   if (parts.length === 4 && parts[2] === 'wallet' && ['balances','treasury','payments'].includes(parts[3])) schema = schemas[parts[3]];
   return schema ? { path:'/'+parts.join('/'), schema, public:false } : null;
 }
@@ -82,6 +85,7 @@ export { operatorAuthorized, localRequest };
 
 /** Closed offline mutations only: rehearsal or revision-checked lifecycle authorization. */
 export async function runAutonomy(path, headers, body, fetcher=fetch) {
+  if(isEconomicPath(path))return runEconomic(path,headers,body,fetcher);
   if(/^\/api\/agents\/[0-9a-f-]{36}\/live(?:\/[0-9a-f-]{36}\/approval)?$/i.test(path))return runLive(path,headers,body,fetcher);
   const request=new Request('http://127.0.0.1'+path,{headers});
   const parts=path.split('/'),scheduled=parts.length===5&&parts[1]==='api'&&parts[2]==='agents'&&uuid.test(parts[3])&&parts[4]==='schedule';
@@ -131,4 +135,25 @@ async function runLive(path,headers,body,fetcher){
     if(result.agent_id!==path.split('/')[3]||(!approval&&result.id!==input.request_id))throw Error();
     return {status:200,body:scrub(result)};
   }catch{return fail('live_outcome_unknown_reload_saved_sessions_no_retry',503);}
+}
+
+export function isEconomicPath(path){return path==='/api/jobs'||/^\/api\/jobs\/[0-9a-f-]{36}\/(commands|simulated-payment|verify-payment)$/i.test(path);}
+async function runEconomic(path,headers,body,fetcher){
+ const request=new Request('http://127.0.0.1'+path,{headers});
+ if(!localRequest(request))return fail('local_access_only',403);
+ if(!operatorAuthorized(request.headers.get('authorization')))return fail('operator_authentication_required',401);
+ if(request.headers.get('x-supa-action')!=='economic-workflow'||!request.headers.get('content-type')?.startsWith('application/json'))return fail('explicit_economic_action_required',403);
+ const origin=request.headers.get('origin');const host=request.headers.get('host');
+ try{if(!origin||new URL(origin).host!==host)throw new Error();}catch{return fail('same_origin_required',403);}
+ if(Buffer.byteLength(body)>12000)return fail('request_too_large',413);
+ let parsed;try{parsed=(path==='/api/jobs'?economicCreateSchema:path.endsWith('/commands')?economicCommandSchema:path.endsWith('/verify-payment')?economicVerifySchema:economicPaymentSchema).safeParse(JSON.parse(body));}catch{return fail('invalid_request',400);}
+ if(!parsed.success)return fail('invalid_request',400);
+ const token=operatorToken(request.headers.get('authorization'));let base;
+ try{base=new URL(process.env.SUPA_BACKEND_URL);const privateStaging=process.env.SUPA_SITE_MODE==='staging'&&/^[a-z0-9][a-z0-9-]*\.railway\.internal$/.test(base.hostname);if(base.protocol!=='http:'||!(['127.0.0.1','[::1]'].includes(base.hostname)||privateStaging)||base.username||base.password||base.pathname!=='/'||base.search||base.hash||!token)throw new Error();}catch{return fail('backend_configuration_invalid',503);}
+ try{const response=await fetcher(new URL(path.slice(4),base),{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(parsed.data),redirect:'error',signal:AbortSignal.timeout(15000)});
+ if(!response.ok)return fail(({400:'invalid_job_action',403:'economic_permission_denied',409:'job_changed_reload_before_retry'})[response.status]??'economic_action_failed',response.status>=500?502:response.status);
+ const reader=response.body?.getReader();if(!reader)return fail('execution_outcome_unknown_reload',502);let bytes=0;const chunks=[];
+ try{while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>50000){await reader.cancel();return fail('execution_outcome_unknown_reload',502);}chunks.push(value);}}finally{reader.releaseLock();}
+ const result=economicJobSchema.safeParse(JSON.parse(Buffer.concat(chunks).toString('utf8')));return result.success?{status:200,body:scrub(result.data)}:fail('execution_outcome_unknown_reload',502);
+ }catch{return fail('execution_outcome_unknown_reload',503);}
 }
