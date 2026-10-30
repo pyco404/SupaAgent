@@ -27,6 +27,24 @@ async fn run() -> Result<()> {
     let scheduler_enabled = flag("SUPA_API_SCHEDULER_ENABLED", false)?;
     let token = std::env::var("SUPA_API_TOKEN").map_err(|_| Error::Invalid)?;
     let provider = std::env::var("SUPA_PROVIDER").unwrap_or_else(|_| "offline".into());
+    let credentials: Vec<supa_api::OperatorCredential> = std::env::var("SUPA_OPERATOR_CREDENTIALS")
+        .ok()
+        .map(|value| serde_json::from_str(&value).map_err(|_| Error::Invalid))
+        .transpose()?
+        .unwrap_or_default();
+    validate_staging(
+        private_staging,
+        &provider,
+        &[
+            scheduler_enabled,
+            flag("SUPA_ALLOW_OPENAI", false)?,
+            flag("SUPA_CONTROLLED_INFERENCE", false)?,
+            flag("SUPA_WALLET_ENABLED", false)?,
+            std::env::var("SUPA_OPERATOR_ID").is_ok(),
+        ],
+        &credentials,
+        &token,
+    )?;
     let reasoner = configured_provider(&provider, private_staging)?;
     let url = std::env::var("DATABASE_URL").map_err(|_| Error::Invalid)?;
     let store = Store::connect(&url).await?;
@@ -211,6 +229,43 @@ fn configured_provider(name: &str, private_staging: bool) -> Result<Arc<dyn Reas
         _ => Err(Error::Invalid),
     }
 }
+fn validate_staging(
+    private: bool,
+    provider: &str,
+    unsafe_flags: &[bool],
+    credentials: &[supa_api::OperatorCredential],
+    service_token: &str,
+) -> Result<()> {
+    if private
+        && (provider != "offline"
+            || unsafe_flags.iter().any(|enabled| *enabled)
+            || !(32..=256).contains(&service_token.len())
+            || service_token.bytes().any(|b| !(33..=126).contains(&b))
+            || credentials.is_empty()
+            || credentials.len() > 100
+            || credentials.iter().any(|c| {
+                c.id.is_nil()
+                    || c.token == service_token
+                    || !(32..=256).contains(&c.token.len())
+                    || c.token.bytes().any(|b| !(33..=126).contains(&b))
+            })
+            || credentials
+                .iter()
+                .map(|c| c.id)
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                != credentials.len()
+            || credentials
+                .iter()
+                .map(|c| &c.token)
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                != credentials.len())
+    {
+        return Err(Error::Denied);
+    }
+    Ok(())
+}
 fn flag(name: &str, fallback: bool) -> Result<bool> {
     parse_flag(std::env::var(name).ok().as_deref(), fallback)
 }
@@ -244,6 +299,43 @@ async fn shutdown() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn staging_fails_closed_before_database_access_or_paid_provider_creation() {
+        let credentials = vec![supa_api::OperatorCredential {
+            id: uuid::Uuid::new_v4(),
+            role: supa_persistence::Role::Viewer,
+            token: "fixture-scoped-operator-credential-000000".into(),
+        }];
+        let service = "fixture-public-service-credential-0000000";
+        assert!(validate_staging(true, "offline", &[false; 5], &credentials, service).is_ok());
+        for index in 0..5 {
+            let mut flags = [false; 5];
+            flags[index] = true;
+            assert!(validate_staging(true, "offline", &flags, &credentials, service).is_err());
+        }
+        assert!(validate_staging(true, "openai", &[false; 5], &credentials, service).is_err());
+        assert!(validate_staging(true, "offline", &[false; 5], &[], service).is_err());
+        assert!(
+            validate_staging(
+                true,
+                "offline",
+                &[false; 5],
+                &credentials,
+                &credentials[0].token
+            )
+            .is_err()
+        );
+        assert!(validate_staging(false, "offline", &[false; 5], &[], service).is_ok());
+        assert!(validate_staging(true, "offline", &[false; 5], &credentials, "short").is_err());
+        let mut invalid = credentials.clone();
+        invalid[0].id = uuid::Uuid::nil();
+        assert!(validate_staging(true, "offline", &[false; 5], &invalid, service).is_err());
+        invalid = credentials.clone();
+        invalid[0].token = "short".into();
+        assert!(validate_staging(true, "offline", &[false; 5], &invalid, service).is_err());
+        invalid = vec![credentials[0].clone(), credentials[0].clone()];
+        assert!(validate_staging(true, "offline", &[false; 5], &invalid, service).is_err());
+    }
     #[test]
     fn container_bind_requires_explicit_private_staging() {
         assert!(server_address("0.0.0.0:8080", false).is_err());
