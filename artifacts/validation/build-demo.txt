@@ -1,3 +1,0 @@
-   Compiling supa-providers v0.1.0 (/home/pikoo/Desktop/supa-agent/crates/providers)
-   Compiling supa-runtime v0.1.0 (/home/pikoo/Desktop/supa-agent/crates/runtime)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.14s
