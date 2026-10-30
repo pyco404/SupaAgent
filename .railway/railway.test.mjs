@@ -90,3 +90,28 @@ test('local preflight fails clearly without secrets and never outputs provided s
   assert.ok(!JSON.stringify(rejected).includes(fixtures.SUPA_API_TOKEN));
   assert.ok(!JSON.stringify(rejected).includes(fixtures.SUPA_STAGING_PASSWORD));
 });
+
+test('database major and persistent mount match the reviewed recovery target', () => {
+  const database = resources.find(resource => resource.type === 'database');
+  assert.equal(database.image, 'ghcr.io/railwayapp-templates/postgres-ssl:18');
+  assert.equal(database.defaultMountPath, '/var/lib/postgresql/data');
+});
+
+test('container runtime entrypoints preserve health ports, non-root users and SIGTERM delivery', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const [resource, port, user] of [[api, '8080', '10001'], [worker, '8081', '10001'], [frontend, '3000', 'node']]) {
+    const dockerfile = await readFile(new URL('../' + resource.build.dockerfilePath, import.meta.url), 'utf8');
+    const runtime = dockerfile.split(/FROM .+ AS runtime\n/)[1];
+    assert.ok(runtime, 'a separate runtime stage is required');
+    assert.match(runtime, new RegExp(`^USER ${user}$`, 'm'));
+    assert.match(runtime, new RegExp(`^EXPOSE ${port}$`, 'm'));
+    assert.equal(resource.variables.PORT.value, port);
+    if (resource === frontend) {
+      assert.match(runtime, /exec node node_modules\/next\/dist\/bin\/next start --hostname :: --port/);
+    } else {
+      assert.match(runtime, /^ENTRYPOINT \["\/usr\/local\/bin\/supa-(api|runtime)"\]$/m);
+    }
+    assert.doesNotMatch(runtime, /^(?:ARG|ENV) (?:OPENAI_API_KEY|SUPA_OPERATOR_CREDENTIALS|SUPA_API_TOKEN)=/m);
+    assert.doesNotMatch(dockerfile, /^COPY \.\s/m, 'never import the whole checkout into an image');
+  }
+});
