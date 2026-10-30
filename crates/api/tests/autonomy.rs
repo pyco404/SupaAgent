@@ -1,4 +1,4 @@
-//! Real database workflow in a fresh schema. No provider networking or existing-row writes.
+//! Real database workflow in a fresh database. No provider networking or existing-row writes.
 use axum::{
     Router,
     body::{Body, to_bytes},
@@ -50,7 +50,7 @@ async fn request(app: &Router, body: Option<Value>, authorized: bool) -> (Status
     (status, value)
 }
 #[tokio::test]
-#[ignore = "requires disposable local TEST_DATABASE_URL; creates a fresh isolated schema"]
+#[ignore = "requires disposable local TEST_DATABASE_URL; creates a fresh isolated database"]
 async fn bounded_offline_operator_workflow_persists_and_rejects_replay() {
     let base = std::env::var("TEST_DATABASE_URL").expect("disposable local database required");
     // Match the existing integration-test contract; never target a remote database.
@@ -60,13 +60,18 @@ async fn bounded_offline_operator_workflow_persists_and_rejects_replay() {
         "base test URL must not override schema"
     );
     let admin = Store::connect(&base).await.unwrap();
-    let schema = format!("autonomy_{}", Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE SCHEMA {schema}"))
+    let schema = format!("supa_test_autonomy_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE DATABASE {schema} TEMPLATE template0"))
         .execute(admin.pool())
         .await
         .unwrap();
-    let separator = if base.contains('?') { '&' } else { '?' };
-    let url = format!("{base}{separator}options=-csearch_path%3D{schema}");
+    let url = sqlx::ConnectOptions::to_url_lossy(
+        &base
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .unwrap()
+            .database(&schema),
+    )
+    .to_string();
     let store = Store::connect(&url).await.unwrap();
     store.migrate().await.unwrap();
     let calls = Arc::new(AtomicUsize::new(0));
@@ -241,7 +246,7 @@ async fn bounded_offline_operator_workflow_persists_and_rejects_replay() {
     assert!(reconnected.due_agents().await.unwrap().is_empty());
     reconnected.pool().close().await;
     store.pool().close().await;
-    sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+    sqlx::query(&format!("DROP DATABASE {schema} WITH (FORCE)"))
         .execute(admin.pool())
         .await
         .unwrap();
