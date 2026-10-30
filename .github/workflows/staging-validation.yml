@@ -1,0 +1,111 @@
+name: Isolated staging validation
+
+# Publication does not start a build. Dispatch requires a separate operator decision.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supa-staging-validation
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  images:
+    if: github.repository == 'pyco404/SupaAgent' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        service: [frontend, api, worker]
+    steps:
+      - name: Check out approved main without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install checksum-pinned scanner in runner temporary storage
+        env:
+          TRIVY_VERSION: '0.76.1'
+          TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/supa-tools"
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+            --output "$RUNNER_TEMP/supa-tools/trivy.tar.gz"
+          echo "$TRIVY_SHA256  $RUNNER_TEMP/supa-tools/trivy.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/supa-tools/trivy.tar.gz" -C "$RUNNER_TEMP/supa-tools" trivy
+      - name: Build, scan and execute isolated application image
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci-staging-images.py --service "$SERVICE" --trivy "$RUNNER_TEMP/supa-tools/trivy"
+
+  postgres18:
+    if: github.repository == 'pyco404/SupaAgent' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+    steps:
+      - name: Check out approved main without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare isolated PostgreSQL 18 binaries, never a system cluster
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, os, pathlib, subprocess, urllib.request
+          base = pathlib.Path(os.environ['RUNNER_TEMP']) / 'supa-pg18'
+          base.mkdir(mode=0o700)
+          # These exact packages were verified against signed official PGDG metadata.
+          # Updating this patch requires a new checksum review and full compatibility run.
+          packages = {
+              'postgresql-18': '9e8a64afde91dbf818526b8c200a3ed4a6fd1975171b06a31fe0bd378fe8c7c6',
+              'postgresql-client-18': '571d7977a64de78487d7def807e3cfb304a47a2ece3e62cd01018cf39bb4f6ec',
+              'libpq5': '79915c8c7f8ae908a600e97260491856199311e83c6ea6c4ea4966e89ee1e95c',
+          }
+          for name, expected in packages.items():
+              filename = f'{name}_18.3-1.pgdg24.04+1_amd64.deb'
+              url = 'https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/' + filename
+              content = urllib.request.urlopen(url, timeout=90).read()
+              assert hashlib.sha256(content).hexdigest() == expected, 'package checksum mismatch'
+              path = base / filename
+              path.write_bytes(content)
+              subprocess.run(['dpkg-deb', '--extract', str(path), str(base / 'root')], check=True)
+          PY
+      - name: Install pinned Rust toolchain on disposable runner
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.93.0 --profile minimal --no-self-update
+          rustup default 1.93.0
+      - name: Build native test services
+        run: cargo build --locked -p supa-api --bin supa-api -p supa-runtime --bin supa-runtime
+      - name: Validate migrations, concurrency, accounting, recovery and restore on PostgreSQL 18
+        run: |
+          set -euo pipefail
+          python3 scripts/validate-postgres18.py \
+            --bin-dir "$RUNNER_TEMP/supa-pg18/root/usr/lib/postgresql/18/bin" \
+            --library-dir "$RUNNER_TEMP/supa-pg18/root/usr/lib/x86_64-linux-gnu" \
+            --evidence-dir "$RUNNER_TEMP/supa-pg18-evidence"
+          python3 - <<'PY'
+          import json, os, pathlib
+          report = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'supa-pg18-evidence/postgres18.json').read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write('\n```json\n' + json.dumps(report, indent=2) + '\n```\n')
+          PY
+
+# No push/PR triggers, pull_request_target, self-hosted runners, environments,
+# deployment/registry credentials, cache uploads or artifact uploads. Only sanitized
+# test summaries and public package/digest information enter the Actions logs.
