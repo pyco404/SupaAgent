@@ -7,7 +7,8 @@ import {spawn,spawnSync} from 'node:child_process';
 import {createServer} from 'node:net';
 import {chromium} from '../web/node_modules/playwright-core/index.mjs';
 const root=resolve(import.meta.dirname,'..'),file=resolve(process.argv[2]??'');
-assert.match(file,new RegExp('^'+root.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'/postgres-data/safety/[a-f0-9]{12}/runtime\\.json$'));
+const remediation=process.env.SUPA_VALIDATION_SUITE==='activation-remediation',fixtureDirectory=remediation?'remediation':'safety',evidenceDirectory=remediation?'activation-remediation':'final-local-safety';
+assert.match(file,new RegExp('^'+root.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'/postgres-data/'+fixtureDirectory+'/[a-f0-9]{12}/runtime\\.json$'));
 const info=await lstat(file);assert.equal(info.isSymbolicLink(),false);assert.equal(info.mode&0o077,0);assert.equal(info.uid,process.getuid());
 const c=JSON.parse(await readFile(file,'utf8'));assert.ok(c.database.startsWith('supa_cutover_test_'));
 async function port(){const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const n=s.address().port;await new Promise(r=>s.close(r));return n;}
@@ -34,6 +35,8 @@ try{
  assert.equal((await fetch(api+'/agents',{method:'POST',headers:{Authorization:'Bearer '+c.synthetic_token,'Content-Type':'application/json'},body:'{}'})).status,403);
  await stop(web);await stop(service);await start();assert.equal((await (await fetch(site+'/api/status')).json()).epoch.approval_id,c.approval_id);
  for(const flags of [{SUPA_API_SCHEDULER_ENABLED:'true'},{SUPA_ALLOW_OPENAI:'true'},{SUPA_CONTROLLED_INFERENCE:'true'},{SUPA_WALLET_ENABLED:'true'}]){const r=spawnSync(resolve(root,'target/debug/supa-api'),[],{cwd:root,env:{...apiEnv,...flags},stdio:'ignore',timeout:6000});assert.equal(r.error,undefined);assert.notEqual(r.status,0);}
+ const wrongCredential=new URL(c.api.DATABASE_URL);wrongCredential.password='wrong-fixture-password';
+ for(const databaseUrl of ['postgresql://',wrongCredential.href]){const r=spawnSync(resolve(root,'target/debug/supa-api'),[],{cwd:root,env:{...apiEnv,DATABASE_URL:databaseUrl},stdio:'ignore',timeout:10000});assert.equal(r.error,undefined);assert.notEqual(r.status,0);}
  const worker=spawnSync(resolve(root,'target/debug/supa-runtime'),[],{cwd:root,env:{...apiEnv,SUPA_WORKER_ENABLED:'true'},stdio:'ignore',timeout:6000});assert.equal(worker.error,undefined);assert.notEqual(worker.status,0);
  browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,...(process.env.SUPA_REA_CDP_PORT?{args:[`--remote-debugging-port=${Number(process.env.SUPA_REA_CDP_PORT)}`,'--remote-debugging-address=127.0.0.1']}:{})});
  const context=await browser.newContext({httpCredentials:{username:c.synthetic_username,password:c.synthetic_password},reducedMotion:'reduce'}),page=await context.newPage(),errors=[];
@@ -43,5 +46,5 @@ try{
  await page.setViewportSize({width:1440,height:1000});await page.goto(site+'/site/#intelligence');await page.locator('.buffer[data-typing-state=complete]').waitFor();await pause('desktop');
  await page.setViewportSize({width:390,height:844});await page.goto(site+'/site/#about');await page.locator('.buffer[data-typing-state=complete]').waitFor();await pause('mobile');
  assert.deepEqual(errors,[]);
- await writeFile(resolve(root,'artifacts/final-local-safety/browser.json'),JSON.stringify({disposable_cluster_only:true,synthetic_credentials_only:true,actual_scram_select_only_backend:true,view_checks:30,viewports:[1440,768,390],browser_errors:errors,overflow:false,unauthorized_and_spoofed_identity_denied:true,shared_service_cannot_be_owner:true,owner_mutations_denied:true,unsafe_startup_flags_rejected:4,worker_rejected:true,restart_preserved_approval:true,primary_frontend_repointed:false,real_credentials_installed:false,paid_requests:0},null,2)+'\n',{flag:'wx'});
+ await writeFile(resolve(root,'artifacts',evidenceDirectory,'browser.json'),JSON.stringify({disposable_cluster_only:true,synthetic_credentials_only:true,actual_scram_select_only_backend:true,view_checks:30,viewports:[1440,768,390],browser_errors:errors,overflow:false,unauthorized_and_spoofed_identity_denied:true,shared_service_cannot_be_owner:true,owner_mutations_denied:true,unsafe_startup_flags_rejected:4,invalid_connection_startups_rejected:2,worker_rejected:true,restart_preserved_approval:true,primary_frontend_repointed:false,real_credentials_installed:false,paid_requests:0},null,2)+'\n',{flag:'wx'});
 }finally{await browser?.close();await stop(web);await stop(service);for(const p of children)if(p.exitCode===null)p.kill('SIGTERM');}
