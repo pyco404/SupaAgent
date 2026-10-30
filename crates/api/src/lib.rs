@@ -1,6 +1,7 @@
 mod access;
 mod autonomy;
 mod controlled;
+mod economy;
 pub use access::{OperatorCredential, Principal};
 use axum::Extension;
 use supa_persistence::Role;
@@ -97,7 +98,7 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
     }
     let path = request.uri().path();
     let public = request.method() == axum::http::Method::GET
-        && matches!(path, "/health" | "/directory" | "/autonomy");
+        && matches!(path, "/health" | "/directory" | "/autonomy" | "/services");
     if !public {
         let Some(actor) = principal else {
             return ApiError(Error::Denied).into_response();
@@ -133,7 +134,7 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
             {
                 return ApiError(Error::Denied).into_response();
             }
-        } else if write && !actor.role.permits(Role::Owner) {
+        } else if write && parts.get(1) != Some(&"jobs") && !actor.role.permits(Role::Owner) {
             return ApiError(Error::Denied).into_response();
         }
     }
@@ -145,6 +146,7 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
 pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(access::routes())
+        .merge(economy::routes())
         .merge(controlled::routes())
         .merge(wallet::routes())
         .merge(autonomy::routes())
