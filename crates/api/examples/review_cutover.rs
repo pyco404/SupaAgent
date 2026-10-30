@@ -49,9 +49,21 @@ async fn run() -> Result<()> {
         .map_err(|_| Error::Invalid)?
         .parse()
         .map_err(|_| Error::Invalid)?;
-    let digest = std::env::var("SUPA_REVIEW_PLAN_SHA256").map_err(|_| Error::Invalid)?;
+    let path = std::env::var("SUPA_REVIEW_PLAN_FILE").map_err(|_| Error::Invalid)?;
+    let metadata = std::fs::symlink_metadata(&path).map_err(|_| Error::Invalid)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.permissions().mode() & 0o077 != 0 {
+            return Err(Error::Denied);
+        }
+    }
+    if !metadata.is_file() || metadata.len() > 32768 {
+        return Err(Error::Denied);
+    }
+    let plan = std::fs::read_to_string(path).map_err(|_| Error::Invalid)?;
     let epoch = store
-        .exercise_epoch_transition(id, actor, approval, revision, &args[1], &digest)
+        .exercise_epoch_transition(id, actor, approval, revision, &args[1], &plan)
         .await?;
     println!(
         "{}",
