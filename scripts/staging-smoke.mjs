@@ -17,13 +17,13 @@ const evidence=process.env.SUPA_STAGING_EVIDENCE_DIR?resolve(process.env.SUPA_ST
 await mkdir(evidence,{recursive:true});
 async function port(){const server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));const value=server.address().port;await new Promise(r=>server.close(r));return value;}
 const apiPort=await port(),webPort=await port(),api=`http://127.0.0.1:${apiPort}`,site=`http://127.0.0.1:${webPort}`;
-const token=randomBytes(32).toString('hex'),operator={username:'smoke-operator',password:randomBytes(24).toString('hex')},visitor={username:'smoke-viewer',password:randomBytes(24).toString('hex')};
+const token=randomBytes(32).toString('hex'),ownerToken=randomBytes(32).toString('hex'),otherToken=randomBytes(32).toString('hex'),ownerId=randomUUID(),otherId=randomUUID(),operator={username:'smoke-operator',password:randomBytes(24).toString('hex')},visitor={username:'smoke-viewer',password:randomBytes(24).toString('hex')};
 const basic=person=>'Basic '+Buffer.from(`${person.username}:${person.password}`).toString('base64');
-const env={PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1',DATABASE_URL:database,SUPA_API_TOKEN:token,SUPA_PROVIDER:'offline',SUPA_API_SCHEDULER_ENABLED:'false',SUPA_ALLOW_OPENAI:'false',SUPA_WALLET_ENABLED:'false',SUPA_SITE_ENV_FILE:'',SUPA_SITE_MODE:'staging',SUPA_SITE_ORIGIN:site,SUPA_BACKEND_URL:api,SUPA_WEB_USERNAME:operator.username,SUPA_WEB_PASSWORD:operator.password,SUPA_STAGING_USERNAME:visitor.username,SUPA_STAGING_PASSWORD:visitor.password};
+const env={PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1',__NEXT_PROCESSED_ENV:'true',DATABASE_URL:database,SUPA_API_TOKEN:token,SUPA_PROVIDER:'offline',SUPA_API_SCHEDULER_ENABLED:'false',SUPA_ALLOW_OPENAI:'false',SUPA_WALLET_ENABLED:'false',SUPA_SITE_ENV_FILE:'',SUPA_SITE_MODE:'staging',SUPA_SITE_ORIGIN:site,SUPA_BACKEND_URL:api,SUPA_PRIVATE_STAGING:'true',SUPA_CONTROLLED_INFERENCE:'false',SUPA_OPERATOR_CREDENTIALS:JSON.stringify([{id:ownerId,role:'owner',token:ownerToken},{id:otherId,role:'viewer',token:otherToken}]),SUPA_WEB_OPERATORS:JSON.stringify([{...operator,api_token:ownerToken}]),SUPA_STAGING_USERNAME:visitor.username,SUPA_STAGING_PASSWORD:visitor.password};
 const children=[],errors=[];let browser,agent;
 function launch(command,args,cwd,extra={}){const child=spawn(command,args,{cwd,env:{...env,...extra},stdio:['ignore','ignore','ignore']});children.push(child);return child;}
 async function ready(url,child){for(let i=0;i<120;i++){assert.equal(child.exitCode,null,'service exited');try{if((await fetch(url,{signal:AbortSignal.timeout(500)})).ok)return;}catch{}await new Promise(r=>setTimeout(r,150));}throw Error('service readiness timeout');}
-async function request(path,body){const response=await fetch(api+path,{headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)})});assert.ok(response.ok,`Rust request failed: ${path} HTTP ${response.status}`);return response.json();}
+async function request(path,body){const response=await fetch(api+path,{headers:{Authorization:`Bearer ${ownerToken}`,'Content-Type':'application/json'},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)})});assert.ok(response.ok,`Rust request failed: ${path} HTTP ${response.status}`);return response.json();}
 async function frontend(path,person=operator){return fetch(site+path,{headers:person?{Authorization:basic(person)}:{},redirect:'manual'});}
 try{
   const service=launch(resolve(root,'target/debug/supa-api'),[],root,{SUPA_BIND:`127.0.0.1:${apiPort}`});await ready(api+'/ready',service);
@@ -32,14 +32,20 @@ try{
   assert.equal((await frontend('/api/agents',visitor)).status,200);
   assert.equal((await frontend('/.env.eval',operator)).status,404);
   assert.equal((await frontend('/operator',visitor)).status,401);
-  const made=await request('/agents',{name:'Milestone 5 isolated offline verification',capabilities:['remember'],config:{scheduler_enabled:false,interval_seconds:1}});agent=made.id;
+  const made=await request('/agents',{name:'Milestone 5 isolated offline verification',capabilities:['read_memory','remember','evaluate_goal'],config:{scheduler_enabled:false,interval_seconds:1}});agent=made.id;
   const base=`/agents/${agent}`;
-  await request(base+'/goals',{description:'Verify persistent integration without paid operations'});
+  const goal=await request(base+'/goals',{description:'Verify persistent integration without paid operations'});
   await request(base+'/simulated-funding',{kind:'seed',amount_microusd:10000,idempotency_key:randomUUID(),simulated:true});
-  await request(base+'/resume',{reason:'Explicit isolated offline test'});
-  await request(base+'/cycles',{});await request(base+'/pause',{reason:'Keep integration fixture paused'});
+  await request(base+'/schedule',{request_id:randomUUID(),expected_revision:0,operation:'start',authorize_offline:true,reason:'Explicit isolated deterministic integration test',policy:{goal_ids:[goal.id],interval_seconds:5,max_cycles:2,simulated_budget_microusd:2200,valid_for_seconds:300}});
+  await request(base+'/cycles',{});
+  const schedule=await request(base+'/schedule');
+  await request(base+'/schedule',{request_id:randomUUID(),expected_revision:schedule.revision,operation:'pause',authorize_offline:true,reason:'Keep integration fixture paused',policy:null});
   const cycles=await request(base+'/cycles'),memory=await request(base+'/memory'),actions=await request(base+'/actions'),financials=await request(base+'/financials');
   assert.equal(cycles[0].status,'completed');assert.ok(memory.length);assert.ok(actions.some(action=>action.status==='succeeded'));assert.equal(financials.simulated,true);assert.ok(financials.inference_microusd>0);
+  for(const deniedToken of [token,otherToken]) {
+    const deniedRead=await fetch(api+base+'/memory',{headers:{Authorization:`Bearer ${deniedToken}`,'x-supa-principal':ownerId,'x-supa-role':'owner'}});
+    assert.equal(deniedRead.status,403);
+  }
   assert.equal((await frontend('/api'+base+'/memory',visitor)).status,401);
   assert.equal((await frontend('/api'+base+'/memory',operator)).status,200);
   const identities=await(await frontend('/api/agents',visitor)).json();assert.deepEqual(Object.keys(identities.find(row=>row.id===agent)).sort(),['created_at','id','lifecycle','name']);
@@ -51,11 +57,11 @@ try{
   assert.equal((await frontend('/api/autonomy',visitor)).status,401);
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(site+'/site/#intelligence',{waitUntil:'domcontentloaded'});
-  await page.locator('.autonomy-panel summary').click();
+  await page.getByText('Run an offline autonomy workflow',{exact:true}).click();
   const workflowGoal='Review saved outcomes and retain verified lessons';
   await page.getByLabel('Goal / operator-only').fill(workflowGoal);
   await page.screenshot({path:resolve(evidence,'offline-workflow-desktop.png')});
-  await page.getByRole('checkbox').check();
+  await page.locator('.autonomy-panel').filter({hasText:'Run an offline autonomy workflow'}).getByRole('checkbox').check();
   const completion=page.waitForResponse(response=>response.url()===site+'/api/autonomy'&&response.request().method()==='POST');
   await page.getByRole('button',{name:'Run authorized offline workflow'}).click();
   const outcome=await(await completion).json();assert.equal(outcome.lifecycle,'paused');assert.equal(outcome.paid_requests,0);assert.equal(outcome.cycles.length,3);
@@ -66,7 +72,7 @@ try{
   await page.waitForFunction(id=>document.querySelector('#agent-select').value===id,outcome.agent_id);
   await page.locator('.buffer[data-typing-state=complete]').waitFor();
   assert.ok((await page.locator('.buffer').innerText()).includes('Saved reasoning cycles / 3'));
-  await page.setViewportSize({width:390,height:844});await page.locator('.autonomy-panel summary').click();
+  await page.setViewportSize({width:390,height:844});await page.getByText('Run an offline autonomy workflow',{exact:true}).click();
   await page.screenshot({path:resolve(evidence,'offline-workflow-mobile.png')});
   // Explicit replay probe of a completed test request: no extra identity, cycle or charge.
   const replay=await fetch(site+'/api/autonomy',{method:'POST',headers:{Authorization:basic(operator),Origin:site,'Content-Type':'application/json','X-Supa-Action':'offline-autonomy'},body:JSON.stringify({request_id:outcome.agent_id,goal:workflowGoal,authorize_offline:true})});assert.equal(replay.status,409);
@@ -91,9 +97,9 @@ try{
   assert.equal((await request(base)).agent.lifecycle,'paused');assert.equal((await request(base+'/cycles')).length,cycles.length);assert.equal((await request(base+'/memory')).length,memory.length);assert.deepEqual(await request(base+'/financials'),financials);
   assert.equal((await request(offlineBase)).agent.lifecycle,'paused');assert.equal((await request(offlineBase+'/cycles')).length,3);assert.equal((await request(offlineBase+'/financials')).balance_microusd,6700);
   assert.deepEqual(errors,[]);
-  const report={passed:true,provider:'offline',database:'isolated_local_test',real_postgres:true,real_rust_api:true,real_next_host:true,api_restart_recovery:true,worker_default_paused:true,public_projection:true,private_reads_protected:true,unrestricted_writes_blocked:true,cycles:cycles.length,memories:memory.length,tool_actions:actions.length,simulated_expenses:financials.inference_microusd+financials.operating_microusd,offline_workflow:{agent_id:outcome.agent_id,cycles:offlineCycles.length,actions:offlineActions.length,memories:offlineMemory.length,lifecycle:'paused',simulated_expenses_microusd:3300,remaining_simulated_microusd:6700,duplicate_rejected:true,restart_preserved:true},screenshots:['offline-workflow-desktop.png','offline-workflow-mobile.png',...screenshots],viewports:[1440,768,390],browser_errors:errors,paid_requests:0,transactions:0};
+  const report={passed:true,provider:'offline',database:'isolated_local_test',real_postgres:true,real_rust_api:true,real_next_host:true,api_restart_recovery:true,worker_default_paused:true,public_projection:true,private_reads_protected:true,scoped_operator_credentials:true,public_token_private_access_denied:true,cross_user_spoofing_denied:true,unrestricted_writes_blocked:true,cycles:cycles.length,memories:memory.length,tool_actions:actions.length,simulated_expenses:financials.inference_microusd+financials.operating_microusd,offline_workflow:{agent_id:outcome.agent_id,cycles:offlineCycles.length,actions:offlineActions.length,memories:offlineMemory.length,lifecycle:'paused',simulated_expenses_microusd:3300,remaining_simulated_microusd:6700,duplicate_rejected:true,restart_preserved:true},screenshots:['offline-workflow-desktop.png','offline-workflow-mobile.png',...screenshots],viewports:[1440,768,390],browser_errors:errors,paid_requests:0,transactions:0};
   await writeFile(resolve(evidence,'system-check.json'),JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({...report,evidence_directory:evidence}));
-  if(process.env.SUPA_REA_CDP_PORT){console.log(JSON.stringify({rea_origin:site,cdp_endpoint:`http://127.0.0.1:${process.env.SUPA_REA_CDP_PORT}`}));await new Promise(r=>{process.once('SIGTERM',r);process.once('SIGINT',r);});}
+  if(process.env.SUPA_REA_CDP_PORT){await page.goto(site+'/site/#intelligence');console.log(JSON.stringify({rea_origin:site,cdp_endpoint:`http://127.0.0.1:${process.env.SUPA_REA_CDP_PORT}`}));await new Promise(r=>{process.once('SIGTERM',r);process.once('SIGINT',r);});}
 }finally{
   await browser?.close();for(const child of children)if(child.exitCode===null)child.kill('SIGTERM');
 }
