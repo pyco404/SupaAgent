@@ -98,15 +98,18 @@ impl Fixture {
         let base = std::env::var("TEST_DATABASE_URL").expect("dedicated test database");
         assert!(base.contains("_test"));
         let admin = Store::connect(&base).await.unwrap();
-        let schema = format!("controlled_{}", Uuid::new_v4().simple());
-        sqlx::query(&format!("CREATE SCHEMA {schema}"))
+        let schema = format!("supa_test_controlled_{}", Uuid::new_v4().simple());
+        sqlx::query(&format!("CREATE DATABASE {schema} TEMPLATE template0"))
             .execute(admin.pool())
             .await
             .unwrap();
-        let url = format!(
-            "{base}{}options=-csearch_path%3D{schema}",
-            if base.contains('?') { '&' } else { '?' }
-        );
+        let url = sqlx::ConnectOptions::to_url_lossy(
+            &base
+                .parse::<sqlx::postgres::PgConnectOptions>()
+                .unwrap()
+                .database(&schema),
+        )
+        .to_string();
         let store = Store::connect(&url).await.unwrap();
         store.migrate().await.unwrap();
         let owner = Uuid::new_v4();
@@ -181,7 +184,7 @@ impl Fixture {
     }
     async fn close(self) {
         self.store.pool().close().await;
-        sqlx::query(&format!("DROP SCHEMA {} CASCADE", self.schema))
+        sqlx::query(&format!("DROP DATABASE {} WITH (FORCE)", self.schema))
             .execute(self.admin.pool())
             .await
             .unwrap();
