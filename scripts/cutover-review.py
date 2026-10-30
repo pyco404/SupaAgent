@@ -42,12 +42,12 @@ def plan():
     return {
         'review_only':True,'ready_for_activation':False,'epoch_id':c['id'],'database':c['database'],
         'accounting_namespace':c['epoch']['accounting_namespace'],'current_state':'prepared','proposed_state':'active_read_only',
-        'current_migrations':8,'proposed_migration':'0009_epoch_cutover_review.sql',
+        'current_migrations':8,'proposed_migrations':['0009_epoch_cutover_review.sql','0010_trusted_epoch_approvals.sql'],
         'actual_candidate_modified':False,'primary_frontend_repointed':False,
         'named_operators':public_roster,'identity_verification':'principal UUID and identity confirmation pending','permissions_granted':False,
         'approval_actor':None,'approval_id':None,'service_database_role':'<approved_read_only_service_role>',
         'api_environment':{
-            'DATABASE_URL':f"postgresql://<approved_read_only_service_role>:your-password@/{c['database']}?host={pg.BASE/'socket'}&port=55440",
+            'DATABASE_URL':f"postgresql://<approved_read_only_service_role>:your-password@localhost/{c['database']}?host={pg.BASE/'socket'}&port=55440",
             'SUPA_BIND':'127.0.0.1:8080','SUPA_EXPECTED_EPOCH_ID':c['id'],'SUPA_EPOCH_MODE':'active_read_only',
             'SUPA_EPOCH_READONLY_PREVIEW':'false','SUPA_EPOCH_APPROVAL_ID':'<explicit_approved_transition_uuid>',
             'SUPA_OPERATOR_CREDENTIALS':'<approved_named_roster_with_server_only_tokens>',
@@ -69,7 +69,7 @@ def plan():
         'rollback_order':['stop reviewed API/frontend processes','append fenced rollback transition through separately approved admin path','verify database default remains read-only','restore exact pre-cutover private config bytes only if hashes match','retain data and both transition audit entries','restart only the previously approved configuration; do not claim historical recovery'],
         'backup_destination':None,'upload_authorized':False,
         'historical_budget':{'id':pg.ARCHIVED,'ceiling_microusd':100000,'unresolved_hold_microusd':4048,'quarantine_changed':False},
-        'blockers':['verified named operator and role roster','dedicated service role and private credentials approval','reviewed real-target transition implementation (current primitive is fixture-only)','approval to apply migration 9 to the real candidate','fresh exact cutover approval','independent backup decision or explicit acceptance of same-disk limitation'],
+        'blockers':['verified named operator and role roster','dedicated service role and private credentials approval','reviewed real-target transition implementation (current primitive is fixture-only)','approval to apply migrations 9 and 10 to the real candidate', 'independent approval custodian and separate database-bound executor', 'immutable exact-plan approval with migration and configuration hashes','fresh exact cutover approval','independent backup decision or explicit acceptance of same-disk limitation'],
         'inventory':inventory}
 
 
