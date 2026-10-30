@@ -113,7 +113,9 @@ class OwnerPreparation(unittest.TestCase):
         principal = str(uuid.uuid4())
         database = 'supa_epoch_dev_' + uuid.UUID(m.EPOCH).hex
         sql = m.render_transition(database, principal, 'activate_read_only')
-        self.assertIn('FOR UPDATE', sql)
+        self.assertIn('epoch_guard.execute_transition', sql)
+        self.assertNotIn('UPDATE application_epoch', sql)
+        self.assertIn('plan_text', sql)
         self.assertIn('expected_revision', sql)
         self.assertIn('BEGIN READ WRITE', sql)
         self.assertIn(database, sql)
