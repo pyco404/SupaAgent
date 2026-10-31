@@ -4,6 +4,7 @@ mod economy;
 mod epoch;
 mod intelligence;
 mod operational;
+mod operator_status;
 pub use access::Role;
 pub use epoch::ApplicationEpoch;
 pub use operational::OperationalContext;
@@ -39,11 +40,13 @@ fn encode(a: &Agent) -> Result<Value> {
 pub struct Store {
     pool: PgPool,
     operational: Option<std::sync::Arc<OperationalContext>>,
+    status_pool: Option<PgPool>,
 }
 impl Store {
     pub async fn connect(url: &str) -> Result<Self> {
         Ok(Self {
             operational: None,
+            status_pool: None,
             pool: PgPoolOptions::new()
                 .max_connections(8)
                 .acquire_timeout(std::time::Duration::from_secs(5))
