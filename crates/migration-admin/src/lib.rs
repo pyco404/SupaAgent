@@ -27,6 +27,8 @@ const ROOT: &str = "/home/pikoo/Desktop/supa-agent";
 const TRUST: &str = "/etc/supa-agent/migration-authority.json";
 const BACKUP: &str = "postgres-data/preflight/1d0e9efe-e66e-4e4f-afc4-478eee4f0833/database.dump";
 const BACKUP_SHA: &str = "600d2bb19b52b4f17d4278459ba722ea5f1135df703b8efc1b0b3db0c8360671";
+// Later application migrations require their own approval, never this 8 -> 10 scope.
+const APPROVED_TARGET: i64 = 10;
 static MIGRATIONS: Migrator = sqlx::migrate!("../../migrations");
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
@@ -145,6 +147,7 @@ impl Target {
 fn inventory() -> BTreeMap<i64, String> {
     MIGRATIONS
         .iter()
+        .filter(|m| m.version <= APPROVED_TARGET)
         .map(|m| (m.version, hex(&m.checksum)))
         .collect()
 }
@@ -209,7 +212,10 @@ fn verify(
     check(
         inventory().keys().copied().eq(1..=10)
             && p.migration_sha384 == inventory()
-            && MIGRATIONS.iter().all(|m| !m.no_tx),
+            && MIGRATIONS
+                .iter()
+                .filter(|m| m.version <= APPROVED_TARGET)
+                .all(|m| !m.no_tx),
         "migration_inventory",
     )?;
     Ok(p)
@@ -502,7 +508,10 @@ async fn execute(
         reviewed_state(&mut tx, &names).await? == p.reviewed_state_sha256,
         "reviewed_schema_or_records_changed",
     )?;
-    for migration in MIGRATIONS.iter().filter(|m| m.version >= 9) {
+    for migration in MIGRATIONS
+        .iter()
+        .filter(|m| (9..=APPROVED_TARGET).contains(&m.version))
+    {
         sql(sqlx::raw_sql(&migration.sql).execute(&mut *tx).await).await?;
         sql(sqlx::query("INSERT INTO public._sqlx_migrations(version,description,success,checksum,execution_time) VALUES($1,$2,true,$3,-1)").bind(migration.version).bind(migration.description.as_ref()).bind(migration.checksum.as_ref()).execute(&mut *tx).await).await?;
         if migration.version == 9 {
