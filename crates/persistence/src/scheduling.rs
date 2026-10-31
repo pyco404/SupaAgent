@@ -6,7 +6,7 @@ impl Store {
         sqlx::query_scalar("SELECT to_jsonb(x) FROM (SELECT id,approved_by,approved_at,policy,expires_at,closed_at,cycles_started,reserved_microusd,legacy FROM schedule_authorizations WHERE agent_id=$1 ORDER BY approved_at DESC,id LIMIT 100) x").bind(id).fetch_all(&self.pool).await.map_err(db)
     }
     pub async fn schedule_status(&self, id: Uuid) -> Result<ScheduleStatus> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let agent = locked(&mut tx, id).await?;
         let result = status(&mut tx, &agent).await?;
         tx.commit().await.map_err(db)?;
@@ -30,7 +30,7 @@ impl Store {
             return Err(Error::Denied);
         }
         let encoded = serde_json::to_value(command).map_err(|_| Error::Invalid)?;
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut agent = locked(&mut tx, id).await?;
         command.validate()?; // A queued renewal must still carry fresh consent after acquiring the lock.
         if let Some(actor) = actor {
