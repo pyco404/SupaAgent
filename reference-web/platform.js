@@ -32,10 +32,11 @@ export async function sectionView(id, state, agentId) {
   };
   const agents=state.agents.data;
   add(`supa ${id==='home'?'status':id}`,'command');
-  const epoch=state.status.data?.epoch;
+  let epoch=state.status.data?.epoch;
   let operator;
   if(id==='intelligence') {
     const response=await read('/api/operator-status'); operator=response.data;
+    epoch??=operator?.epoch;
     add('Operator / verified service metadata','heading');
     if(!operator)add(response.error??'Operator status unavailable. Execution eligibility is unverified.','notice');
     else {
