@@ -18,7 +18,7 @@ test('displayed Rust excerpt exactly matches the complete real runtime function'
   expect(lines.at(-1)).toBe('}');
   await expect(page.locator('.intro-file')).toHaveText(excerpt.file);
   await expect(page.locator('.intro-canvas')).toHaveAttribute('data-source-file', excerpt.file);
-  await expect(page.locator('.intro-position')).toHaveText('132:2');
+  await expect(page.locator('.intro-position')).toHaveText(`${excerpt.firstLine+lines.length-1}:2`);
 });
 
 test('Rust lexer preserves tokens and wrapping never discards source', async ({ page }) => {
