@@ -14,7 +14,22 @@ pub struct OperatorCredential {
     pub role: Role,
     pub token: String,
 }
+pub(super) fn deadline_valid(deadline: Option<u64>, now: Option<u64>) -> bool {
+    deadline.is_none_or(|end| now.is_some_and(|time| time < end))
+}
 impl AppState {
+    /// Server-controlled Unix-second deadlines; absent entries preserve legacy behavior.
+    pub fn with_credential_deadlines(mut self, deadlines: BTreeMap<Uuid, u64>) -> Result<Self> {
+        if deadlines
+            .iter()
+            .any(|(id, end)| *end == 0 || !self.operators.iter().any(|c| c.id == *id))
+        {
+            return Err(Error::Invalid);
+        }
+        self.credential_deadlines = Arc::new(deadlines);
+        Ok(self)
+    }
+
     pub fn with_operator(mut self, id: Uuid) -> Result<Self> {
         self.add_credential(OperatorCredential {
             id,
@@ -97,4 +112,17 @@ async fn scope(
         }
     }
     Ok(Json(json!({"role":role})))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::deadline_valid;
+    #[test]
+    fn session_deadline_is_exclusive_and_clock_failure_is_closed() {
+        assert!(deadline_valid(Some(100), Some(99)));
+        assert!(!deadline_valid(Some(100), Some(100)));
+        assert!(!deadline_valid(Some(100), Some(101)));
+        assert!(!deadline_valid(Some(100), None));
+        assert!(deadline_valid(None, Some(101)));
+    }
 }
