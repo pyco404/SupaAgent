@@ -16,7 +16,7 @@ test('all ten prepared views distinguish fresh state without fetching private hi
    assert.ok(rows.some(row=>row.text?.includes(epoch.id)&&row.text.includes('historical database unrecovered')));
    assert.equal(rows.some(row=>['autonomy','schedule','live'].includes(row.kind)),false);
   }
-  assert.equal(calls,0);
+  assert.equal(calls,2);
  }finally{globalThis.fetch=before;}
 });
 test('unidentified and disconnected epochs never imply historical recovery',async()=>{
@@ -30,4 +30,15 @@ test('active read-only health is explicit and does not authorize writes',()=>{
  const data=schemas.health.parse({status:'ok',economic_mode:'simulation',epoch:{...epoch,state:'active_read_only',revision:1,approval_id:'43f197d6-7f55-4876-b71f-c23804e0e35c'}});
  assert.equal(data.epoch.state,'active_read_only');
  assert.equal(data.epoch.revision,1);
+});
+
+test('Intelligence displays genuine scoped status without claiming a running worker',async()=>{
+ const before=globalThis.fetch;
+ const status={role:'owner',credential:{status:'valid'},authorization:{status:'revoked',scope:'offline_control',agent_id:epoch.id,expires_at:null},worker:{status:'unavailable',execution_running:false},eligibility:{activate_offline:false}};
+ globalThis.fetch=async path=>{assert.equal(path,'/api/operator-status');return Response.json(status);};
+ try {const rows=await sectionView('intelligence',{status:{data:{epoch}},agents:{data:[]}},'');
+ assert.ok(rows.some(r=>r.text==='Scoped authorization  revoked / offline_control'));
+ assert.ok(rows.some(r=>r.text==='Execution  No verified running execution'));
+ assert.equal(rows.some(r=>['autonomy','schedule','live'].includes(r.kind)),false);
+ }finally{globalThis.fetch=before;}
 });
