@@ -40,7 +40,7 @@ impl Store {
         if principal.is_nil() {
             return Err(Error::Invalid);
         }
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         locked(&mut tx, agent).await?;
         if sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM agent_access WHERE agent_id=$1)",
@@ -65,7 +65,7 @@ impl Store {
         if target.is_nil() || target == actor || role == Role::Owner {
             return Err(Error::Denied);
         }
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         locked(&mut tx, agent).await?;
         let owner: Option<Uuid> = sqlx::query_scalar(
             "SELECT principal_id FROM agent_access WHERE agent_id=$1 AND role='owner'",
