@@ -11,7 +11,7 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 reduced.addEventListener('change', event => { root.dataset.motion=event.matches?'still':'running';if(event.matches)revealTyping?.(); });
 root.dataset.motion = reduced.matches?'still':'running';
 const node = (tag,className,text) => { const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=String(text);return el; };
-const palettes=[['#080908','#ded9bd','#aaa58b'],['#080908','#e6e0cf','#a7a18f'],['#0a0c08','#d9dbc3','#a7ac90']];
+const palettes=[['#080908','#ded9bd','#aaa58b'],['#0b0b0a','#e6e0cf','#a7a18f'],['#0a0c08','#d9dbc3','#a7ac90']];
 let sceneData, revealTyping=null;
 let theme=0,wheel,scenes,itemIndex=0,typing=0,typingTimer=0,leaving=false,entryAttempt=0,worm=false;
 let state={status:{error:'Connecting to local backend…'},agents:{error:'Loading saved agents…'},retrievedAt:'not yet retrieved'},agentId='',renderVersion=0,reloadVersion=0;
@@ -21,8 +21,19 @@ try{const id=sessionStorage.getItem('supa.offline-request');if(/^[0-9a-f-]{36}$/
 try{const saved=Number(localStorage.getItem('supa.dark-theme'));if(Number.isInteger(saved)&&saved>=0&&saved<palettes.length)theme=saved;}catch{/* Optional preference. */}
 function applyTheme(){['--bg','--ink','--dim'].forEach((name,index)=>root.style.setProperty(name,palettes[theme][index]));}
 applyTheme();
+let characterShortcuts=true;
+try{characterShortcuts=localStorage.getItem('supa.character-shortcuts')!=='off';}catch{/* Optional local preference. */}
+const shortcutControl=$('.shortcut-toggle');
+function syncShortcutControl(){shortcutControl.setAttribute('aria-pressed',String(characterShortcuts));shortcutControl.textContent=`Global character shortcuts ${characterShortcuts?'on':'off'}`;}
+syncShortcutControl();
+shortcutControl.addEventListener('click',()=>{
+  characterShortcuts=!characterShortcuts;syncShortcutControl();
+  try{localStorage.setItem('supa.character-shortcuts',characterShortcuts?'on':'off');}catch{/* Optional local preference. */}
+  $('.announcement').textContent=`${shortcutControl.textContent}. Arrow keys and focused terminal/navigation controls remain available.`;
+});
+let pickerSearch='',pickerSearchAt=0;
 // Keep the native value as backing state; the visible picker never uses an OS popup.
-function closeAgentPicker(focus=false){$('#agent-options').hidden=true;$('#agent-picker-trigger').setAttribute('aria-expanded','false');if(focus)$('#agent-picker-trigger').focus({preventScroll:true});}
+function closeAgentPicker(focus=false){pickerSearch='';pickerSearchAt=0;$('#agent-options').hidden=true;$('#agent-picker-trigger').setAttribute('aria-expanded','false');if(focus)$('#agent-picker-trigger').focus({preventScroll:true});}
 function syncAgentPicker(){
   const native=$('#agent-select'),list=$('#agent-options'),trigger=$('#agent-picker-trigger'),restore=list.contains(document.activeElement);
   $('#agent-selected-name').textContent=native.selectedOptions[0]?.textContent ?? 'Choose an agent';trigger.title=$('#agent-selected-name').textContent;trigger.disabled=native.options.length<2;
@@ -48,7 +59,13 @@ $('.agent-picker').addEventListener('keydown',event=>{
   if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
     event.preventDefault();event.stopPropagation();if($('#agent-options').hidden){openAgentPicker(event.key==='ArrowUp'||event.key==='End');return;}
     const next=event.key==='Home'?0:event.key==='End'?options.length-1:Math.max(0,Math.min(options.length-1,index+(event.key==='ArrowDown'?1:-1)));options[next]?.focus({preventScroll:true});options[next]?.scrollIntoView({block:'nearest'});
-  }else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeAgentPicker(true);}else if(event.key==='Tab')closeAgentPicker(true);else if(event.key.length===1&&event.key!==' '){event.preventDefault();event.stopPropagation();if($('#agent-options').hidden)openAgentPicker();options.find(option=>option.textContent.toLowerCase().startsWith(event.key.toLowerCase()))?.focus();}
+  }else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeAgentPicker(true);}else if(event.key==='Tab')closeAgentPicker(true);else if(event.key.length===1&&event.key!==' '){
+    event.preventDefault();event.stopPropagation();if($('#agent-options').hidden)openAgentPicker();
+    const now=performance.now(),key=event.key.toLowerCase();pickerSearch=now-pickerSearchAt<700?pickerSearch+key:key;pickerSearchAt=now;
+    const cycle=[...pickerSearch].every(character=>character===key),query=cycle?key:pickerSearch,start=cycle?Math.max(0,options.indexOf(document.activeElement)+1):0;
+    const match=[...options.slice(start),...options.slice(0,start)].find(option=>option.textContent.toLowerCase().startsWith(query));
+    match?.focus({preventScroll:true});match?.scrollIntoView({block:'nearest'});
+  }
 });
 document.addEventListener('pointerdown',event=>{if(!$('.agent-picker').contains(event.target))closeAgentPicker();});
 window.addEventListener('resize',()=>closeAgentPicker($('#agent-options').contains(document.activeElement)));
@@ -377,7 +394,7 @@ $('.command').addEventListener('submit',event=>{
   if(command==='help'){line('UI commands only: supa status, supa agents, supa inspect <name or UUID>, supa intelligence, supa memory, supa economy, supa social, supa capabilities. ↑↓ choose views, j/k scroll, : opens command, Escape returns navigation. No shell execution.','terminal-notice');$('.announcement').textContent='Command help added to terminal.';return;}
   if(command.startsWith('inspect ')){
     const query=command.slice(8).toLowerCase();const agent=state.agents.data?.find(a=>a.id===query||a.name.toLowerCase()===query);
-    if(!agent){$('.announcement').textContent='No matching saved agent. Use supa agents.';return;}
+    if(!agent){const message='No matching saved agent. Use supa agents.';$('.announcement').textContent=message;line(message,'terminal-notice');$('.buffer').scrollTop=$('.buffer').scrollHeight;return;}
     agentId=agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);return;
   }
   const id=({status:'home',capabilities:'about'})[command]??command,index=navigation.findIndex(item=>item.id===id);
@@ -389,6 +406,7 @@ window.addEventListener('keydown',async event=>{
   if(event.defaultPrevented||event.ctrlKey||event.metaKey||event.altKey)return;
   if(event.key==='Escape'){closeCommand(false);returnFocus();return;}
   if(event.target instanceof HTMLInputElement||event.target instanceof HTMLSelectElement||event.target instanceof HTMLTextAreaElement)return;
+  if(!characterShortcuts&&event.key.length===1&&!(event.target instanceof Element&&event.target.closest('.wheel,.buffer')))return;
   if(event.key==='Tab'&&$('.projects').classList.contains('drawer-open')){
     const active=$('.wheel-item[aria-selected=true]');if(event.shiftKey&&document.activeElement===$('.tabline')){event.preventDefault();active?.focus();}else if(!event.shiftKey&&document.activeElement===active){event.preventDefault();$('.tabline').focus();}return;
   }
