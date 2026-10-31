@@ -59,6 +59,54 @@ async fn run() -> Result<()> {
     let expected = std::env::var("SUPA_EXPECTED_EPOCH_ID").ok();
     let preview = flag("SUPA_EPOCH_READONLY_PREVIEW", false)?;
     let epoch_mode = std::env::var("SUPA_EPOCH_MODE").ok();
+    if epoch_mode.as_deref() == Some("controlled_offline") {
+        if preview
+            || private_staging
+            || scheduler_enabled
+            || provider != "offline"
+            || flag("SUPA_ALLOW_OPENAI", false)?
+            || flag("SUPA_CONTROLLED_INFERENCE", false)?
+            || flag("SUPA_WALLET_ENABLED", false)?
+            || std::env::var_os("SUPA_OPERATOR_ID").is_some()
+            || std::env::var_os("SUPA_WALLET_POLL_SECONDS").is_some()
+        {
+            return Err(Error::Denied);
+        }
+        let id = expected
+            .ok_or(Error::Denied)?
+            .parse()
+            .map_err(|_| Error::Invalid)?;
+        let namespace = std::env::var("SUPA_EXPECTED_ACCOUNTING_NAMESPACE")
+            .map_err(|_| Error::Denied)?
+            .parse()
+            .map_err(|_| Error::Invalid)?;
+        let approval = std::env::var("SUPA_OPERATION_APPROVAL_ID")
+            .map_err(|_| Error::Denied)?
+            .parse()
+            .map_err(|_| Error::Invalid)?;
+        let admitted = store.admit_operation(approval, id, namespace).await?;
+        let context = admitted.operational_context().ok_or(Error::Denied)?;
+        // One verified principal per admission; frontend identity fields never choose it.
+        if credentials.len() != 1
+            || credentials[0].id != context.principal_id
+            || credentials[0].role != supa_persistence::Role::Owner
+            || credentials[0].token == token
+            || !deadlines.contains_key(&context.principal_id)
+        {
+            return Err(Error::Denied);
+        }
+        let runtime = Runtime::new(admitted.clone(), Arc::new(Offline));
+        let state = AppState::new(admitted, runtime, token)?
+            .with_credentials(credentials)?
+            .with_credential_deadlines(deadlines)?;
+        let listener = tokio::net::TcpListener::bind(bind)
+            .await
+            .map_err(|_| Error::Invalid)?;
+        return axum::serve(listener, router(state))
+            .with_graceful_shutdown(shutdown())
+            .await
+            .map_err(|_| Error::Invalid);
+    }
     if epoch.is_some() || expected.is_some() || preview || epoch_mode.is_some() {
         let mode = epoch_mode
             .as_deref()
