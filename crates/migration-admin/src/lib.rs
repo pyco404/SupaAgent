@@ -184,6 +184,7 @@ fn verify_for(
     let scope = match schema {
         10 => "migrate_development_epoch_only",
         11 => "migrate_development_epoch_through_eleven_only",
+        12 => "migrate_development_epoch_through_twelve_only",
         _ => return Err("unsupported_migration_profile"),
     };
     check(
@@ -282,6 +283,10 @@ pub async fn command(args: Vec<String>) -> Result<()> {
 /// Independent 8 -> 11 profile: its scope/signature never accepts an 8 -> 10 approval.
 pub async fn command_eleven(args: Vec<String>) -> Result<()> {
     command_profile(args, 11).await
+}
+/// Migration-only 8 -> 12; installing permit schema never issues an operational approval.
+pub async fn command_twelve(args: Vec<String>) -> Result<()> {
+    command_profile(args, 12).await
 }
 async fn command_profile(args: Vec<String>, schema: i64) -> Result<()> {
     clean_environment()?;
