@@ -427,3 +427,186 @@ async fn cloned_schema_permissions_atomic_failures_concurrency_and_recovery() {
     assert!(partial.run(Fault::Never).await.is_err());
     assert_eq!(partial.version().await, 9);
 }
+
+#[test]
+fn eleven_approval_is_independently_scoped_and_checksum_bound() {
+    let target = Target::primary();
+    let key = key();
+    let authority = authority(&target, &key);
+    let mut p = plan(&target, &authority);
+    let now = Utc::now().timestamp();
+    p.target_version = 11;
+    p.scope = "migrate_development_epoch_through_eleven_only".into();
+    p.migration_sha384 = inventory_for(11);
+    let (raw, signature) = sign(&p, &key);
+    assert!(
+        verify_for(
+            &raw,
+            &signature,
+            &authority,
+            &target,
+            &p.executable_sha256,
+            now,
+            11
+        )
+        .is_ok()
+    );
+    assert!(
+        verify(
+            &raw,
+            &signature,
+            &authority,
+            &target,
+            &p.executable_sha256,
+            now
+        )
+        .is_err()
+    );
+    assert!(
+        verify_for(
+            &raw,
+            &signature,
+            &authority,
+            &target,
+            &p.executable_sha256,
+            now,
+            12
+        )
+        .is_err()
+    );
+    for field in [
+        "scope",
+        "target_version",
+        "migration_sha384",
+        "principal_id",
+        "epoch_id",
+    ] {
+        let mut altered = serde_json::to_value(&p).unwrap();
+        altered[field] = match field {
+            "target_version" => json!(10),
+            "migration_sha384" => json!(inventory()),
+            "principal_id" | "epoch_id" => json!(Uuid::new_v4()),
+            _ => json!("migrate_development_epoch_only"),
+        };
+        let changed = serde_json::to_vec(&altered).unwrap();
+        assert!(
+            verify_for(
+                &changed,
+                key.sign(&changed).as_ref(),
+                &authority,
+                &target,
+                &p.executable_sha256,
+                now,
+                11
+            )
+            .is_err()
+        );
+    }
+    assert!(
+        verify_for(
+            &raw,
+            &signature,
+            &authority,
+            &target,
+            &p.executable_sha256,
+            p.expires_at,
+            11
+        )
+        .is_err()
+    );
+}
+
+impl Fixture {
+    async fn eleven() -> Self {
+        let mut fixture = Self::new().await;
+        fixture.plan.target_version = 11;
+        fixture.plan.scope = "migrate_development_epoch_through_eleven_only".into();
+        fixture.plan.migration_sha384 = inventory_for(11);
+        fixture.raw = serde_json::to_vec(&fixture.plan).unwrap();
+        fixture
+    }
+    async fn run_eleven(&self, fault: Fault) -> Result<()> {
+        let signature = self.signing_key.sign(&self.raw);
+        verify_for(
+            &self.raw,
+            signature.as_ref(),
+            &self.authority,
+            &self.target,
+            &self.plan.executable_sha256,
+            Utc::now().timestamp(),
+            11,
+        )?;
+        execute(
+            &self.opts,
+            &self.target,
+            &self.authority,
+            &self.plan,
+            &self.raw,
+            signature.as_ref(),
+            fault,
+        )
+        .await
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires approved backup and isolated stage-two cluster; never primary"]
+async fn eleven_profile_atomicity_replay_concurrency_and_interruption() {
+    let mut good = Fixture::eleven().await;
+    good.run_eleven(Fault::Never).await.unwrap();
+    assert_eq!(good.version().await, 11);
+    good.prepared().await;
+    let receipt: (i64, i64) =
+        sqlx::query_as("SELECT from_version,to_version FROM epoch_guard.migration_receipts")
+            .fetch_one(&mut good.admin)
+            .await
+            .unwrap();
+    assert_eq!(receipt, (8, 11));
+    assert!(good.run_eleven(Fault::Never).await.is_err());
+    let rows: i64 = sqlx::query_scalar("SELECT (SELECT count(*) FROM agents)+(SELECT count(*) FROM agent_access)+(SELECT count(*) FROM live_budgets)+(SELECT count(*) FROM economic_entries)+(SELECT count(*) FROM epoch_guard.approvals)+(SELECT count(*) FROM epoch_guard.authorities)+(SELECT count(*) FROM epoch_guard.executors)")
+        .fetch_one(&mut good.admin).await.unwrap();
+    assert_eq!(rows, 0);
+    let mut failed = Fixture::eleven().await;
+    assert!(failed.run_eleven(Fault::FailAfterEleven).await.is_err());
+    assert_eq!(failed.version().await, 8);
+    assert_eq!(
+        sqlx::query_scalar::<_, String>("SELECT state FROM application_epoch")
+            .fetch_one(&mut failed.admin)
+            .await
+            .unwrap(),
+        "prepared"
+    );
+    let missing: bool = sqlx::query_scalar("SELECT to_regclass('economic_jobs') IS NULL AND to_regclass('epoch_guard.migration_receipts') IS NULL")
+        .fetch_one(&mut failed.admin).await.unwrap();
+    assert!(missing);
+    let mut concurrent = Fixture::eleven().await;
+    let (a, b) = tokio::join!(
+        concurrent.run_eleven(Fault::Never),
+        concurrent.run_eleven(Fault::Never)
+    );
+    assert_eq!(u8::from(a.is_ok()) + u8::from(b.is_ok()), 1);
+    assert_eq!(concurrent.version().await, 11);
+    let mut killed = Fixture::eleven().await;
+    let ready = Arc::new(Notify::new());
+    let resume = Arc::new(Notify::new());
+    let future = killed.run_eleven(Fault::PauseAfterNine(ready.clone(), resume.clone()));
+    let control = async {
+        ready.notified().await;
+        let mut root = PgConnection::connect(&migration_test_url()).await.unwrap();
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM (SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1 AND application_name='stage2-migration-test' AND pid<>pg_backend_pid()) t")
+            .bind(&killed.target.database).fetch_one(&mut root).await.unwrap();
+        assert!(count > 0);
+        resume.notify_one();
+    };
+    let (result, _) = tokio::join!(future, control);
+    assert!(result.is_err());
+    killed.admin = PgConnection::connect_with(&killed.opts).await.unwrap();
+    assert_eq!(killed.version().await, 8);
+    assert_eq!(
+        sqlx::query_scalar::<_, String>("SELECT state FROM application_epoch")
+            .fetch_one(&mut killed.admin)
+            .await
+            .unwrap(),
+        "prepared"
+    );
+}
