@@ -13,9 +13,9 @@ test("intro enters the project browser and browser back restores intro", async (
   page.on("pageerror", error => errors.push(error.message));
   await open(page, "/");
   await expect(page.locator("body")).toHaveAttribute("data-view", "intro");
-  await expect(page.locator("a.enter")).toHaveAttribute("href", "/site/");
+  await expect(page.locator("a.enter")).toHaveAttribute("href", "/");
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/site\/(?:#.*)?$/);
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("body")).toHaveAttribute("data-view", "projects");
   await expect(page.locator(".bar")).toBeVisible();
   await page.goBack();
@@ -60,7 +60,7 @@ test("command input is keyboard accessible and does not navigate externally", as
   await expect(page.locator(".command-input")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(navigationFocus(page)).toBeFocused();
-  await expect(page).toHaveURL(/\/site\/(?:#.*)?$/);
+  await expect(page).toHaveURL(/\/$/);
   await page.keyboard.press(":");
   await page.locator(".command-input").fill("globalThis.__supaCommandExecuted=true");
   await page.keyboard.press("Enter");
@@ -68,12 +68,12 @@ test("command input is keyboard accessible and does not navigate externally", as
   expect(await page.evaluate(() => globalThis.__supaCommandExecuted)).toBeUndefined();
 });
 
-test("Supa hashes and navigational commands restore saved selections", async ({ page }) => {
-  await open(page, "/site/#economy");
+test("Supa paths and navigational commands restore saved selections", async ({ page }) => {
+  await open(page, "/economy");
   await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("data-index", "4");
   await page.locator(".buffer").focus();await page.keyboard.press(":");
   await page.locator(".command-input").fill("supa social");await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/#social$/);
+  await expect(page).toHaveURL(/\/social$/);
   await expect(page.locator(".buffer")).toContainText("Select an agent");
   await page.reload({waitUntil:"domcontentloaded"});
   await expect(page.locator('.wheel-item[aria-selected="true"]')).toHaveAttribute("aria-label", "Social");
@@ -468,7 +468,7 @@ test('hands switch between mouse and typing while a second tether follows screen
   await expect(tether).toHaveAttribute('data-typing-active','true');await expect(tether).toHaveAttribute('data-active','true');
   const keyboardBounds=await intro.getAttribute('data-keyboard-bounds');
   await expect(intro).toHaveAttribute('data-right-hand','keyboard');expect(await intro.getAttribute('data-keyboard-bounds')).toBe(keyboardBounds);await expect(intro).toHaveAttribute('data-hand-state','typing');
-  await open(page,'/site/#about');const hands=page.locator('.workspace-hands');
+  await open(page,'/about');const hands=page.locator('.workspace-hands');
   await expect(hands).toBeVisible();await expect(hands).toHaveAttribute('data-hand-state','typing');
   await expect(tether).toHaveAttribute('data-typing-active','true');
   const target=await tether.evaluate(canvas=>canvas.dataset.typingEndpoints.split(',').map(Number));const buffer=await page.locator('.buffer').boundingBox();
@@ -489,7 +489,7 @@ test('typing tether disappears on completion while mouse tracking remains availa
   await expect(page.locator('.intro-canvas')).toHaveAttribute('data-intro-state','complete',{timeout:25000});
   await expect(tether).toHaveAttribute('data-typing-active','false');
   await page.mouse.move(220,190);await expect(tether).toHaveAttribute('data-active','true');
-  await open(page,'/site/#about');
+  await open(page,'/about');
   await expect(tether).toHaveAttribute('data-typing-active','true');
   await page.locator('.command-toggle').click();await page.locator('.skip-typing').click();
   await expect(tether).toHaveAttribute('data-typing-active','false');
@@ -501,7 +501,7 @@ test('typing tether disappears on completion while mouse tracking remains availa
 });
 
 test('wheel uses distinct section schematics and full planned labels',async({page,request})=>{
-  await open(page,'/site/#about');
+  await open(page,'/about');
   if(page.viewportSize().width<=700)await page.locator('.tabline').click();
   const source=await request.get('/public/assets/navigation-previews.svg');expect(source.status()).toBe(200);expect(source.headers()['content-type']).toContain('image/svg+xml');
   const previews=page.locator('.wheel-preview use');await expect(previews).toHaveCount(9);
@@ -537,7 +537,7 @@ test('navigation fibers keep moving while cards stay still and can be paused',as
 
 test('every workspace view anchors the keyboard below content and enlarges architecture',async({page})=>{
   for(const section of ['home','agents','intelligence','memory','economy','social','trading','token-launch','factory','about']){
-    await open(page,`/site/#${section}`);
+    await open(page,`/${section==='home'?'':section}`);if(section==='home')await page.locator('.enter').click();
     const keyboard=await page.locator('.workspace-hands').boundingBox(),bar=await page.locator('.bar').boundingBox(),buffer=await page.locator('.buffer').boundingBox();
     expect(keyboard.y+keyboard.height).toBeCloseTo(page.viewportSize().height,0);expect(bar.y+bar.height).toBeLessThanOrEqual(keyboard.y+1);
     expect(buffer.height).toBeGreaterThan(60);expect(buffer.y+buffer.height).toBeLessThanOrEqual(bar.y+1);
@@ -555,7 +555,7 @@ test('Home and About have distinct concept visuals with stable reduced motion', 
   const pixels=()=>diagram.evaluate(canvas=>{const bytes=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;let hash=0;for(let i=0;i<bytes.length;i+=4)hash=(Math.imul(hash,31)+bytes[i]+bytes[i+3])|0;return hash;});
   await expect(diagram).toHaveAttribute('data-concept','architecture');
   const home=await pixels();
-  await page.evaluate(()=>location.hash='about');
+  await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa about');await page.keyboard.press('Enter');
   await expect(diagram).toHaveAttribute('data-concept','identity');
   await expect(diagram).toHaveAccessibleName(/identity, memory, goals, policy and limits/);
   const about=await pixels();expect(about).not.toBe(home);
@@ -566,7 +566,7 @@ test('Home and About have distinct concept visuals with stable reduced motion', 
   await expect(diagram).toHaveAttribute('data-motion-state','running');
   const moving=await pixels();await page.waitForTimeout(250);expect(await pixels()).not.toBe(moving);
   await page.emulateMedia({reducedMotion:'reduce'});
-  await page.evaluate(()=>location.hash='home');
+  await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa home');await page.keyboard.press('Enter');
   await expect(diagram).toHaveAttribute('data-concept','architecture');
   expect(await pixels()).toBe(home);
 });
