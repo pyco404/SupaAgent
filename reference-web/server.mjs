@@ -4,6 +4,7 @@ import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadLocalEnvironment, readResource, runAutonomy, isEconomicPath, operatorAuthorized, localRequest } from './backend.mjs';
+import { navigation } from './platform.js';
 await loadLocalEnvironment();
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -53,7 +54,7 @@ createServer(async (request, response) => {
       response.setHeader('WWW-Authenticate','Basic realm="Supa local operator", charset="UTF-8"');
       return finish(response,401,'Operator authentication required');
     }
-    response.writeHead(302,{Location:'/site/#agents'});return response.end();
+    response.writeHead(302,{Location:'/agents'});return response.end();
   }
   if (path.startsWith('/api/')) {
     const result = await readResource(request.url, request.headers);
@@ -64,9 +65,14 @@ createServer(async (request, response) => {
     response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     return response.end(request.method === "HEAD" ? undefined : JSON.stringify({ status: "ok", mode: "supa-bounded-offline", host: "127.0.0.1" }));
   }
-  const file = path === "/" || path === "/site" || path === "/site/" ? "index.html" : path.slice(1);
+  const canonical = path === '/home' || path === '/home/' ? '/' : navigation.find(item=>item.path!=='/' && path===item.path+'/')?.path;
+  if(canonical){response.writeHead(308,{Location:canonical+new URL(request.url,'http://localhost').search});return response.end();}
+  const file = navigation.some(item=>item.path===path) || path === "/" || path === "/site" || path === "/site/" ? "index.html" : path.slice(1);
   const isPublic = file.startsWith("public/") && file.split("/").every(part => part && !part.startsWith(".")) && (publicExtensions.has(extname(file)) || file === "public/fonts/OFL.txt");
-  if (!appFiles.has(file) && !isPublic) return finish(response, 404, "Not found");
+  if (!appFiles.has(file) && !isPublic) {
+    response.writeHead(404,{'Content-Type':'text/html; charset=utf-8'});
+    return response.end(request.method==='HEAD'?undefined:await readFile(resolve(root,'not-found.html')));
+  }
   try {
     const target = await realpath(resolve(root, file));
     const safeRoot = isPublic ? resolve(root, "public") : root;
