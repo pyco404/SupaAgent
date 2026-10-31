@@ -32,6 +32,12 @@ async fn run() -> Result<()> {
         .map(|value| serde_json::from_str(&value).map_err(|_| Error::Invalid))
         .transpose()?
         .unwrap_or_default();
+    let deadlines: std::collections::BTreeMap<uuid::Uuid, u64> =
+        std::env::var("SUPA_OPERATOR_SESSION_DEADLINES")
+            .ok()
+            .map(|value| serde_json::from_str(&value).map_err(|_| Error::Invalid))
+            .transpose()?
+            .unwrap_or_default();
     validate_staging(
         private_staging,
         &provider,
@@ -83,6 +89,7 @@ async fn run() -> Result<()> {
             state = state
                 .with_credentials(serde_json::from_str(&value).map_err(|_| Error::Invalid)?)?;
         }
+        state = state.with_credential_deadlines(deadlines)?;
         let listener = tokio::net::TcpListener::bind(bind)
             .await
             .map_err(|_| Error::Invalid)?;
@@ -102,6 +109,7 @@ async fn run() -> Result<()> {
         state =
             state.with_credentials(serde_json::from_str(&value).map_err(|_| Error::Invalid)?)?;
     }
+    state = state.with_credential_deadlines(deadlines)?;
     if flag("SUPA_CONTROLLED_INFERENCE", false)? {
         if scheduler_enabled || provider != "offline" {
             return Err(Error::Denied);
