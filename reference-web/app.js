@@ -125,6 +125,11 @@ function setView(projects){
 }
 async function enter(event){event?.preventDefault();if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'',`/${location.search}`);setView(true);}
 $('.enter').addEventListener('click',enter);
+$('.skip').addEventListener('click',event=>{
+  event.preventDefault();
+  if(location.hash!=='#workspace')history.pushState({view:document.body.dataset.view},'',`${location.pathname}${location.search}#workspace`);
+  $('#workspace').focus();
+});
 $('.brand').addEventListener('click',async event=>{event.preventDefault();if(!await ready)return;history.pushState({view:'intro'},'',`/${location.search}`);setView(false);$('.enter').focus({preventScroll:true});});
 window.addEventListener('popstate',restoreRoute);
 function migrateLegacyRoute(){
