@@ -8,7 +8,7 @@ test('read-only polling refreshes changed goals without restarting unchanged tex
     reads++;await route.fulfill({json:[{id,description,completed:false,priority:1,suggested_progress_bps:0}]});
   });
   await page.goto('http://127.0.0.1:3202/operator');
-  await page.goto('http://127.0.0.1:3202/site/#intelligence');
+  await page.goto('http://127.0.0.1:3202/intelligence');
   const buffer=page.locator('.buffer');
   await expect(buffer).toContainText(description);await expect(buffer).toHaveAttribute('data-typing-state','complete');
   await page.waitForLoadState('networkidle');
