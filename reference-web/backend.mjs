@@ -22,6 +22,7 @@ export async function loadLocalEnvironment() {
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function resource(path) {
+  if(path==='/api/operator-status')return {path:'/operator-status',schema:schemas['operator-status'],public:false};
   if(path==='/api/jobs')return {path:'/jobs',schema:schemas.jobs,public:false};
   if(/^\/api\/jobs\/[0-9a-f-]{36}$/i.test(path))return {path:path.slice(4),schema:schemas['job-payment'],public:false};
   if (path === '/api/services') return {path:'/services',schema:schemas.services,public:true};
