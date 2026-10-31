@@ -70,13 +70,14 @@ $('.agent-picker').addEventListener('keydown',event=>{
 document.addEventListener('pointerdown',event=>{if(!$('.agent-picker').contains(event.target))closeAgentPicker();});
 window.addEventListener('resize',()=>closeAgentPicker($('#agent-options').contains(document.activeElement)));
 document.addEventListener('scroll',event=>{const target=event.target;if(target===document||target instanceof Element&&target.contains($('#agent-picker-trigger')))closeAgentPicker($('#agent-options').contains(document.activeElement));},true);
+let restoringRoute=false;
 const ready=boot();
 async function boot(){
   const data=sceneData={days:[],account:'Supa Agent',connection:'connecting',agentCount:null,retrievedAt:null};
   scenes=createScenes({intro:$('.intro-canvas'),blueprint:$('.blueprint'),entity:$('.entity'),transition:$('.transition'),spark:$('.spark'),reduced,data});
   document.fonts.ready.then(()=>scenes?.redraw());
-  wheel=createWheel({host:$('.wheel'),canvas:$('.wheel-ink'),items:navigation,reducedMotion:reduced,onSelect:index=>select(index)});
-  const initial=location.hash;setView(location.pathname.startsWith('/site'));if(document.body.dataset.view==='projects')openHash(initial);
+  wheel=createWheel({host:$('.wheel'),canvas:$('.wheel-ink'),items:navigation,reducedMotion:reduced,onSelect:index=>{if(!restoringRoute)void select(index);}});
+  migrateLegacyRoute();restoreRoute();
   root.dataset.ready='true';
   void reload(data);
   liveTimer=setInterval(()=>void refreshLive(),15000);
@@ -118,15 +119,29 @@ $('#agent-select').addEventListener('change',event=>{agentId=event.target.value;
 function setView(projects){
   closeAgentPicker();
   entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
+  if(!projects){document.title='Supa Agent — Born to think. Built to survive.';$('link[rel=canonical]').setAttribute('href','/');}
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
   if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));wheel.reveal();$('.buffer').focus({preventScroll:true});});}
 }
-async function enter(event){event?.preventDefault();if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'','/site/');setView(true);}
+async function enter(event){event?.preventDefault();if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'',`/${location.search}`);setView(true);}
 $('.enter').addEventListener('click',enter);
-$('.brand').addEventListener('click',async event=>{event.preventDefault();if(!await ready)return;history.pushState({view:'intro'},'','/');setView(false);$('.enter').focus({preventScroll:true});});
-window.addEventListener('popstate',()=>{const hash=location.hash;setView(location.pathname.startsWith('/site'));if(document.body.dataset.view==='projects')openHash(hash);});
-window.addEventListener('hashchange',()=>{if(root.dataset.ready==='true'&&document.body.dataset.view==='projects')openHash(location.hash);});
-function openHash(hash){let id='home';try{id=decodeURIComponent(hash.replace(/^#/,''))||'home';}catch{/* Unknown fragments return Home. */}const index=navigation.findIndex(item=>item.id===id);wheel.select(Math.max(0,index));void select(Math.max(0,index));}
+$('.brand').addEventListener('click',async event=>{event.preventDefault();if(!await ready)return;history.pushState({view:'intro'},'',`/${location.search}`);setView(false);$('.enter').focus({preventScroll:true});});
+window.addEventListener('popstate',restoreRoute);
+function migrateLegacyRoute(){
+  if(!['/site','/site/'].includes(location.pathname))return;
+  let id;try{id=decodeURIComponent(location.hash.slice(1))||'home';}catch{id='not-found';}
+  const item=navigation.find(entry=>entry.id===id);
+  if(!item){location.replace(`/${encodeURIComponent(id)}${location.search}`);return;}
+  history.replaceState({view:'projects'},'',`${item.path}${location.search}`);
+}
+function restoreRoute(){
+  const item=navigation.find(entry=>entry.path===location.pathname);
+  if(!item)return;
+  restoringRoute=true;
+  itemIndex=navigation.indexOf(item);wheel.select(itemIndex);
+  setView(item.id!=='home'||history.state?.view==='projects');
+  restoringRoute=false;
+}
 function changeTheme(){theme=(theme+1)%palettes.length;applyTheme();try{localStorage.setItem('supa.dark-theme',String(theme));}catch{/* Optional preference. */}scenes.redraw();window.dispatchEvent(new Event('resize'));$('.announcement').textContent=`Dark theme ${theme+1} of ${palettes.length}`;}
 $('.theme-key').addEventListener('click',changeTheme);
 function setDrawer(open,focus=true){
@@ -146,7 +161,11 @@ async function select(index,background=false){
   scenes?.setLifecycle(state.agents.error?null:state.agents.data?.find(agent=>agent.id===agentId)?.lifecycle);
   const version=background?renderVersion:++renderVersion;
   if(!background){itemIndex=index;cancelTyping();}
-  if(document.body.dataset.view==='projects')history.replaceState(null,'',`#${item.id}`);
+  if(!background&&document.body.dataset.view==='projects'){
+    if(location.pathname!==item.path)history.pushState({view:'projects'},'',`${item.path}${location.search}`);
+    document.title=`${item.label.split(' · ')[0]} / Supa Agent`;
+    $('link[rel=canonical]').setAttribute('href',item.path);
+  }
   const buffer=$('.buffer');
   if(!background){
     $('.tab-file').textContent=item.label.split(' · ')[0];$('.winbar').textContent=`supa@local — ${item.label} / read-only`;
@@ -388,7 +407,7 @@ $('.command-input').addEventListener('keydown',event=>{if(['ArrowUp','ArrowDown'
 $('.command').addEventListener('submit',event=>{
   event.preventDefault();const value=$('.command-input').value.trim().replace(/^:/,'');if(value){commandHistory.push(value);commandHistory=commandHistory.slice(-50);}closeCommand();
   if(value==='theme'){changeTheme();return;}
-  if(['q','quit'].includes(value)){history.pushState({},'','/');setView(false);$('.enter').focus();return;}
+  if(['q','quit'].includes(value)){history.pushState({view:'intro'},'',`/${location.search}`);setView(false);$('.enter').focus();return;}
   const command=value.replace(/^supa\s+/,'');
   if(command==='help'){line('UI commands only: supa status, supa agents, supa inspect <name or UUID>, supa intelligence, supa memory, supa economy, supa social, supa capabilities. ↑↓ choose views, j/k scroll, : opens command, Escape returns navigation. No shell execution.','terminal-notice');$('.announcement').textContent='Command help added to terminal.';return;}
   if(command.startsWith('inspect ')){
@@ -397,7 +416,7 @@ $('.command').addEventListener('submit',event=>{
     agentId=agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);return;
   }
   const id=({status:'home',capabilities:'about'})[command]??command,index=navigation.findIndex(item=>item.id===id);
-  if(index>=0){if(document.body.dataset.view==='intro'){history.pushState({},'','/site/');setView(true);}wheel.select(index);void select(index);}
+  if(index>=0){if(document.body.dataset.view==='intro'){itemIndex=index;history.pushState({view:'projects'},'',`${navigation[index].path}${location.search}`);setView(true);}wheel.select(index);void select(index);}
   else{$('.announcement').textContent='Unknown command. Try supa help.';line('Unknown command. Try supa help.','terminal-notice');}
 });
 $('.worm-switch').addEventListener('click',()=>{worm=!worm;$('.worm-switch').setAttribute('aria-pressed',String(worm));$('.worm-switch').textContent=worm?'awake':'asleep';scenes?.setWorm(worm);});
