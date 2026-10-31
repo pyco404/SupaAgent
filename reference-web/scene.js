@@ -238,7 +238,23 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       }
       ctx.stroke();
     }
-    ascii(ctx,cx-r*.7,cy-r*.7,r*1.4,r*1.4,phase*1000);
+    // Abstract processor schematic; no mascot or inferred runtime activity.
+    const core=r*.52;
+    ctx.globalAlpha=.6;ctx.strokeRect(cx-core,cy-core,core*2,core*2);
+    ctx.globalAlpha=.22;ctx.strokeRect(cx-core*.78,cy-core*.78,core*1.56,core*1.56);
+    for(let side=0;side<4;side++){
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(side*Math.PI/2);
+      for(let pin=0;pin<4;pin++){
+        const offset=(pin-1.5)*core*.38;
+        ctx.globalAlpha=.45;ctx.beginPath();ctx.moveTo(offset,-core);ctx.lineTo(offset,-core*1.35);ctx.stroke();
+        ctx.globalAlpha=.7;ctx.fillRect(offset-1,-core*1.35-1,2,2);
+      }
+      ctx.restore();
+    }
+    ctx.globalAlpha=.35;ctx.beginPath();
+    ctx.moveTo(cx,cy-core*.56);ctx.lineTo(cx+core*.56,cy);ctx.lineTo(cx,cy+core*.56);ctx.lineTo(cx-core*.56,cy);ctx.closePath();ctx.stroke();
+    ctx.font='8px Plex,monospace';ctx.textAlign='center';ctx.globalAlpha=.8;ctx.fillText('CORE',cx,cy+3);
+    ctx.font='11px Plex,monospace';ctx.textAlign='left';
     const labels=[['MEMORY',12,cy-r*.55,-1],['GOALS',w-12,cy-r*.55,1],['POLICY',12,cy+r*.65,-1],['LIMITS',w-12,cy+r*.65,1]];
     for(const [label,x,y,side] of labels){
       const edge=cx+side*(r+28),end=x-side*(small?49:66);
