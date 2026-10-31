@@ -28,15 +28,17 @@ export async function GET(request: Request, context: { params: Promise<{ path?: 
   if (path === "/healthz") return Response.json({status:"ok",mode:"private-staging",signing_enabled:false},{headers});
   if (path === "/operator") {
     if (!operatorAuthorized(request.headers.get("authorization"))) return new Response("Operator authentication required", {status:401,headers:{...headers,"WWW-Authenticate":'Basic realm="Supa operator", charset="UTF-8"'}});
-    return new Response(null, {status:302, headers:{...headers, Location:"/site/#agents"}});
+    return new Response(null, {status:302, headers:{...headers, Location:"/agents"}});
   }
   if (path.startsWith("/api/")) {
     const result = await readResource(path+new URL(request.url).search, request.headers);
     return Response.json(result.body, {status:result.status,headers});
   }
-  const file = ["/", "/site", "/site/"].includes(path) ? "index.html" : parts.join("/");
+  const sections = ["/", "/agents", "/intelligence", "/memory", "/economy", "/social", "/trading", "/token-launch", "/factory", "/about"];
+  if(path==="/home")return new Response(null,{status:308,headers:{...headers,Location:"/"+new URL(request.url).search}});
+  const file = [...sections, "/site", "/site/"].includes(path) ? "index.html" : parts.join("/");
   const asset = /^public\/(assets\/[a-z0-9-]+\.svg|fonts\/[a-zA-Z0-9._-]+\.(woff2|ttf|txt))$/.test(file);
-  if (!files.has(file) && !asset) return new Response("Not found", {status:404, headers});
+  if (!files.has(file) && !asset) return new Response(await readFile(resolve(process.cwd(),"../reference-web/not-found.html")), {status:404, headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
   try {
     const root = await realpath(resolve(process.cwd(), "../reference-web"));
     const target = await realpath(resolve(root,file));
