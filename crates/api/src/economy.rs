@@ -11,6 +11,7 @@ pub(super) fn routes() -> Router<AppState> {
         .route("/jobs/{id}/verify-payment", post(verify_payment))
         .route("/agents/{id}/services", post(offer))
         .route("/agents/{id}/economy", get(accounts))
+        .route("/agents/{id}/economy/recipient", post(recipient))
         .route("/agents/{id}/economy/capital", post(capital))
         .route("/agents/{id}/economy/policy", post(policy))
         .route("/agents/{id}/economy/spend", post(spend))
@@ -129,6 +130,52 @@ fn owner(p: Principal) -> Result<()> {
     } else {
         Err(Error::Denied)
     }
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Recipient {
+    address: String,
+    confirm_watch_only: bool,
+}
+/// Register only a public external identity. No vault, key generation or signing.
+async fn recipient(
+    State(s): State<AppState>,
+    Extension(p): Extension<Principal>,
+    Path(id): Path<Uuid>,
+    Json(r): Json<Recipient>,
+) -> ApiResult {
+    owner(p)?;
+    s.store.require_access(id, p.id, Role::Owner).await?;
+    if !r.confirm_watch_only {
+        return Err(Error::Denied.into());
+    }
+    validate_solana_address(&r.address)?;
+    let wallet = match s.store.wallet(id).await {
+        Ok(w)
+            if w.address == r.address
+                && w.owner_id == p.id
+                && w.network == SolanaNetwork::Devnet =>
+        {
+            w
+        }
+        Ok(_) => return Err(Error::Stale.into()),
+        Err(Error::NotFound) => {
+            let w = WalletIdentity {
+                id: Uuid::new_v4(),
+                agent_id: id,
+                network: SolanaNetwork::Devnet,
+                address: r.address,
+                owner_id: p.id,
+                origin: IdentityOrigin::HumanOperator,
+            };
+            s.store.register_wallet(&w, p.id).await?;
+            w
+        }
+        Err(e) => return Err(e.into()),
+    };
+    Ok(Json(
+        json!({"address":wallet.address,"network":"devnet","watch_only":true,"signing_enabled":false,"external_control_verified":false}),
+    ))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
