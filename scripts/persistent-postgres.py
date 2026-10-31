@@ -118,9 +118,10 @@ def prepare():
     sql("COMMENT ON DATABASE supa_infrastructure_test IS 'NEW NONPRODUCTION VALIDATION; HISTORICAL DATABASE UNRECOVERED'", 'postgres')
 
 
-def fingerprint(database):
+def fingerprint(database, *, include_sequence_values=True):
     # One consistent transaction; include every non-system schema, not just public.
     tables = json.loads(sql("SELECT coalesce(json_agg(json_build_array(schemaname,tablename) ORDER BY schemaname,tablename),'[]') FROM pg_tables WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema'", database))
+    sequence_columns = "schemaname,sequencename,start_value,min_value,max_value,increment_by,cycle,cache_size" + (",last_value" if include_sequence_values else "")
     statements = ["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"]
     for schema, name in tables:
         qualified = '.'.join('"' + n.replace('"', '""') + '"' for n in [schema, name])
@@ -128,7 +129,7 @@ def fingerprint(database):
     statements += ["SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY table_schema,table_name,ordinal_position),'[]') FROM (SELECT table_schema,table_name,column_name,ordinal_position,data_type,is_nullable,column_default FROM information_schema.columns WHERE table_schema NOT LIKE 'pg_%' AND table_schema <> 'information_schema') c",
                    "SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY schema,name,definition),'[]') FROM (SELECT n.nspname AS schema,conname AS name,pg_get_constraintdef(c.oid) AS definition FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema') c",
                    "SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY schemaname,indexname),'[]') FROM (SELECT schemaname,indexname,indexdef FROM pg_indexes WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema') c",
-                   "SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY schemaname,sequencename),'[]') FROM (SELECT schemaname,sequencename,start_value,min_value,max_value,increment_by,cycle,cache_size,last_value FROM pg_sequences WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema') c", 'COMMIT']
+                   f"SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY schemaname,sequencename),'[]') FROM (SELECT {sequence_columns} FROM pg_sequences WHERE schemaname NOT LIKE 'pg_%' AND schemaname <> 'information_schema') c", 'COMMIT']
     return hashlib.sha256((json.dumps(tables) + sql(';'.join(statements), database)).encode()).hexdigest()
 
 
