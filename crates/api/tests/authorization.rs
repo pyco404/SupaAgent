@@ -751,3 +751,76 @@ async fn forged_owner_identity_fields_never_replace_server_credentials() {
     );
     f.close().await;
 }
+
+#[tokio::test]
+#[ignore = "requires disposable PostgreSQL"]
+async fn credential_session_expiry_cannot_fall_back_or_spoof_time() {
+    let f = Fixture::new().await;
+    let state = || {
+        AppState::new(
+            f.store.clone(),
+            Runtime::new(f.store.clone(), Arc::new(Offline)),
+            SERVICE.into(),
+        )
+        .unwrap()
+    };
+    assert!(
+        state()
+            .with_credential_deadlines([(f.owner, 1)].into())
+            .is_err()
+    );
+    let expired = state()
+        .with_credentials(vec![OperatorCredential {
+            id: f.owner,
+            role: Role::Owner,
+            token: OWNER.into(),
+        }])
+        .unwrap()
+        .with_credential_deadlines([(f.owner, 1)].into())
+        .unwrap();
+    let app = router(expired);
+    assert_eq!(
+        http(&app, OWNER, "GET", &f.path("memory"), None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri(f.path("memory"))
+                .header("authorization", format!("Bearer {OWNER}"))
+                .header("x-supa-role", "owner")
+                .header("x-supa-session-expires", "9999999999")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    let legacy = state()
+        .with_operator(f.owner)
+        .unwrap()
+        .with_credential_deadlines([(f.owner, 1)].into())
+        .unwrap();
+    assert_eq!(
+        http(&router(legacy), SERVICE, "GET", "/health", None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    let valid = state()
+        .with_credentials(vec![OperatorCredential {
+            id: f.owner,
+            role: Role::Owner,
+            token: OWNER.into(),
+        }])
+        .unwrap()
+        .with_credential_deadlines([(f.owner, u64::MAX)].into())
+        .unwrap();
+    assert_eq!(
+        http(&router(valid), OWNER, "GET", &f.path("memory"), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    f.close().await;
+}
