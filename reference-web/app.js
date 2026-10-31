@@ -120,9 +120,9 @@ function setView(projects){
   closeAgentPicker();
   entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
-  if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));$('.buffer').focus({preventScroll:true});});}
+  if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));wheel.reveal();$('.buffer').focus({preventScroll:true});});}
 }
-async function enter(event){event?.preventDefault();if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;history.pushState({view:'projects'},'','/site/');setView(true);}
+async function enter(event){event?.preventDefault();if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'','/site/');setView(true);}
 $('.enter').addEventListener('click',enter);
 $('.brand').addEventListener('click',async event=>{event.preventDefault();if(!await ready)return;history.pushState({view:'intro'},'','/');setView(false);$('.enter').focus({preventScroll:true});});
 window.addEventListener('popstate',()=>{const hash=location.hash;setView(location.pathname.startsWith('/site'));if(document.body.dataset.view==='projects')openHash(hash);});
