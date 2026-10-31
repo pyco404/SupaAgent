@@ -80,6 +80,7 @@ impl Store {
         Ok(Self {
             pool,
             operational: Some(Arc::new(context)),
+            status_pool: Some(self.pool.clone()),
         })
     }
     /// Authorization is rechecked by SQL on each mutation and again at commit.
