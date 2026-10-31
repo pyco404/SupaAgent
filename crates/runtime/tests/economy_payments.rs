@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::sync::{
     Arc,
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicI64, Ordering},
 };
 use supa_domain::*;
 use supa_persistence::Store;
@@ -12,6 +12,13 @@ use supa_runtime::Runtime;
 use uuid::Uuid;
 const ADDRESS: &str = "11111111111111111111111111111111";
 struct Rpc {
+    amount: AtomicI64,
+    unavailable: AtomicBool,
+    bad_network: AtomicBool,
+    interrupt_tx: AtomicBool,
+    missing_tx: AtomicBool,
+    wrong_recipient: AtomicBool,
+    failed_tx: AtomicBool,
     owner: String,
     memo: String,
     pending: AtomicBool,
@@ -20,14 +27,27 @@ struct Rpc {
 #[async_trait]
 impl SolanaRpc for Rpc {
     async fn read(&self, m: RpcMethod, p: Value) -> Result<Value> {
+        if self.unavailable.load(Ordering::SeqCst) {
+            return Err(Error::Rpc);
+        }
+        let amount = self.amount.load(Ordering::SeqCst).to_string();
+        let recipient = if self.wrong_recipient.load(Ordering::SeqCst) {
+            ADDRESS
+        } else {
+            &self.owner
+        };
         let mint = if self.bad_mint.load(Ordering::SeqCst) {
             SolanaNetwork::Mainnet.usdc_mint()
         } else {
             SolanaNetwork::Devnet.usdc_mint()
         };
-        let row = |amount: &str| json!({"accountIndex":0,"mint":mint,"owner":self.owner,"programId":TOKEN_PROGRAM,"uiTokenAmount":{"amount":amount,"decimals":6}});
+        let row = |amount: &str| json!({"accountIndex":0,"mint":mint,"owner":recipient,"programId":TOKEN_PROGRAM,"uiTokenAmount":{"amount":amount,"decimals":6}});
         Ok(match m {
-            RpcMethod::Genesis => json!(SolanaNetwork::Devnet.genesis()),
+            RpcMethod::Genesis => json!(if self.bad_network.load(Ordering::SeqCst) {
+                SolanaNetwork::Mainnet.genesis()
+            } else {
+                SolanaNetwork::Devnet.genesis()
+            }),
             RpcMethod::MintAccount => {
                 json!({"context":{"slot":42},"value":{"owner":TOKEN_PROGRAM,"executable":false,"data":{"parsed":{"type":"mint","info":{"decimals":6,"isInitialized":true}}}}})
             }
@@ -35,7 +55,13 @@ impl SolanaRpc for Rpc {
                 json!({"value":[{"slot":42,"err":null,"confirmationStatus":if self.pending.load(Ordering::SeqCst){"confirmed"}else{"finalized"}}]})
             }
             RpcMethod::Transaction => {
-                json!({"slot":42,"transaction":{"signatures":[p[0]],"message":{"accountKeys":[ADDRESS,mint],"instructions":[{"programId":TOKEN_PROGRAM,"parsed":{"type":"transferChecked","info":{"source":mint,"destination":ADDRESS,"mint":mint,"tokenAmount":{"amount":"5000","decimals":6}}}},{"programId":"MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr","parsed":self.memo}]}},"meta":{"err":null,"preTokenBalances":[row("0")],"postTokenBalances":[row("5000")],"innerInstructions":[]}})
+                if self.interrupt_tx.load(Ordering::SeqCst) {
+                    return Err(Error::Rpc);
+                }
+                if self.missing_tx.load(Ordering::SeqCst) {
+                    return Ok(Value::Null);
+                }
+                json!({"slot":42,"transaction":{"signatures":[p[0]],"message":{"accountKeys":[ADDRESS,mint],"instructions":[{"programId":TOKEN_PROGRAM,"parsed":{"type":"transferChecked","info":{"source":mint,"destination":ADDRESS,"mint":mint,"tokenAmount":{"amount":amount,"decimals":6}}}},{"programId":"MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr","parsed":self.memo}]}},"meta":{"err":if self.failed_tx.load(Ordering::SeqCst){json!({"InstructionError":[0,"Custom"]})}else{Value::Null},"preTokenBalances":[row("0")],"postTokenBalances":[row(&amount)],"innerInstructions":[]}})
             }
             _ => return Err(Error::Denied),
         })
@@ -124,6 +150,13 @@ async fn mint_finality_memo_replay_and_restart_reconciliation() {
     let runtime = Runtime::new(store.clone(), Arc::new(supa_providers::Offline));
     let signature = bs58::encode(Uuid::new_v4().as_bytes().repeat(4)).into_string();
     let rpc = Rpc {
+        amount: AtomicI64::new(5000),
+        unavailable: AtomicBool::new(false),
+        bad_network: AtomicBool::new(false),
+        interrupt_tx: AtomicBool::new(false),
+        missing_tx: AtomicBool::new(false),
+        wrong_recipient: AtomicBool::new(false),
+        failed_tx: AtomicBool::new(false),
         owner: address.clone(),
         memo: j.id.to_string(),
         pending: AtomicBool::new(true),
@@ -144,7 +177,61 @@ async fn mint_finality_memo_replay_and_restart_reconciliation() {
             .is_err()
     );
     rpc.bad_mint.store(false, Ordering::SeqCst);
+    for flag in [
+        &rpc.unavailable,
+        &rpc.bad_network,
+        &rpc.interrupt_tx,
+        &rpc.missing_tx,
+        &rpc.wrong_recipient,
+        &rpc.failed_tx,
+    ] {
+        flag.store(true, Ordering::SeqCst);
+        assert!(
+            runtime
+                .verify_economic_payment(j.id, customer, &signature, &rpc)
+                .await
+                .is_err()
+        );
+        flag.store(false, Ordering::SeqCst);
+        assert_eq!(
+            store
+                .economic_job(j.id, customer)
+                .await
+                .unwrap()
+                .received_atoms,
+            0
+        );
+    }
+    assert!(
+        runtime
+            .verify_economic_payment(j.id, Uuid::new_v4(), &signature, &rpc)
+            .await
+            .is_err()
+    );
+    assert!(
+        store
+            .economic_command(
+                j.id,
+                owner,
+                JobCommand {
+                    request_id: Uuid::new_v4(),
+                    expected_revision: j.revision,
+                    operation: "accept".into(),
+                    authorize: true
+                }
+            )
+            .await
+            .is_err()
+    );
+
     let wrong = Rpc {
+        amount: AtomicI64::new(5000),
+        unavailable: AtomicBool::new(false),
+        bad_network: AtomicBool::new(false),
+        interrupt_tx: AtomicBool::new(false),
+        missing_tx: AtomicBool::new(false),
+        wrong_recipient: AtomicBool::new(false),
+        failed_tx: AtomicBool::new(false),
         owner: address.clone(),
         memo: Uuid::new_v4().to_string(),
         pending: AtomicBool::new(false),
@@ -156,6 +243,20 @@ async fn mint_finality_memo_replay_and_restart_reconciliation() {
             .await
             .is_err()
     );
+    rpc.amount.store(2000, Ordering::SeqCst);
+    let partial = runtime
+        .verify_economic_payment(
+            j.id,
+            customer,
+            &bs58::encode(Uuid::new_v4().as_bytes().repeat(4)).into_string(),
+            &rpc,
+        )
+        .await
+        .unwrap();
+    assert_eq!(partial.state, JobState::AwaitingPayment);
+    assert_eq!(partial.received_atoms, 2000);
+    assert_eq!(partial.earned_atoms, 0);
+    rpc.amount.store(3000, Ordering::SeqCst);
     let (r1, r2) = tokio::join!(
         runtime.verify_economic_payment(j.id, customer, &signature, &rpc),
         runtime.verify_economic_payment(j.id, customer, &signature, &rpc)
@@ -199,6 +300,13 @@ async fn mint_finality_memo_replay_and_restart_reconciliation() {
         .await
         .unwrap();
     let late = Rpc {
+        amount: AtomicI64::new(5000),
+        unavailable: AtomicBool::new(false),
+        bad_network: AtomicBool::new(false),
+        interrupt_tx: AtomicBool::new(false),
+        missing_tx: AtomicBool::new(false),
+        wrong_recipient: AtomicBool::new(false),
+        failed_tx: AtomicBool::new(false),
         owner: address.clone(),
         memo: other.id.to_string(),
         pending: AtomicBool::new(false),
