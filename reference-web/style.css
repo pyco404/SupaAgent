@@ -42,7 +42,7 @@ body[data-view=intro] .frame-top,.intro-bottom{font-size:clamp(12px,1vw,16px);li
 .transition.active{pointer-events:auto}
 .portal-brand{position:fixed;top:50%;left:50%;z-index:16;display:flex;flex-direction:column;align-items:center;gap:clamp(16px,2.4vmin,28px);visibility:hidden;opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(var(--portal-brand-scale,.98))}
 .portal-brand img{display:block;width:var(--portal-logo-size,144px);height:var(--portal-logo-size,144px);filter:none;image-rendering:pixelated}
-.portal-brand span{color:var(--ink);font:400 clamp(18px,2.6vmin,28px)/1.2 Plex,monospace;letter-spacing:.18em;padding-left:.18em;white-space:nowrap}
+.portal-brand span{display:block;width:clamp(176px,32vmin,320px);max-width:72vw;aspect-ratio:57/7;color:transparent;font-size:0;background:url("/public/assets/supa-agent-code-wordmark.svg") center/contain no-repeat}
 .transition.active+.portal-brand{visibility:visible;opacity:var(--portal-brand-opacity,0)}
 .intro-mascot{--mascot-size:clamp(128px,16vw,220px);position:fixed;left:auto;right:12vw;top:100px;width:var(--mascot-size);height:var(--mascot-size);opacity:.6;filter:blur(.2px);pointer-events:none;user-select:none;z-index:0}
 .intro-canvas{z-index:1}
