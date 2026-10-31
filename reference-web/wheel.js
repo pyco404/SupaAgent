@@ -65,6 +65,9 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   let height = 680;
   let frame = 0;
   let destroyed = false;
+  let entrance = null;
+  let entranceRequested = false;
+  host.dataset.carouselState = "settled";
   let branchVisible=false,branchPaused=false,branchTime=0,branchPrevious=null,lastBranchPaint=0,needsRender=true;
   const branchControl=document.querySelector('.branch-motion');
   let wheelDelta = 0;
@@ -85,6 +88,30 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
     const gap = Math.min(88, Math.max(62, height / 7.5));
     return { cardWidth, cardHeight, gap };
   };
+  // Shared elliptical path keeps the card and its branch attachment together.
+  const placement = (index) => {
+    const { cardWidth, cardHeight, gap } = dimensions();
+    const distance = wrappedDistance(index - position), orbit = distance * .17;
+    return {
+      distance, cardWidth, cardHeight,
+      x: 3 + (1 - Math.cos(orbit)) * 2 * Math.min(6, width / 38) / (.17 ** 2),
+      y: height / 2 + Math.sin(orbit) * gap / .17,
+      scale: .64 + Math.max(0, 1 - Math.abs(distance) * 2) * .36,
+      angle: -orbit / 2,
+    };
+  };
+  function cancelEntrance() {
+    entranceRequested = false;
+    if (entrance) position = target;
+    entrance = null;
+    host.dataset.carouselState = "settled";
+  }
+  function reveal() {
+    if (!count || destroyed) return;
+    cancelEntrance();
+    entranceRequested = !motion?.matches;
+    schedule();
+  }
   const spine = (y) => {
     const normalized = (y - height / 2) / Math.max(height / 2, 1);
     return -16 + normalized * normalized * Math.min(90, width * 0.4)+Math.sin(y/Math.max(height,1)*13+position*.35)*4;
@@ -125,12 +152,9 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       context.beginPath();context.moveTo(x,y);context.bezierCurveTo(x+direction*length*.15+bend*.35,y-5-lift*.4,x+direction*length*.5+bend,tipY+20-lift*.5,tipX,tipY);context.stroke();
       if(stem%3===0){context.fillStyle=ink;context.globalAlpha=.65;context.fillRect(tipX,tipY,1.7,1.7);}
     }
-    const {gap,cardWidth}=dimensions();
     buttons.forEach((button,index)=>{
-      const distance=wrappedDistance(index-position),y=height/2+Math.sin(distance*.17)/.17*gap;
+      const { y, x: cardX, cardWidth, scale, angle } = placement(index);
       if(y<0||y>height)return;
-      const cardX=3+Math.abs(distance)**2*Math.min(6,width/38);
-      const scale=.64+Math.max(0,1-Math.abs(distance)*2)*.36,angle=-distance*.085;
       const endX=cardX+cardWidth/2-Math.cos(angle)*cardWidth*scale/2,endY=y-Math.sin(angle)*cardWidth*scale/2;
       const chosen=index===selected;
       context.strokeStyle=chosen?getComputedStyle(host).getPropertyValue('--green').trim():ink;
@@ -142,18 +166,16 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   }
 
   function render() {
-    const { cardWidth, cardHeight, gap } = dimensions();
     buttons.forEach((button, index) => {
-      const distance = wrappedDistance(index - position);
-      const y = height / 2 + Math.sin(distance * 0.17) / 0.17 * gap - cardHeight / 2;
-      const x = 3 + (matchMedia('(max-width:700px)').matches ? (width-dimensions().cardWidth)/2 : 0) + Math.pow(Math.abs(distance), 2) * Math.min(6, width / 38);
-      const scale = 0.64 + Math.max(0, 1 - Math.abs(distance) * 2) * 0.36;
+      const { distance, cardWidth, cardHeight, scale, angle, x: orbitX, y: centerY } = placement(index);
+      const y = centerY - cardHeight / 2;
+      const x = orbitX + (matchMedia('(max-width:700px)').matches ? (width-cardWidth)/2 : 0);
       button.style.position = "absolute";
       button.style.left = "0";
       button.style.top = "0";
       button.style.width = `${cardWidth}px`;
       button.style.height = `${cardHeight}px`;
-      button.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${-distance * 0.085}rad) scale(${scale.toFixed(3)})`;
+      button.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${angle}rad) scale(${scale.toFixed(3)})`;
       button.style.setProperty("--shade", String(Math.min(0.72, Math.abs(distance) * 0.08 + (Math.abs(distance) > 0.2 ? 0.26 : 0))));
       button.style.zIndex = String(100 - Math.round(Math.abs(distance) * 10));
       button.style.visibility = y < -cardHeight || y > height ? "hidden" : "visible";
@@ -172,12 +194,22 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
     canvas.dataset.motionState=motion?.matches?'reduced':branchPaused?'paused':branchVisible?'running':'offscreen';
     if(flowing&&branchPrevious!==null)branchTime+=Math.max(0,Math.min(100,time-branchPrevious));
     branchPrevious=flowing?time:null;
+    if (motion?.matches) cancelEntrance();
+    if (entranceRequested && branchVisible) {
+      entranceRequested = false;
+      entrance = { start: time, from: target - count };
+      host.dataset.carouselState = "entering";
+    }
     const difference=target-position;
     const navigating=Math.abs(difference)>0;
-    position=motion?.matches||Math.abs(difference)<.002?target:position+difference*.18;
-    if(needsRender||navigating){render();needsRender=false;lastBranchPaint=time;}
+    if (entrance) {
+      const progress = Math.min(1, (time - entrance.start) / 780);
+      position = entrance.from + (target - entrance.from) * (1 - (1 - progress) ** 3);
+      if (progress === 1) { entrance = null; host.dataset.carouselState = "settled"; }
+    } else position=motion?.matches||Math.abs(difference)<.002?target:position+difference*.18;
+    if(needsRender||navigating||entrance){render();needsRender=false;lastBranchPaint=time;}
     else if(flowing&&time-lastBranchPaint>=33){drawBranch();lastBranchPaint=time;}
-    if(position!==target||flowing)frame=requestAnimationFrame(animate);
+    if(entrance||position!==target||flowing)frame=requestAnimationFrame(animate);
   }
 
   function schedule() {
@@ -195,6 +227,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
 
   function select(index) {
     if (!count || !Number.isFinite(index) || destroyed) return;
+    cancelEntrance();
     const next = modulo(Math.round(index));
     const changed = next !== selected;
     target += wrappedDistance(next - modulo(target));
@@ -250,6 +283,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
 
   function onPointerDown(event) {
     if (!event.isPrimary || event.button !== 0) return;
+    cancelEntrance();
     pointer = { id: event.pointerId, y: event.clientY, position, dragged: false };
     suppressClick = false;
   }
@@ -321,6 +355,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   resize();
 
   return {
+    reveal,
     select,
     step,
     get index() { return selected; },
