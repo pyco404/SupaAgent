@@ -17,7 +17,11 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::{collections::BTreeSet, net::SocketAddr, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    net::SocketAddr,
+    sync::Arc,
+};
 use supa_domain::*;
 use supa_persistence::Store;
 use supa_runtime::Runtime;
@@ -31,6 +35,7 @@ pub struct AppState {
     pub runtime: Runtime,
     token: Arc<String>,
     operators: Arc<Vec<OperatorCredential>>,
+    credential_deadlines: Arc<BTreeMap<Uuid, u64>>,
     pub gate: Arc<Semaphore>,
     pub wallets: Option<supa_runtime::wallet::WalletService>,
     /// Identity-only scope for persisted wallet observations; grants no RPC, vault or write access.
@@ -51,6 +56,7 @@ impl AppState {
             runtime,
             token: Arc::new(token),
             operators: Arc::new(Vec::new()),
+            credential_deadlines: Arc::new(BTreeMap::new()),
             gate: Arc::new(Semaphore::new(1)),
             wallets: None,
             wallet_read_operator: None,
@@ -80,6 +86,17 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
         .get("authorization")
         .and_then(|h| h.to_str().ok())
         .and_then(|h| h.strip_prefix("Bearer "));
+    // An expired operator token must not fall back to the public service credential.
+    let matched = token.and_then(|t| state.operators.iter().find(|c| token_matches(t, &c.token)));
+    if let Some(credential) = matched {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .ok()
+            .map(|d| d.as_secs());
+        if !access::deadline_valid(state.credential_deadlines.get(&credential.id).copied(), now) {
+            return ApiError(Error::Unauthorized).into_response();
+        }
+    }
     let principal = token
         .and_then(|t| state.operators.iter().find(|c| token_matches(t, &c.token)))
         .map(|c| Principal {
