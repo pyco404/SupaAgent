@@ -20,7 +20,7 @@ test('carousel entrance makes one sweep and settles on Home without changing sec
   const settled = await card.evaluate(node => node.style.transform);
   await page.waitForTimeout(200);
   expect(await card.evaluate(node => node.style.transform)).toBe(settled);
-  await expect(page).toHaveURL(/\/site\/(?:#home)?$/);
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test('keyboard interrupts entrance and carousel wraps in both directions', async ({ page }) => {
@@ -35,19 +35,19 @@ test('keyboard interrupts entrance and carousel wraps in both directions', async
 });
 
 test('reduced motion skips sweep and explicit deep links remain available', async ({ page }) => {
-  await openWheel(page, '/site/#memory');
+  await openWheel(page, '/memory');
   await expect(page.locator('.wheel')).toHaveAttribute('data-carousel-state', 'settled');
   await expect(selected(page)).toHaveAttribute('data-index', '3');
 });
 
 test('entering again defaults to Home after a different section', async ({ page }) => {
-  await openWheel(page, '/site/#trading');
+  await openWheel(page, '/trading');
   if (page.viewportSize().width <= 700) await page.keyboard.press('Escape');
   await page.locator('.brand').click();
   await page.locator('.enter').click();
   await expect(page.locator('body')).toHaveAttribute('data-view', 'projects');
   await expect(selected(page)).toHaveAttribute('data-index', '0');
-  await expect(page).toHaveURL(/\/site\/#home$/);
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test('drag interrupts sweep and selects only the released card', async ({ page }) => {
@@ -71,7 +71,7 @@ test('drag interrupts sweep and selects only the released card', async ({ page }
   }
   await expect(wheel).toHaveAttribute('data-carousel-state', 'settled');
   await expect(selected(page)).toHaveAttribute('data-index', '1');
-  await expect(page).toHaveURL(/#agents$/);
+  await expect(page).toHaveURL(/\/agents$/);
 });
 
 test('changing motion preference during sweep settles immediately', async ({ page }) => {
