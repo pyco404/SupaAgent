@@ -68,11 +68,11 @@ async function boot(){
 }
 // Read-only polling pauses while hidden, typing or interacting. It never starts a cycle.
 async function refreshLive(){
-  if(liveBusy||document.hidden||document.body.dataset.view!=='projects'||$('.buffer').getAttribute('aria-busy')==='true'||!$('.command').hidden||!$('#agent-options').hidden||$('.projects').classList.contains('drawer-open'))return;
+  if(liveBusy||$('.buffer').querySelector('[data-economic-action-pending=true]')||document.hidden||document.body.dataset.view!=='projects'||$('.buffer').getAttribute('aria-busy')==='true'||!$('.command').hidden||!$('#agent-options').hidden||$('.projects').classList.contains('drawer-open'))return;
   liveBusy=true;
   try{
     const version=reloadVersion,next=await overview();
-    if(version!==reloadVersion||document.hidden||document.body.dataset.view!=='projects')return;
+    if(version!==reloadVersion||$('.buffer').querySelector('[data-economic-action-pending=true]')||document.hidden||document.body.dataset.view!=='projects')return;
     const changed=JSON.stringify([state.status,state.agents])!==JSON.stringify([next.status,next.agents]);
     state=next;
     if(changed){await reload();return;}
@@ -223,7 +223,7 @@ function economyPanel(view,id){
   }
   const status=node('p','terminal-notice');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   async function send(path,body,button){
-    button.disabled=true;status.textContent='Saving explicit economic action…';
+    details.dataset.economicActionPending='true';button.disabled=true;status.textContent='Saving explicit economic action…';
     try{const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Supa-Action':'economic-workflow'},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});const result=await response.json();if(!response.ok){status.textContent=`Action not confirmed: ${result.error??'backend unavailable'}. Reload saved records before another action.`;return null;}status.textContent=`Saved job ${result.id} / ${result.state}. Reload Economy to inspect current records.`;return result;}catch{status.textContent='Outcome uncertain. Reload saved records before another action. No automatic retry.';return null;}
   }
   const refresh=node('button','','Reload economic records');refresh.type='button';refresh.addEventListener('click',()=>void select(navigation.findIndex(n=>n.id==='economy')));details.append(refresh);
