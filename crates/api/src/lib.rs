@@ -2,6 +2,7 @@ mod access;
 mod autonomy;
 mod controlled;
 mod economy;
+mod operator_status;
 pub use access::{OperatorCredential, Principal};
 use axum::Extension;
 use supa_persistence::Role;
@@ -107,6 +108,8 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
         return ApiError(Error::Unauthorized).into_response();
     }
     if let (Some(context), Some(actor)) = (state.store.operational_context(), principal)
+        && !(request.method() == axum::http::Method::GET
+            && request.uri().path() == "/operator-status")
         && state
             .store
             .require_operation(actor.id, &context.scope, None)
@@ -205,6 +208,7 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
 pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(access::routes())
+        .route("/operator-status", get(operator_status::status))
         .merge(economy::routes())
         .merge(controlled::routes())
         .merge(wallet::routes())
