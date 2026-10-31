@@ -10,23 +10,26 @@ impl Store {
         if !matches!(kind, "api" | "worker") || !(1..=3600).contains(&poll_seconds) {
             return Err(Error::Invalid);
         }
+        let mut tx = self.operational_transaction().await?;
         let id = Uuid::new_v4();
         sqlx::query("INSERT INTO worker_health(id,kind,enabled,poll_seconds) VALUES($1,$2,$3,$4)")
             .bind(id)
             .bind(kind)
             .bind(enabled)
             .bind(poll_seconds)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(db)?;
+        tx.commit().await.map_err(db)?;
         Ok(id)
     }
     pub async fn heartbeat(&self, worker: Uuid) -> Result<()> {
-        let n=sqlx::query("UPDATE worker_health SET heartbeat_at=now() WHERE id=$1 AND stopped_at IS NULL AND heartbeat_at>clock_timestamp()-interval '15 seconds'").bind(worker).execute(&self.pool).await.map_err(db)?.rows_affected();
+        let mut tx = self.operational_transaction().await?;
+        let n=sqlx::query("UPDATE worker_health SET heartbeat_at=now() WHERE id=$1 AND stopped_at IS NULL AND heartbeat_at>clock_timestamp()-interval '15 seconds'").bind(worker).execute(&mut *tx).await.map_err(db)?.rows_affected();
         if n != 1 {
             return Err(Error::Stale);
         }
-        Ok(())
+        tx.commit().await.map_err(db)
     }
     pub async fn worker_tick(
         &self,
@@ -34,7 +37,7 @@ impl Store {
         finished: bool,
         error: Option<&Error>,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         live_worker(&mut tx, worker).await?;
         if finished {
             sqlx::query(
@@ -55,18 +58,19 @@ impl Store {
         tx.commit().await.map_err(db)
     }
     pub async fn stop_worker(&self, worker: Uuid) -> Result<()> {
+        let mut tx = self.operational_transaction().await?;
         sqlx::query("UPDATE worker_health SET stopped_at=now() WHERE id=$1 AND stopped_at IS NULL")
             .bind(worker)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(db)?;
-        Ok(())
+        tx.commit().await.map_err(db)
     }
     pub async fn execution_health(&self, agent: Uuid) -> Result<Value> {
         // Agent lock provides one snapshot consistent with lifecycle and lease changes.
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let a = locked(&mut tx, agent).await?;
-        let lease=sqlx::query("SELECT id,worker_id,lease_until,lease_until>clock_timestamp() AS valid FROM cycles WHERE agent_id=$1 AND status='running' ORDER BY started_at DESC LIMIT 1").bind(agent).fetch_optional(&mut *tx).await.map_err(db)?;
+        let lease=sqlx::query("SELECT id,worker_id,lease_until,lease_until>clock_timestamp() AND (epoch_permit_id IS NULL OR epoch_guard.operation_live(epoch_permit_id)) AS valid FROM cycles WHERE agent_id=$1 AND status='running' ORDER BY started_at DESC LIMIT 1").bind(agent).fetch_optional(&mut *tx).await.map_err(db)?;
         let worker_id = lease
             .as_ref()
             .and_then(|r| r.get::<Option<Uuid>, _>("worker_id"));
