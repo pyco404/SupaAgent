@@ -9,6 +9,26 @@ use supa_providers::Offline;
 use supa_runtime::Runtime;
 use uuid::Uuid;
 
+// Fixture children must not outlive a failed browser or HTTP assertion.
+struct ProcessGuard(std::process::Child);
+impl std::ops::Deref for ProcessGuard {
+    type Target = std::process::Child;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for ProcessGuard {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl Drop for ProcessGuard {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
 struct Fixture {
     root: Store,
     service: Store,
@@ -94,6 +114,8 @@ impl Fixture {
             sqlx::raw_sql(&format!("GRANT CONNECT ON DATABASE {database} TO {role}; GRANT USAGE ON SCHEMA public,epoch_guard TO {role}; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {role}")).execute(root.pool()).await.unwrap();
         }
         sqlx::raw_sql(&format!("GRANT INSERT,UPDATE,DELETE,TRUNCATE ON ALL TABLES IN SCHEMA public TO {login}; GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA public TO {login}; GRANT EXECUTE ON FUNCTION epoch_guard.approve_operation(uuid,jsonb),epoch_guard.revoke_operation(uuid),epoch_guard.revoke_credential(uuid) TO {issuer}")).execute(root.pool()).await.unwrap();
+        // Read-only status projection; never grant the capability hash column or issuance functions.
+        sqlx::raw_sql(&format!("GRANT SELECT(credential_id,principal_id,login,verified_by,verified_at,expires_at) ON epoch_guard.operational_principals TO {login}; GRANT SELECT(credential_id) ON epoch_guard.credential_revocations TO {login}; GRANT SELECT(principal_id) ON epoch_guard.authorities TO {login}; GRANT SELECT(login,principal_id,role) ON epoch_guard.executors TO {login}; GRANT SELECT(id,plan) ON epoch_guard.operational_approvals TO {login}; GRANT SELECT(approval_id) ON epoch_guard.operational_revocations TO {login}; GRANT SELECT(approval_id,login,server_start) ON epoch_guard.operational_claims TO {login}")).execute(root.pool()).await.unwrap();
         sqlx::query("INSERT INTO epoch_guard.authorities VALUES($1,$2)")
             .bind(&issuer)
             .bind(custodian)
@@ -264,7 +286,14 @@ async fn epoch_scopes_offline_execution_and_revocation_fence_existing_leases() {
         .unwrap();
     let bounded:bool=sqlx::query_scalar("SELECT c.lease_until<=(a.plan->>'expires_at')::timestamptz FROM cycles c JOIN epoch_guard.operational_approvals a ON a.id=c.epoch_permit_id WHERE c.id=$1").bind(cycle).fetch_one(f.root.pool()).await.unwrap();
     assert!(bounded);
+    assert_eq!(
+        execution.operator_status(f.owner).await.unwrap()["worker"]["execution_running"],
+        true
+    );
     f.revoke(id).await;
+    let status = execution.operator_status(f.owner).await.unwrap();
+    assert_eq!(status["worker"]["status"], "recovery_required");
+    assert_eq!(status["worker"]["execution_running"], false);
     assert!(
         execution
             .propose(f.agent, cycle, &[json!({"tool":"remember"})])
@@ -523,7 +552,7 @@ async fn epoch_api_process_crash_requires_new_admission_and_preserves_readonly_d
             .spawn()
             .unwrap()
     };
-    let mut child = launch();
+    let mut child = ProcessGuard(launch());
     for _ in 0..100 {
         if std::net::TcpStream::connect(address).is_ok() {
             break;
@@ -539,6 +568,50 @@ async fn epoch_api_process_crash_requires_new_admission_and_preserves_readonly_d
     let mut response = String::new();
     stream.read_to_string(&mut response).unwrap();
     assert!(response.starts_with("HTTP/1.1 200"));
+    let request = |path: &str, bearer: &str| {
+        let mut stream = std::net::TcpStream::connect(address).unwrap();
+        stream
+            .set_read_timeout(Some(std::time::Duration::from_secs(3)))
+            .unwrap();
+        write!(stream,"GET {path} HTTP/1.1\r\nHost: {address}\r\nAuthorization: Bearer {bearer}\r\nX-Principal-Id: {}\r\nX-Role: owner\r\nConnection: close\r\n\r\n",Uuid::new_v4()).unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        response
+    };
+    assert!(request("/operator-status", "invalid").starts_with("HTTP/1.1 401"));
+    assert!(request("/operator-status", &service_token).starts_with("HTTP/1.1 403"));
+    let status = request("/operator-status", &token);
+    assert!(status.starts_with("HTTP/1.1 200"));
+    assert!(status.contains("no-store"));
+    assert!(status.contains("\"create_agent\":true"));
+    assert!(!status.contains("secret_hash"));
+    if std::env::var("SUPA_8B_BROWSER").as_deref() == Ok("1") {
+        let mut command = Command::new("node");
+        command
+            .arg(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../scripts/operator-status-smoke.mjs"
+            ))
+            .env_clear()
+            .env("PATH", std::env::var("PATH").unwrap())
+            .env("HOME", std::env::var("HOME").unwrap())
+            .env("SUPA_8B_DISPOSABLE", "restored-schema-12-fixture")
+            .env("SUPA_8B_TEST_API", format!("http://{address}"))
+            .env("SUPA_8B_TEST_OPERATOR_TOKEN", &token)
+            .env("SUPA_8B_TEST_SERVICE_TOKEN", &service_token);
+        if let Ok(directory) = std::env::var("SUPA_8B_EVIDENCE_DIR") {
+            command.env("SUPA_8B_EVIDENCE_DIR", directory);
+        }
+        if let Ok(port) = std::env::var("SUPA_8B_REA_PORT") {
+            command.env("SUPA_8B_REA_PORT", port);
+        }
+        assert!(command.status().unwrap().success());
+    }
+    f.revoke(id).await;
+    let status = request("/operator-status", &token);
+    assert!(status.starts_with("HTTP/1.1 200"));
+    assert!(status.contains("\"status\":\"revoked\""));
+    assert!(request("/agents", &token).starts_with("HTTP/1.1 403"));
     child.kill().unwrap();
     child.wait().unwrap(); // Real process crash; no admission token persisted to disk.
     let mut restart = launch();
@@ -671,7 +744,7 @@ async fn epoch_worker_process_is_finite_and_restart_cannot_replay_admission() {
             .spawn()
             .unwrap()
     };
-    let mut child = launch();
+    let mut child = ProcessGuard(launch());
     for _ in 0..200 {
         assert!(child.try_wait().unwrap().is_none());
         let count: i64 = sqlx::query_scalar("SELECT count(*) FROM cycles WHERE status='completed'")
@@ -705,4 +778,50 @@ async fn epoch_worker_process_is_finite_and_restart_cannot_replay_admission() {
     );
     assert_eq!(f.root.history(f.agent, "cycles").await.unwrap().len(), 2);
     assert!(!f.root.get(f.agent).await.unwrap().memory.is_empty());
+}
+
+#[tokio::test]
+#[ignore = "requires isolated restored PostgreSQL; never primary"]
+async fn operator_status_is_private_readonly_and_survives_permit_revocation() {
+    let f = Fixture::new().await;
+    let base = f.service.operator_status(f.owner).await.unwrap();
+    assert_eq!(base["credential"]["status"], "valid");
+    assert_eq!(base["authorization"]["status"], "inactive");
+    let (id, store) = f.admit("agent_creation").await;
+    let ready = store.operator_status(f.owner).await.unwrap();
+    assert_eq!(ready["eligibility"]["create_agent"], true);
+    assert_eq!(ready["worker"]["execution_running"], false);
+    assert_eq!(ready["eligibility"]["paid_inference"], false);
+    assert!(store.operator_status(Uuid::new_v4()).await.is_err());
+    assert!(
+        sqlx::query("SELECT secret_hash FROM epoch_guard.operational_claims")
+            .execute(f.service.pool())
+            .await
+            .is_err()
+    );
+    let n: i64 = sqlx::query_scalar("SELECT count(*) FROM epoch_guard.operational_operations")
+        .fetch_one(f.root.pool())
+        .await
+        .unwrap();
+    f.revoke(id).await;
+    let revoked = store.operator_status(f.owner).await.unwrap();
+    assert_eq!(revoked["authorization"]["status"], "revoked");
+    assert_eq!(revoked["eligibility"]["create_agent"], false);
+    assert_eq!(
+        n,
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM epoch_guard.operational_operations")
+            .fetch_one(f.root.pool())
+            .await
+            .unwrap()
+    );
+    assert!(
+        store
+            .require_operation(f.owner, "agent_creation", None)
+            .await
+            .is_err()
+    );
+    let raw = revoked.to_string();
+    for secret in ["secret_hash", "capability", "password", "token"] {
+        assert!(!raw.contains(secret));
+    }
 }
