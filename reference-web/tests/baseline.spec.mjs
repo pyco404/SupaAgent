@@ -141,7 +141,7 @@ test("opening uses one file status bar and keeps it inside the viewport", async 
   const status = page.locator(".intro-modes");
   await expect(status.locator(".mode-label")).toHaveCount(1);
   await expect(status.locator(".mode-label")).toHaveText("NORMAL");
-  await expect(status.locator(".intro-file")).toHaveText("supa-agent/app.js");
+  await expect(status.locator(".intro-file")).toHaveText("crates/runtime/src/lib.rs");
   await expect(status.locator(".intro-position")).toHaveText(/\d+:\d+/);
   await expect(page.locator(".intro-command")).toBeVisible();
   const box = await status.boundingBox();
@@ -482,7 +482,7 @@ test('hands switch between mouse and typing while a second tether follows screen
 
 test('typing tether disappears on completion while mouse tracking remains available',async({page})=>{
   // Short public source fixture lets the intro finish naturally, without skipping time.
-  await page.route('**/app.js',route=>route.request().resourceType()==='fetch'?route.fulfill({contentType:'text/javascript',body:';'}):route.continue());
+  await page.route('**/scene.js',async route=>{const response=await route.fetch();const source=await response.text();await route.fulfill({response,body:source.replace(String.raw`const code = RUNTIME_EXCERPT.code.split('\n');`,"const code = ['let ready = true;'];")});});
   await page.emulateMedia({reducedMotion:'no-preference'});await open(page,'/');
   const tether=page.locator('.pointer-tether');
   await expect(tether).toHaveAttribute('data-typing-active','true');
