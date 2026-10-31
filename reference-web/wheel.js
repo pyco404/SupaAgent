@@ -132,8 +132,11 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       const cardX=3+Math.abs(distance)**2*Math.min(6,width/38);
       const scale=.64+Math.max(0,1-Math.abs(distance)*2)*.36,angle=-distance*.085;
       const endX=cardX+cardWidth/2-Math.cos(angle)*cardWidth*scale/2,endY=y-Math.sin(angle)*cardWidth*scale/2;
-      context.globalAlpha=index === selected ? .6 : .22;context.lineWidth=.6;
+      const chosen=index===selected;
+      context.strokeStyle=chosen?getComputedStyle(host).getPropertyValue('--green').trim():ink;
+      context.globalAlpha=chosen?.8:.18;context.lineWidth=chosen?.9:.6;
       context.beginPath();context.moveTo(spine(y),y);context.bezierCurveTo(spine(y)+12,y-12,endX-8,endY-8,endX,endY);context.stroke();
+      if(chosen){context.globalAlpha=.08;context.lineWidth=3;context.stroke();}
     });
     context.restore();
   }
