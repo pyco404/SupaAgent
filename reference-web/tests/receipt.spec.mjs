@@ -1,0 +1,17 @@
+import {test,expect} from '../../web/node_modules/@playwright/test/index.mjs';
+const id='11111111-1111-4111-8111-111111111111',jobId='22222222-2222-4222-8222-222222222222';
+test.use({httpCredentials:{username:'fixture',password:'fixture-password-'.repeat(3)}});
+test('receipt consent and uncertain feedback survive background refresh without replay',async({page})=>{
+ test.setTimeout(60000);let writes=0,reads=0,finish;const pending=new Promise(r=>{finish=r;});
+ const spec={name:'Receipt test fixture',kind:'summary',price_atoms:5000,estimated_inference_atoms:1000,estimated_infrastructure_atoms:100,max_input_bytes:8000,max_attempts:1};
+ const service={id,agent_id:id,spec,created_at:'2026-10-30T00:00:00Z'};
+ const job={id:jobId,service_id:id,agent_id:id,customer_id:id,network:'devnet',spec,input:'Supplied fixture',state:'awaiting_payment',revision:1,attempts:0,received_atoms:0,earned_atoms:0,expires_at:'2099-01-01T00:00:00Z',created_at:'2026-10-30T00:00:00Z',lease_until:null,output:null,output_sha256:null,failure_code:null,assessment:null};
+ const network=n=>({network:n,cash_atoms:0,liability_atoms:0,earned_atoms:0,inference_atoms:0,infrastructure_atoms:0,available_atoms:0,net_result_atoms:0,runway_days:null,runway_reason:'No recurring real costs established.'});
+ await page.route(`**/api/agents/${id}/economy`,r=>{reads++;return r.fulfill({json:{services:[service],jobs:[job],accounts:{agent_id:id,mainnet_enabled:false,signing_enabled:false,networks:[network('simulated'),network('devnet')],entries:[],audit:[],policy:null}}});});
+ await page.route(`**/api/jobs/${jobId}`,r=>r.fulfill({json:{job,refund_eligible_atoms:0,payment_request:{network:'devnet',amount_atoms:5000,decimals:6,mint:'4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',recipient:'11111111111111111111111111111112',memo:jobId,expires_at:job.expires_at,signing_enabled:false}}}));
+ await page.route(`**/api/jobs/${jobId}/verify-payment`,async r=>{writes++;await pending;await r.fulfill({status:409,json:{error:'receipt_not_finalized_or_reconciliation_conflict'}});});
+ try{
+ await page.goto('http://127.0.0.1:3202/operator');await page.goto('http://127.0.0.1:3202/site/#economy');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','complete');await page.locator('[data-economy=jobs]>summary').click();await page.locator('[data-job-id]>summary').click();const feedback=page.locator('[data-economy=jobs] [role=status]');await page.getByLabel('Finalized Devnet transaction signature').fill('1'.repeat(64));await page.getByRole('button',{name:'Verify read-only Devnet receipt'}).click();await expect(feedback).toContainText('Authorization');expect(writes).toBe(0);
+ await page.locator('[data-job-id] input[type=checkbox]').check();await page.getByRole('button',{name:'Verify read-only Devnet receipt'}).click();await expect.poll(()=>writes).toBe(1);await expect(page.locator('[data-economy=jobs]')).toHaveAttribute('data-economic-action-pending','true');const count=reads;await page.waitForTimeout(15500);expect(reads).toBe(count);finish();await expect(feedback).toContainText('receipt_not_finalized_or_reconciliation_conflict');await page.locator('.brand').focus();await page.waitForTimeout(15500);expect(writes).toBe(1);expect(reads).toBe(count);await expect(feedback).toContainText('Reload saved records');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }finally{finish();}
+});
