@@ -3,8 +3,10 @@ mod controlled;
 mod economy;
 mod epoch;
 mod intelligence;
+mod operational;
 pub use access::Role;
 pub use epoch::ApplicationEpoch;
+pub use operational::OperationalContext;
 mod health;
 mod scheduling;
 mod social;
@@ -36,10 +38,12 @@ fn encode(a: &Agent) -> Result<Value> {
 #[derive(Clone)]
 pub struct Store {
     pool: PgPool,
+    operational: Option<std::sync::Arc<OperationalContext>>,
 }
 impl Store {
     pub async fn connect(url: &str) -> Result<Self> {
         Ok(Self {
+            operational: None,
             pool: PgPoolOptions::new()
                 .max_connections(8)
                 .acquire_timeout(std::time::Duration::from_secs(5))
@@ -74,7 +78,7 @@ impl Store {
         self.create_with_owner(a, Some(owner)).await
     }
     async fn create_with_owner(&self, a: &Agent, owner: Option<Uuid>) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         sqlx::query("INSERT INTO agents(id,data) VALUES($1,$2)")
             .bind(a.id)
             .bind(encode(a)?)
@@ -118,7 +122,7 @@ impl Store {
             return Err(Error::Unauthorized);
         }
         clean_text(reason, 500)?;
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = locked(&mut tx, id).await?;
         if next == Lifecycle::Active
             && sqlx::query_scalar::<_, bool>(
@@ -141,7 +145,7 @@ impl Store {
     }
     pub async fn add_goal(&self, id: Uuid, description: String) -> Result<Goal> {
         clean_text(&description, 1000)?;
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = locked(&mut tx, id).await?;
         if a.lifecycle == Lifecycle::Terminated || a.goals.len() >= 100 {
             return Err(Error::Invalid);
@@ -160,7 +164,7 @@ impl Store {
         Ok(goal)
     }
     pub async fn complete_goal(&self, id: Uuid, goal_id: Uuid) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = locked(&mut tx, id).await?;
         if a.lifecycle == Lifecycle::Terminated {
             return Err(Error::Inactive);
@@ -179,7 +183,7 @@ impl Store {
         if !matches!(kind, LedgerKind::Seed | LedgerKind::Revenue) {
             return Err(Error::Denied);
         }
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let a = locked(&mut tx, id).await?;
         if a.lifecycle == Lifecycle::Terminated {
             return Err(Error::Inactive);
@@ -196,7 +200,7 @@ impl Store {
         scheduled: bool,
         worker: Option<Uuid>,
     ) -> Result<Uuid> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = locked(&mut tx, id).await?;
         if a.lifecycle != Lifecycle::Active {
             return Err(Error::Inactive);
@@ -259,7 +263,7 @@ impl Store {
         if !matches!(kind, LedgerKind::Inference | LedgerKind::Operating) {
             return Err(Error::Denied);
         }
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         live(&mut tx, id, cycle).await?;
         if amount > 0 {
             ledger(&mut tx, id, Some(cycle), kind, amount, key).await?;
@@ -268,7 +272,7 @@ impl Store {
     }
     /// All proposals are recorded before executing any. Raw model prose is excluded.
     pub async fn propose(&self, id: Uuid, cycle: Uuid, proposals: &[Value]) -> Result<Vec<Uuid>> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let a = live(&mut tx, id, cycle).await?;
         if proposals.len() > a.config.max_steps {
             return Err(Error::Invalid);
@@ -290,7 +294,7 @@ impl Store {
         action: Uuid,
         allowed: bool,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         live(&mut tx, id, cycle).await?;
         let n=sqlx::query("UPDATE actions SET authorization_outcome=$3,status=$4,finished_at=CASE WHEN $5 THEN NULL ELSE now() END WHERE id=$1 AND cycle_id=$2 AND status='proposed'").bind(action).bind(cycle).bind(if allowed {"allowed"}else{"denied"}).bind(if allowed {"running"}else{"denied"}).bind(allowed).execute(&mut *tx).await.map_err(db)?.rows_affected();
         if n != 1 {
@@ -315,7 +319,7 @@ impl Store {
         lesson: Option<&str>,
         draft: Option<&TweetDraft>,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = live(&mut tx, id, cycle).await?;
         let running:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM actions WHERE id=$1 AND cycle_id=$2 AND status='running' AND authorization_outcome='allowed')").bind(action).bind(cycle).fetch_one(&mut *tx).await.map_err(db)?;
         if !running {
@@ -366,7 +370,7 @@ impl Store {
         tx.commit().await.map_err(db)
     }
     pub async fn finish(&self, id: Uuid, cycle: Uuid, failure: Option<&Error>) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = locked(&mut tx, id).await?;
         if let Some(worker) = sqlx::query_scalar::<_, Option<Uuid>>(
             "SELECT worker_id FROM cycles WHERE id=$1 AND agent_id=$2",
@@ -439,7 +443,7 @@ impl Store {
         .await
         .map_err(db)?;
         for id in ids {
-            let mut tx = self.pool.begin().await.map_err(db)?;
+            let mut tx = self.operational_transaction().await?;
             locked(&mut tx, id).await?;
             recover_agent(&mut tx, id).await?;
             tx.commit().await.map_err(db)?;
@@ -447,7 +451,7 @@ impl Store {
         Ok(())
     }
     pub async fn events(&self, id: Uuid) -> Result<Vec<Event>> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let events = events_tx(&mut tx, id).await?;
         tx.commit().await.map_err(db)?;
         Ok(events)
