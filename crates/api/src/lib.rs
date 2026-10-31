@@ -106,12 +106,54 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
     if principal.is_none() && !token.is_some_and(|t| token_matches(t, &state.token)) {
         return ApiError(Error::Unauthorized).into_response();
     }
-    // Prepared epochs are read-only even for authenticated owners.
-    if request.method() != axum::http::Method::GET
-        && request.method() != axum::http::Method::HEAD
-        && !matches!(state.store.application_epoch().await, Ok(None))
+    if let (Some(context), Some(actor)) = (state.store.operational_context(), principal)
+        && state
+            .store
+            .require_operation(actor.id, &context.scope, None)
+            .await
+            .is_err()
     {
         return ApiError(Error::Denied).into_response();
+    }
+    // Epoch writes require an independently admitted, operation-specific server context.
+    if request.method() != axum::http::Method::GET && request.method() != axum::http::Method::HEAD {
+        match state.store.application_epoch().await {
+            Ok(None) => {}
+            Ok(Some(_)) => {
+                let Some(actor) = principal else {
+                    return ApiError(Error::Denied).into_response();
+                };
+                let path = request.uri().path();
+                let parts: Vec<_> = path.split('/').collect();
+                let agent = parts.get(2).and_then(|id| Uuid::parse_str(id).ok());
+                let context = state.store.operational_context();
+                let required = if path == "/agents" {
+                    "agent_creation"
+                } else if parts.get(3) == Some(&"cycles") {
+                    "offline_execution"
+                } else if matches!(
+                    parts.get(3),
+                    Some(&"schedule" | &"emergency-stop" | &"simulated-funding")
+                ) {
+                    "offline_control"
+                } else if parts.get(3) == Some(&"goals")
+                    && context.is_some_and(|c| c.scope == "agent_creation")
+                {
+                    "agent_creation"
+                } else {
+                    return ApiError(Error::Denied).into_response();
+                };
+                if state
+                    .store
+                    .require_operation(actor.id, required, agent)
+                    .await
+                    .is_err()
+                {
+                    return ApiError(Error::Denied).into_response();
+                }
+            }
+            Err(_) => return ApiError(Error::Denied).into_response(),
+        }
     }
     let path = request.uri().path();
     let public = request.method() == axum::http::Method::GET
@@ -265,7 +307,10 @@ async fn create(
     body: std::result::Result<Json<Create>, axum::extract::rejection::JsonRejection>,
 ) -> ApiResult {
     let Json(b) = body.map_err(|_| Error::Invalid)?;
-    let a = Agent::new(b.name, b.personality, b.config, b.capabilities)?;
+    let mut a = Agent::new(b.name, b.personality, b.config, b.capabilities)?;
+    if let Some(context) = s.store.operational_context() {
+        a.id = context.agent_id;
+    }
     s.store.create_owned(&a, actor.id).await?;
     Ok(Json(json!(a)))
 }
