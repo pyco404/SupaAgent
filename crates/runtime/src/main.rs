@@ -84,11 +84,42 @@ async fn run() -> Result<()> {
         active,
         &std::env::var("SUPA_PROVIDER").unwrap_or_else(|_| "offline".into()),
     )?;
-    let store = Store::connect(&std::env::var("DATABASE_URL").map_err(|_| Error::Invalid)?).await?;
+    let mut store =
+        Store::connect(&std::env::var("DATABASE_URL").map_err(|_| Error::Invalid)?).await?;
     if store.application_epoch().await?.is_some() {
-        return Err(Error::Denied); // Prepared epochs cannot start workers, even paused heartbeats.
+        if !active
+            || private
+            || std::env::var("SUPA_EPOCH_MODE").as_deref() != Ok("controlled_offline")
+        {
+            return Err(Error::Denied);
+        }
+        let parse = |key| {
+            std::env::var(key)
+                .map_err(|_| Error::Denied)?
+                .parse()
+                .map_err(|_| Error::Invalid)
+        };
+        store = store
+            .admit_operation(
+                parse("SUPA_OPERATION_APPROVAL_ID")?,
+                parse("SUPA_EXPECTED_EPOCH_ID")?,
+                parse("SUPA_EXPECTED_ACCOUNTING_NAMESPACE")?,
+            )
+            .await?;
+        if store
+            .operational_context()
+            .is_none_or(|context| context.scope != "offline_execution")
+        {
+            return Err(Error::Denied);
+        }
+    } else {
+        if std::env::var_os("SUPA_EPOCH_MODE").is_some()
+            || std::env::var_os("SUPA_OPERATION_APPROVAL_ID").is_some()
+        {
+            return Err(Error::Denied);
+        }
+        store.migrate().await?;
     }
-    store.migrate().await?;
     store.ping().await?;
     let listener = tokio::net::TcpListener::bind(bind)
         .await
