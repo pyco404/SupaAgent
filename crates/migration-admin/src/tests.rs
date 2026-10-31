@@ -304,9 +304,23 @@ impl Fixture {
 #[tokio::test]
 #[ignore = "requires Stage 1 backup and isolated stage-two cluster on port 55444; never primary"]
 async fn cloned_schema_permissions_atomic_failures_concurrency_and_recovery() {
+    assert!(
+        MIGRATIONS.iter().any(|m| m.version == 11),
+        "fresh build must see the economic migration"
+    );
+    assert!(inventory().keys().copied().eq(1..=10));
     let mut good = Fixture::new().await;
     good.run(Fault::Never).await.unwrap();
     assert_eq!(good.version().await, 10);
+    let economic_schema: bool =
+        sqlx::query_scalar("SELECT to_regclass('economic_jobs') IS NOT NULL")
+            .fetch_one(&mut good.admin)
+            .await
+            .unwrap();
+    assert!(
+        !economic_schema,
+        "8 -> 10 approval must never install migration 11"
+    );
     good.prepared().await;
     assert!(good.run(Fault::Never).await.is_err());
     let receipts: i64 = sqlx::query_scalar("SELECT count(*) FROM epoch_guard.migration_receipts")
