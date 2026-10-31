@@ -272,7 +272,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       ctx.beginPath();ctx.moveTo(x+dx*7,y);ctx.lineTo(x,y);ctx.lineTo(x,y+dy*7);ctx.stroke();
     }
     ctx.restore();entity.dataset.lifecycle=savedLifecycle;entity.dataset.lifecycleSource=known?'saved-record':'unavailable';
-    ctx.font='7px Plex,monospace';ctx.globalAlpha=.65;ctx.fillText(`saved identity: ${savedLifecycle}`,12,view.h-21);ctx.globalAlpha=1;
+    ctx.font='7px Plex,monospace';ctx.globalAlpha=.65;ctx.fillText(`${view.w<140?'saved':'saved identity'}: ${savedLifecycle}`,12,view.h-21);ctx.globalAlpha=1;
     view.ctx.font = '7px Plex,monospace'; view.ctx.globalAlpha = .6;
     view.ctx.fillText(`${worm ? 'worm: awake' : 'eye: tracking'} · ${input.slice(-8)}`, 12, view.h - 10); view.ctx.globalAlpha = 1;
   }
