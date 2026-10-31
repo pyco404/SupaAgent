@@ -33,6 +33,22 @@ export async function sectionView(id, state, agentId) {
   const agents=state.agents.data;
   add(`supa ${id==='home'?'status':id}`,'command');
   const epoch=state.status.data?.epoch;
+  let operator;
+  if(id==='intelligence') {
+    const response=await read('/api/operator-status'); operator=response.data;
+    add('Operator / verified service metadata','heading');
+    if(!operator)add(response.error??'Operator status unavailable. Execution eligibility is unverified.','notice');
+    else {
+      record('Credential',operator.credential.status);record('Your role',operator.role);
+      record('Scoped authorization',`${operator.authorization.status} / ${operator.authorization.scope??'none'}`);
+      record('Permit expires',operator.authorization.expires_at??'No admitted permit');
+      record('Scope target',operator.authorization.agent_id??'No target');
+      record('Worker',operator.worker.status.replaceAll('_',' '));
+      record('Execution',operator.worker.execution_running?'Verified active lease and recent heartbeat':'No verified running execution');
+      record('Offline control eligibility',operator.eligibility.activate_offline?'Scoped permission; fresh finite agent consent required':'Not authorized');
+      add('Paid inference and financial operations remain disabled. A permit is not evidence of running intelligence.','notice');
+    }
+  }
   add(epoch?`Development epoch / ${epoch.id}. ${epoch.state==='active_read_only'?'Active, read-only':'Prepared, read-only'}; historical database unrecovered.`:state.status.data?'Epoch unidentified. Historical recovery is not verified.':'Epoch unavailable while the backend is disconnected.','notice');
   if(id==='home') {
     add('Supa Agent / SUPA','heading');add('Born to think. Built to survive.','heading');
@@ -73,11 +89,11 @@ export async function sectionView(id, state, agentId) {
       const [schedule,health,history,access]=await Promise.all(['schedule','execution-health','authorizations','access'].map(resource=>read(`/api/agents/${agentId}/${resource}`)));
       if(access.data)record('Your role',access.data.role);
       const live=await read(`/api/agents/${agentId}/live`);
-      if(live.data && access.data)rows.push({kind:'live',view:live.data,role:access.data.role,agentId});
+      if(!epoch && live.data && access.data)rows.push({kind:'live',view:live.data,role:access.data.role,agentId});
       else add('Controlled live inference unavailable. No paid requests are enabled by viewing this page.','notice');
       if(health.data){record('Worker health',health.data.status.replaceAll('_',' '));record('Worker process',health.data.worker_enabled===false?'Scheduling disabled in observed process':health.data.worker_enabled===true?'Scheduling enabled in observed process':'Configuration not reported');record('Execution',health.data.execution_running?'Measured active lease and recent heartbeat':'No verified running execution');record('Heartbeat observed',health.data.heartbeat_at??'No heartbeat recorded');record('Lease expires',health.data.lease_until??'No active lease');add('Authorization permits work; it does not prove a worker is running.','notice');}
       else add('Worker health is unavailable. No running execution can be verified.','notice');
-      if(schedule.data && goals && access.data)rows.push({kind:'schedule',status:schedule.data,goals,role:access.data.role});
+      if(schedule.data && goals && access.data)rows.push({kind:'schedule',status:schedule.data,goals,role:epoch&&!operator?.eligibility.activate_offline?'viewer':access.data.role});
       if(history.data?.length)rows.push({kind:'detail',text:'Authorization approval history',body:history.data.map(a=>`Authorization ${a.id} / ${a.legacy?'legacy: approver not recorded':a.approved_by??'approver unavailable'}\nApproved ${a.approved_at??'time not recorded'} / expires ${a.expires_at} / closed ${a.closed_at??'current epoch'}\nGoals ${a.policy.goal_ids.join(', ')}\nLimit ${a.policy.max_cycles} cycles / ${a.policy.simulated_budget_microusd} simulated microUSD / interval ${a.policy.interval_seconds}s\nConsumed ${a.cycles_started} cycles / ${a.reserved_microusd} simulated microUSD`).join('\n\n')});
       if(profile){add('Agent profile','heading');record('Lifecycle',profile.agent.lifecycle);record('Created',profile.agent.created_at);record('Verified activity records',activity?.length);record('Wallet network',wallet?.network ?? 'No saved wallet identity');record('Wallet address',wallet?.address ?? 'unavailable');}
       if(goals){add('Goals','heading');if(!goals.length)empty('goals');goals.forEach(g=>add(`${g.completed?'complete':'open'} / priority ${g.priority} / suggested progress ${g.suggested_progress_bps/100}%\n${g.description}\nref ${g.id}`));}
@@ -112,7 +128,7 @@ export async function sectionView(id, state, agentId) {
     }
     record('Retrieved',new Date().toISOString());
   }
-  if(id==='intelligence' && epoch && ['prepared','active_read_only'].includes(epoch.state))add(epoch.state==='prepared'?'Prepared epoch: ownership changes, authorizations and execution controls are disabled. No activation has been approved.':'Active read-only epoch: records are available; worker execution, ownership changes, authorizations and paid inference remain disabled.','notice');
+  if(id==='intelligence' && epoch && ['prepared','active_read_only'].includes(epoch.state))add(epoch.state==='prepared'?'Prepared epoch: read-only by default. Only a verified, finite, operation-specific server permit can authorize offline writes.':'Active read-only epoch: records are available; worker execution, ownership changes, authorizations and paid inference remain disabled.','notice');
   if(id==='intelligence' && (!epoch || !['prepared','active_read_only'].includes(epoch.state))){
     const workflow=await read('/api/autonomy');
     if(workflow.data)rows.splice(1,0,{kind:'autonomy',policy:workflow.data});
