@@ -15,6 +15,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   const diagramControl=document.querySelector('.diagram-motion');
   const contexts = new Map();
   const portalBrand = document.querySelector('.portal-brand');
+  let savedLifecycle='unavailable',lifecycleChangedAt=-Infinity;
   let code = [
     '// workspace / a small study in motion', '',
     'import { clock, cursor } from "./system.js";',
@@ -68,9 +69,11 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     ctx.clip(silhouette,'evenodd');ctx.font='.72px Plex,monospace';
     ctx.textBaseline='top';ctx.fillStyle=ink();
     const source=code.join(' ').replace(/\s+/g,' '),offset=reduced.matches?0:Math.floor(time/1800);
+    // One subpixel code-row slip for 80ms every 37s; never affects terminal text.
+    const slip=small&&!reduced.matches&&time%37000>34800&&time%37000<34880?.14:0;
     for(let row=0;row<30;row++)for(let column=0;column<48;column++){
       ctx.globalAlpha=.35+.25*((row+column)%4)/3;
-      ctx.fillText(source[(row*48+column+offset)%source.length],column*.5,row*.8);
+      ctx.fillText(source[(row*48+column+offset)%source.length],column*.5+(row===12?slip:0),row*.8);
     }
     ctx.restore();
   }
@@ -259,6 +262,17 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   function drawEntity(time) {
     const view = fit(entity); if (!view) return;
     ascii(view.ctx, 0, 0, view.w, view.h * .8, time, true);
+    const ctx=view.ctx,known=savedLifecycle!=='unavailable';
+    const emphasis={active:.65,created:.48,paused:.38,suspended:.28,terminated:.18,unavailable:.18}[savedLifecycle];
+    const settle=reduced.matches?0:Math.max(0,1-(time-lifecycleChangedAt)/800)*.12;
+    ctx.save();ctx.strokeStyle=savedLifecycle==='active'?getComputedStyle(document.documentElement).getPropertyValue('--green').trim():ink();
+    ctx.globalAlpha=emphasis+settle;ctx.lineWidth=.6;
+    const inset=6,bottom=view.h*.8;
+    for(const [x,y,dx,dy]of [[inset,inset,1,1],[view.w-inset,inset,-1,1],[inset,bottom,1,-1],[view.w-inset,bottom,-1,-1]]){
+      ctx.beginPath();ctx.moveTo(x+dx*7,y);ctx.lineTo(x,y);ctx.lineTo(x,y+dy*7);ctx.stroke();
+    }
+    ctx.restore();entity.dataset.lifecycle=savedLifecycle;entity.dataset.lifecycleSource=known?'saved-record':'unavailable';
+    ctx.font='7px Plex,monospace';ctx.globalAlpha=.65;ctx.fillText(`saved identity: ${savedLifecycle}`,12,view.h-21);ctx.globalAlpha=1;
     view.ctx.font = '7px Plex,monospace'; view.ctx.globalAlpha = .6;
     view.ctx.fillText(`${worm ? 'worm: awake' : 'eye: tracking'} · ${input.slice(-8)}`, 12, view.h - 10); view.ctx.globalAlpha = 1;
   }
@@ -317,7 +331,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     ctx.globalAlpha=.65;ctx.lineWidth=1;ctx.strokeStyle=ink();ctx.stroke();ctx.globalAlpha=1;
     transition.dataset.progress=progress.toFixed(3);
     if(portalBrand){
-      const fadeIn=Math.min(1,progress/.13),fadeOut=Math.max(0,1-Math.max(0,progress-.72)/.18);
+      const fadeIn=Math.min(1,Math.max(0,(progress-.035)/.18)),fadeOut=Math.max(0,1-Math.max(0,progress-.72)/.18);
       portalBrand.style.setProperty('--portal-brand-opacity',(fadeIn*fadeOut).toFixed(3));
       portalBrand.style.setProperty('--portal-brand-scale',(.98+.02*fadeIn).toFixed(3));
       portalBrand.style.setProperty('--portal-logo-size',`${Math.max(72,Math.min(192,Math.round(Math.min(w,h)*.18/24)*24))}px`);
@@ -359,6 +373,10 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     onTyping(text,offset,character,progress){typingTarget={text,offset};terminalCharacter=character;terminalProgress=progress;terminalTyping=true;schedule();},
     stopTyping(clear=false){terminalTyping=false;if(clear)typingTarget=null;schedule();},
     setSelection(index) { selected = index; blueprint.dataset.selection = String(selected); drawBlueprint(); },
+    setLifecycle(value) {
+      const next=['created','active','paused','suspended','terminated'].includes(value)?value:'unavailable';
+      if(next!==savedLifecycle){savedLifecycle=next;lifecycleChangedAt=next==='unavailable'?-Infinity:performance.now();schedule();}
+    },
     setWorm(value) { worm = value; schedule(); },
     onInput(value) { input = value; schedule(); },
     redraw: resize,
