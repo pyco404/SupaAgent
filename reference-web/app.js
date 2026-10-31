@@ -11,7 +11,7 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 reduced.addEventListener('change', event => { root.dataset.motion=event.matches?'still':'running';if(event.matches)revealTyping?.(); });
 root.dataset.motion = reduced.matches?'still':'running';
 const node = (tag,className,text) => { const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=String(text);return el; };
-const palettes=[['#0c0c0c','#d8d4b4','#949078'],['#0b0b0b','#ebe6db','#9b968a'],['#11120f','#d9d7c3','#9b9d85']];
+const palettes=[['#080908','#ded9bd','#aaa58b'],['#080908','#e6e0cf','#a7a18f'],['#0a0c08','#d9dbc3','#a7ac90']];
 let sceneData, revealTyping=null;
 let theme=0,wheel,scenes,itemIndex=0,typing=0,typingTimer=0,leaving=false,entryAttempt=0,worm=false;
 let state={status:{error:'Connecting to local backend…'},agents:{error:'Loading saved agents…'},retrievedAt:'not yet retrieved'},agentId='',renderVersion=0,reloadVersion=0;
@@ -126,6 +126,8 @@ $('.wheel').addEventListener('click',event=>{if(event.target.closest('.wheel-ite
 function line(text,className='terminal-line'){const el=node('p',className,text);$('.buffer').append(el);return el;}
 async function select(index,background=false){
   const item=navigation[index];if(!item)return;
+  // Saved lifecycle is an identity attribute, never proof of a healthy worker.
+  scenes?.setLifecycle(state.agents.error?null:state.agents.data?.find(agent=>agent.id===agentId)?.lifecycle);
   const version=background?renderVersion:++renderVersion;
   if(!background){itemIndex=index;cancelTyping();}
   if(document.body.dataset.view==='projects')history.replaceState(null,'',`#${item.id}`);
