@@ -1,4 +1,57 @@
 import { navigation } from './platform.js';
+// Presentation copy of the complete function; source parity is checked in browser tests.
+export const RUNTIME_EXCERPT = Object.freeze({
+  file: 'crates/runtime/src/lib.rs',
+  firstLine: 106,
+  title: 'cycle_inner · excerpt',
+  code: String.raw`async fn cycle_inner(
+    &self,
+    id: Uuid,
+    scheduled: bool,
+    requested: Option<Plan>,
+) -> Result<Uuid> {
+    let cycle = self
+        .store
+        .begin_cycle_for(id, scheduled, self.worker)
+        .await?;
+    tracing::info!(agent_id=%id,cycle_id=%cycle,"cycle_started");
+    let outcome =
+        tokio::time::timeout(Duration::from_secs(180), self.run(id, cycle, requested))
+            .await
+            .unwrap_or(Err(Error::Timeout));
+    if let Err(e) = self.store.finish(id, cycle, outcome.as_ref().err()).await
+        && (!matches!(e, Error::Stale) || outcome.is_ok())
+    {
+        return Err(e);
+    }
+    match &outcome {
+        Ok(()) => tracing::info!(agent_id=%id,cycle_id=%cycle,"cycle_completed"),
+        Err(e) => tracing::warn!(agent_id=%id,cycle_id=%cycle,error_code=%e,"cycle_failed"),
+    }
+    outcome?;
+    Ok(cycle)
+}`,
+});
+const RUST_KEYWORDS = /^(?:as|async|await|break|const|continue|crate|dyn|else|enum|false|fn|for|if|impl|in|let|loop|match|mod|move|mut|pub|ref|return|self|Self|static|struct|super|trait|true|type|unsafe|use|where|while)$/;
+export function rustTokens(line) {
+  return line.split(/(\/\/.*$|"(?:\\.|[^"\\])*"?|'(?:\\.|[^'\\])'|\b(?:[A-Za-z_]\w*!|[A-Za-z_]\w*|\d+)\b!?)/g).filter(Boolean).map(text => ({
+    text,
+    kind: text.startsWith('//') ? 'comment' : /^["']/.test(text) ? 'string' : RUST_KEYWORDS.test(text) ? 'keyword' : /^\d+$/.test(text) ? 'number' : text.endsWith('!') ? 'macro' : /^[A-Z]/.test(text) ? 'type' : 'plain',
+  }));
+}
+// Wrapping only changes presentation; columns still refer to the original Rust line.
+export function rustEditorRows(code, limit, firstLine = RUNTIME_EXCERPT.firstLine) {
+  return code.flatMap((text, index) => {
+    const rows = [], tokens = rustTokens(text);
+    let column = 0;
+    do {
+      rows.push({ text: text.slice(column, column + limit), column, sourceLine: firstLine + index, tokens });
+      column += limit;
+    } while (column < text.length);
+    return rows;
+  });
+}
+
 // Independently authored procedural scenes, informed by observed browser behavior.
 // No reference scripts, filmed portrait or tracking code are included.
 export function createScenes({ intro, blueprint, entity, transition, spark, reduced, data }) {
@@ -16,36 +69,8 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   const contexts = new Map();
   const portalBrand = document.querySelector('.portal-brand');
   let savedLifecycle='unavailable',lifecycleChangedAt=-Infinity,entityDirty=true,entityPaintKey='';
-  let code = [
-    '// workspace / a small study in motion', '',
-    'import { clock, cursor } from "./system.js";',
-    'const view = new Scene({ width, height });',
-    'const state = { ready: false, frame: 0 };', '',
-    'function observe(position) {',
-    '  const direction = position.subtract(center);',
-    '  return direction.normalize();',
-    '}', '',
-    'export function render(time) {',
-    '  const delta = clock.advance(time);',
-    '  const target = observe(cursor.position);',
-    '  state.frame += 1;',
-    '  view.clear(palette.background);',
-    '  view.lines.forEach((line, index) => {',
-    '    const phase = index / view.lines.length;',
-    '    line.follow(target, delta * phase);',
-    '    line.draw(view.context);',
-    '  });',
-    '  return state;',
-    '}', '',
-    'function onKey(event) {',
-    '  const key = event.key;',
-    '  if (key === "Enter") openProjects();',
-    '  if (key === "Escape") returnToWheel();',
-    '  cursor.remember(key);',
-    '}', '',
-    'window.addEventListener("keydown", onKey);',
-    '// leave space for the next idea',
-  ];
+  const code = RUNTIME_EXCERPT.code.split('\n');
+  let editorLayoutKey = '', editorRows = [];
   const ink = () => getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
   const bg = () => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
   function fit(canvas) {
@@ -151,36 +176,51 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     if(reduced.matches) introProgress=Infinity;
     else if(introTime!==null) introProgress+=Math.max(0,Math.min(100,time-introTime))/30;
     introTime=time;
+    const limit=Math.max(1,Math.floor(width/cell)-5),layoutKey=String(limit);
+    if(editorLayoutKey!==layoutKey){editorLayoutKey=layoutKey;editorRows=rustEditorRows(code,limit);}
     let remaining=introProgress,revealedRows=0,typedCharacters=0,activeRow=0,activeColumn=0,typedKey=" ";
-    ctx.save();ctx.beginPath();ctx.rect(left,top,width,bottom-top);ctx.clip();
-    ctx.globalAlpha=.25;ctx.fillText('// — reference-web/app.js —',left+cell*3,top+font);
-    for(let row=0;row<rows;row++){
-      const limit=Math.max(1,Math.floor(width/cell)-5),full=code[row%code.length].slice(0,limit);
-      const count=Math.min(full.length,Math.max(0,Math.floor(remaining))),started=remaining>=0,complete=remaining>=full.length+8;
-      remaining-=full.length+8;
+    const revealed=editorRows.map((row,index)=>{
+      const count=Math.min(row.text.length,Math.max(0,Math.floor(remaining))),started=remaining>=0,complete=remaining>=row.text.length+8;
+      remaining-=row.text.length+8;
       if(complete)revealedRows++;
       typedCharacters+=count;
+      if(started){activeRow=index;activeColumn=count;if(count>0)typedKey=row.text[count-1];}
+      return {...row,count,started,complete};
+    });
+    const complete=revealedRows===editorRows.length;
+    const scrollRow=reduced.matches?0:Math.max(0,activeRow-rows+1);
+    ctx.save();ctx.beginPath();ctx.rect(left,top,width,bottom-top);ctx.clip();
+    ctx.globalAlpha=.25;ctx.fillText('// lib.rs · '+RUNTIME_EXCERPT.title,left+cell*4,top+font);
+    for(let row=scrollRow;row<Math.min(editorRows.length,scrollRow+rows);row++){
+      const {column,sourceLine,tokens,count,started,complete:lineComplete}=revealed[row];
       if(!started)continue;
-      activeRow=row;activeColumn=count;if(count>0)typedKey=full[count-1];
-      const baseline=first+row*line;
-      if(!complete){ctx.globalAlpha=.7;ctx.fillStyle='#161615';ctx.fillRect(left,baseline-font,width,line);}
-      ctx.fillStyle=ink();ctx.globalAlpha=.28;ctx.fillText(String(row+1).padStart(3),left,baseline);
-      const text=full.slice(0,count),textX=left+cell*4;
-      // Authored source tokens receive the reference's muted terminal palette.
-      const tokens=text.split(/(\b(?:import|from|const|let|function|return|export|if|async|await|try|catch)\b|['"`][^'"`]*['"`]|\b\d+\b)/g);
-      let tx=textX;
-      for(const token of tokens){ctx.globalAlpha=.42;ctx.fillStyle=/^(import|from|const|let|function|return|export|if|async|await|try|catch)$/.test(token)?'#71957d':/^\d+$/.test(token)?'#cd796e':ink();ctx.fillText(token,tx,baseline);tx+=ctx.measureText(token).width;}
-      if(!complete&&!reduced.matches&&Math.floor(time/550)%2===0){ctx.fillStyle=ink();ctx.globalAlpha=.7;ctx.fillRect(textX+count*cell,baseline-font,cell,line);}
+      const baseline=first+(row-scrollRow)*line;
+      if(!lineComplete){ctx.globalAlpha=.7;ctx.fillStyle='#161615';ctx.fillRect(left,baseline-font,width,line);}
+      ctx.fillStyle=ink();ctx.globalAlpha=.28;ctx.fillText(column?'':String(sourceLine).padStart(3),left,baseline);
+      const textX=left+cell*4;
+      let tx=textX,offset=0;
+      for(const token of tokens){
+        const start=Math.max(column,offset),end=Math.min(column+count,offset+token.text.length);
+        if(end>start){
+          const text=token.text.slice(start-offset,end-offset);
+          ctx.globalAlpha=token.kind==='comment'?.32:token.kind==='string'?.56:.42;
+          ctx.fillStyle=['keyword','macro'].includes(token.kind)?'#71957d':token.kind==='number'?'#cd796e':ink();
+          ctx.fillText(text,tx,baseline);tx+=ctx.measureText(text).width;
+        }
+        offset+=token.text.length;
+      }
+      if(!lineComplete&&!reduced.matches&&Math.floor(time/550)%2===0){ctx.fillStyle=ink();ctx.globalAlpha=.7;ctx.fillRect(textX+count*cell,baseline-font,cell,line);}
     }
     ctx.restore();
-    intro.dataset.revealedRows=String(revealedRows);intro.dataset.typedCharacters=String(typedCharacters);intro.dataset.introState=revealedRows===rows?'complete':'typing';
+    intro.dataset.revealedRows=String(revealedRows);intro.dataset.typedCharacters=String(typedCharacters);intro.dataset.introState=complete?'complete':'typing';
+    intro.dataset.language='rust';intro.dataset.sourceFile=RUNTIME_EXCERPT.file;intro.dataset.visibleFirstLine=String(editorRows[scrollRow]?.sourceLine??RUNTIME_EXCERPT.firstLine);
     const status=document.querySelector('.intro-modes'),label=document.querySelector('.mode-label'),position=document.querySelector('.intro-position');
-    const state=revealedRows===rows?'NORMAL':'INSERT',cursor=`${activeRow+1}:${activeColumn+1}`;
+    const active=editorRows[activeRow],state=complete?'NORMAL':'INSERT',cursor=`${active.sourceLine}:${active.column+activeColumn+1}`;
     if(status)status.dataset.mode=state;
     if(label&&label.textContent!==state)label.textContent=state;
     if(position&&position.textContent!==cursor)position.textContent=cursor;
-    introTarget=!reduced.matches&&revealedRows<rows?{x:left+cell*4+activeColumn*cell,y:first+activeRow*line-font*.35}:null;
-    drawHands(ctx,w,h,!reduced.matches&&revealedRows<rows,typedKey);
+    introTarget=!reduced.matches&&!complete?{x:left+cell*4+activeColumn*cell,y:first+(activeRow-scrollRow)*line-font*.35}:null;
+    drawHands(ctx,w,h,!reduced.matches&&!complete,typedKey);
     ctx.globalAlpha=1;
   }
   function drawAbout({ctx,w,h},phase) {
@@ -375,7 +415,6 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   window.addEventListener('pointermove', pointerMove, { passive: true });document.documentElement.addEventListener('pointerleave',pointerLeave);window.addEventListener('blur',pointerLeave); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility); reduced.addEventListener('change', motionChange); motionChange();
   return {
     setMode(value) { mode = value; if(value==='intro'){introProgress=0;handBeat=-1;handKey='';}introTime=null;resize(); },
-    setCode(text) { code=String(text).split('\n').slice(0,500);introProgress=0;introTime=null;handBeat=-1;handKey='';resize(); },
     onTyping(text,offset,character,progress){typingTarget={text,offset};terminalCharacter=character;terminalProgress=progress;terminalTyping=true;schedule();},
     stopTyping(clear=false){terminalTyping=false;if(clear)typingTarget=null;schedule();},
     setSelection(index) { selected = index; blueprint.dataset.selection = String(selected); drawBlueprint(); },
