@@ -75,7 +75,6 @@ async function boot(){
   const data=sceneData={days:[],account:'Supa Agent',connection:'connecting',agentCount:null,retrievedAt:null};
   scenes=createScenes({intro:$('.intro-canvas'),blueprint:$('.blueprint'),entity:$('.entity'),transition:$('.transition'),spark:$('.spark'),reduced,data});
   document.fonts.ready.then(()=>scenes?.redraw());
-  fetch('/app.js').then(r=>r.ok?r.text():'').then(text=>{if(text)scenes?.setCode(text);}).catch(()=>{});
   wheel=createWheel({host:$('.wheel'),canvas:$('.wheel-ink'),items:navigation,reducedMotion:reduced,onSelect:index=>select(index)});
   const initial=location.hash;setView(location.pathname.startsWith('/site'));if(document.body.dataset.view==='projects')openHash(initial);
   root.dataset.ready='true';
