@@ -106,7 +106,13 @@ impl Runtime {
             .as_array()
             .filter(|s| s.len() == 1)
             .ok_or(Error::Rpc)?;
+        if statuses[0].is_null() || statuses[0]["confirmationStatus"] != "finalized" {
+            return Err(Error::Unconfirmed);
+        }
         let transaction=rpc.read(RpcMethod::Transaction,json!([signature,{"encoding":"jsonParsed","commitment":"finalized","maxSupportedTransactionVersion":0}])).await?;
+        if transaction.is_null() {
+            return Err(Error::Unconfirmed);
+        }
         let instructions = transaction["transaction"]["message"]["instructions"]
             .as_array()
             .ok_or(Error::InvalidPayment)?;
