@@ -1,0 +1,48 @@
+{
+  "kind": "unsigned_local_onboarding_proposal",
+  "approved": false,
+  "epoch_id": "fd2f52e0-33fc-4c0d-893a-7b08b26ab748",
+  "proposed_owner_principal": "6fd863e1-745d-4a06-b68e-eea69e854a69",
+  "agent_id": null,
+  "initial_lifecycle": "created",
+  "agent_request": {
+    "name": "Supa",
+    "capabilities": [
+      "read_memory",
+      "remember",
+      "evaluate_goal"
+    ],
+    "config": {
+      "scheduler_enabled": false,
+      "interval_seconds": 60,
+      "max_steps": 3,
+      "timeout_seconds": 5,
+      "retry_budget": 0,
+      "max_provider_calls": 1,
+      "max_cycle_tokens": 150000,
+      "inference_cost_microusd": 1000,
+      "operating_cost_microusd": 100,
+      "draft_cost_microusd": 1000
+    }
+  },
+  "goals": [
+    "Review this agent's verified execution outcomes and retain evidence-linked observations.",
+    "Assess goal progress only from persisted evidence; preserve uncertainty and unverified hypotheses."
+  ],
+  "future_offline_policy": {
+    "interval_seconds": 60,
+    "max_cycles": 3,
+    "simulated_budget_microusd": 3300,
+    "valid_for_seconds": 180
+  },
+  "live_spending_authorized": false,
+  "worker_launch_authorized": false,
+  "devnet_recipient": null,
+  "prerequisites": [
+    "Separately approved primary migrations and verified custodian identity",
+    "Separately approved owner binding and server-side credential installation",
+    "Reviewed writable development-epoch architecture; active_read_only cannot provision agents",
+    "Separate explicit approval to create this fresh identity and goals",
+    "Separate finite offline authorization and explicitly approved execution host"
+  ]
+}
