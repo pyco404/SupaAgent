@@ -5,6 +5,7 @@ import { z } from "zod";
 
 const noCache = { "Cache-Control": "no-store" };
 export function resolveResource(parts: string[]): { path: string; schema: z.ZodType } | null {
+  if (parts.length === 1 && parts[0] === "operator-status") return {path:"/operator-status",schema:schemas["operator-status"]};
   if (parts.length === 1 && (parts[0] === "health" || parts[0] === "agents")) {
     return { path: `/${parts[0]}`, schema: schemas[parts[0]] };
   }
