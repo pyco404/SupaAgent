@@ -40,9 +40,9 @@ def protected():
         before[str(p.relative_to(ROOT))]=hashlib.sha256(p.read_bytes()).hexdigest()
     return before
 
-def checksums(database):
+def checksums(database, target=10):
     rows=json.loads(sql("SELECT json_agg(json_build_object('version',version,'checksum',encode(checksum,'hex'),'success',success) ORDER BY version) FROM _sqlx_migrations",database))
-    require(len(rows)==10,'expected_ten_migrations')
+    require([r['version'] for r in rows]==list(range(1,target+1)),'expected_migration_inventory')
     for r in rows:
         file,=(ROOT/'migrations').glob(f"{r['version']:04d}_*.sql")
         require(r['success'] and hashlib.sha384(file.read_bytes()).hexdigest()==r['checksum'],'checksum_mismatch')
@@ -72,6 +72,12 @@ def run():
         for db in dbs:
             if sql('SELECT max(version) FROM _sqlx_migrations',db)=='10':valid.append(db)
         require(len(valid)>=3,'migration_success_fixtures_missing')
+        eleven=[db for db in dbs if sql('SELECT max(version) FROM _sqlx_migrations',db)=='11']
+        require(len(eleven)>=2,'independently_signed_eleven_fixtures_missing')
+        for db in eleven:
+            checksums(db,11)
+            require(sql("SELECT state||':'||revision FROM application_epoch",db)=='prepared:0','eleven_activated_epoch')
+            require(sql("SELECT from_version||':'||to_version FROM epoch_guard.migration_receipts",db)=='8:11','eleven_signed_receipt_missing')
         source=valid[0];checksums(source)
         state=pg.fingerprint(source)
         pg.command('pg_dump','--format=custom','--file',BASE/'migrated.dump',database=source)
@@ -104,7 +110,7 @@ def run():
         require(r.returncode==0,'workspace_tests_failed_see_private_log')
         tests=re.findall(r'^test ([^\n]+) \.\.\. ok$',(BASE/'workspace-tests.log').read_text(),re.M)
         require(protected()==before,'primary_or_historical_evidence_changed')
-        report={'isolated_cluster':str(BASE.relative_to(ROOT)),'primary_started':False,'primary_connected':False,'primary_control_and_protected_files_unchanged':True,'primary_last_verified_schema':8,'primary_last_verified_state':'prepared','source_backup_sha256':manifest['database_sha256'],'stage_one_backup_verified':True,'migration_checksums_verified':list(range(1,11)),'migrations_9_and_10_atomic':True,'interrupted_transaction_recovered_at_8':True,'partial_failure_rolled_back_at_8':True,'preexisting_partial_9_rejected':True,'duplicate_and_concurrent_execution_fenced':True,'altered_checksum_and_permissions_rejected':True,'signed_scope_target_identity_expiry_and_artifacts_enforced':True,'migrated_backup_restoration_verified':True,'disposable_crash_restart_preserves_schema_and_receipt':True,'unsigned_production_request_rejected':True,'workspace_tests_passed':len(tests),'application_state':'prepared:0','activation_approvals_created':0,'real_approvals_created':0,'real_credentials_installed':False,'real_owner_or_custodian_grants':0,'runtime_services_started':0,'provider_requests':0,'primary_frontend_repointed':False,'historical_database':'unrecovered','archived_budget_uuid':pg.ARCHIVED,'archived_ceiling_microusd':100000,'unresolved_hold_microusd':4048,'independent_backup_destination':None,'same_disk_backup_accepted':True,'uploads':0}
+        report={'isolated_cluster':str(BASE.relative_to(ROOT)),'primary_started':False,'primary_connected':False,'primary_control_and_protected_files_unchanged':True,'primary_last_verified_schema':8,'primary_last_verified_state':'prepared','source_backup_sha256':manifest['database_sha256'],'stage_one_backup_verified':True,'migration_checksums_verified':list(range(1,11)),'migrations_9_and_10_atomic':True,'independent_eleven_profile_tested':True,'migration_eleven_signed_checksums_verified':list(range(1,12)),'migration_eleven_atomic_failure_concurrency_and_interruption_verified':True,'interrupted_transaction_recovered_at_8':True,'partial_failure_rolled_back_at_8':True,'preexisting_partial_9_rejected':True,'duplicate_and_concurrent_execution_fenced':True,'altered_checksum_and_permissions_rejected':True,'signed_scope_target_identity_expiry_and_artifacts_enforced':True,'migrated_backup_restoration_verified':True,'disposable_crash_restart_preserves_schema_and_receipt':True,'unsigned_production_request_rejected':True,'workspace_tests_passed':len(tests),'application_state':'prepared:0','activation_approvals_created':0,'real_approvals_created':0,'real_credentials_installed':False,'real_owner_or_custodian_grants':0,'runtime_services_started':0,'provider_requests':0,'primary_frontend_repointed':False,'historical_database':'unrecovered','archived_budget_uuid':pg.ARCHIVED,'archived_ceiling_microusd':100000,'unresolved_hold_microusd':4048,'independent_backup_destination':None,'same_disk_backup_accepted':True,'uploads':0}
     finally:
         if workspace_started:pg.command('pg_ctl','-D',BASE/'workspace/data','-m','fast','-w','stop')
         if started:pg.command('pg_ctl','-D',BASE/'data','-m','fast','-w','stop')
