@@ -131,3 +131,12 @@ test('staging requires named operator credentials separate from public service a
     }
   }finally{for(const key of keys){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
 });
+
+test('operator status requires private authentication and strips capability material',async()=>{
+ const no=await readResource('/api/operator-status',publicHeaders,()=>{throw Error('must not fetch');});assert.equal(no.status,401);
+ const value={database:'disposable',schema_version:12,database_read_only_default:true,checked_at:'2026-10-31T10:00:00Z',epoch:null,role:'owner',api_session_expires_at:null,credential:{status:'valid',expires_at:null},authorization:{status:'revoked',scope:'offline_control',agent_id:agentId,expires_at:null,max_cycles:2,budget_microusd:2200,secret_hash:'NEVER-FORWARD'},worker:{status:'unavailable',execution_running:false,heartbeat_at:null,lease_until:null},eligibility:{create_agent:false,grant_owner:false,activate_offline:false,execute_offline:false,paid_inference:false,financial_operations:false,reason:'permit_inactive'}};
+ const read=async v=>readResource('/api/operator-status',headers,async url=>{assert.equal(url.pathname,'/operator-status');return response(v);});
+ const result=await read(value);assert.equal(result.status,200);assert.ok(!JSON.stringify(result.body).includes('NEVER-FORWARD'));
+ for(const key of ['paid_inference','financial_operations'])assert.equal((await read({...value,eligibility:{...value.eligibility,[key]:true}})).status,502);
+ assert.equal((await read({...value,authorization:{...value.authorization,status:'running'}})).status,502);
+});
