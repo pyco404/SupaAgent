@@ -6,8 +6,10 @@ test('visible status labels meet normal-text contrast in every approved palette'
   for (let palette = 0; palette < 3; palette++) {
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('data-ready', 'true');
+    // Home refresh preserves workspace history state; return through the real brand control.
+    if(await page.locator('body').getAttribute('data-view')==='projects')await page.locator('.brand').click();
     await page.locator('.theme-key').click();
-    await page.goto('/site/', { waitUntil: 'domcontentloaded' });
+    await page.locator('.enter').click();
     await expect(page.locator('html')).toHaveAttribute('data-ready', 'true');
     const samples = await page.locator('.bar .stat > span').evaluateAll(labels => {
       const rgb = value => value.match(/[\d.]+/g).slice(0, 3).map(Number);
