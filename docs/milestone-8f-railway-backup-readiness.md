@@ -6,11 +6,15 @@ Preparation completed; **no independent cloud backup has been established yet**.
 Railway authentication and read-only inventories succeeded. The operator selected
 a **new dedicated project, `Supa Agent`**, with separate staging and production
 environments. Neither existing project may be reused. The project is not created
-or accessible in the inspected account. No project ID or workspace selection is
-approved. The planned bucket display name is `supa-agent-backups`, placement region
+or accessible in the inspected account. No project ID exists. Read-only account
+verification identifies the candidate existing workspace as **`Daniel 's Projects`**,
+ID **`e319f68a-9897-49ed-b119-743f1f846aa0`**; operator confirmation is still required.
+The planned bucket display name is `supa-agent-backups`, placement region
 **Amsterdam (`ams`)**. This approves the planning region, not resource creation.
 
-The monthly ceiling, OpenPGP recipient, manifest signer and key-custody arrangements
+The operator has selected a **$1/month bucket-only monitoring and approval ceiling**,
+excluding Railway plan fees and unrelated services. No verified bucket-specific hard
+limit is claimed. OpenPGP recipient, manifest signer and key-custody arrangements
 remain unassigned. All execution permissions in
 [`config/railway-backup-plan.example.json`](../config/railway-backup-plan.example.json)
 are false. This is a review document, not runtime configuration or an authorization
@@ -44,7 +48,7 @@ staged changes must be inspected; do not commit unrelated changes while adding a
 Proposed structure, with nothing provisioned:
 
 ```text
-Approved workspace (ID still required)
+Daniel 's Projects (e319f68a-9897-49ed-b119-743f1f846aa0; confirmation pending)
   Supa Agent (new dedicated project)
     staging
       supa-agent-backups: private bucket instance, ams (first proposed backup target)
@@ -54,7 +58,9 @@ Approved workspace (ID still required)
       all application services deferred
 ```
 
-The staging backup target is proposed, not separately approved. Creating or
+The initial resource scope is **staging backup infrastructure only**. Production
+remains a future separation plan, not permission to create production resources.
+The staging backup target is planned, not authorized for creation. Creating or
 duplicating environments can create separate bucket instances: do not duplicate
 resources, credentials or local development records into production. No remote
 database or running service is needed for this backup-only stage. Do not apply the
@@ -97,7 +103,19 @@ services. Existing aggregate usage can change the incremental rounded charge.
 Pro at $20/month; an existing suitable plan may avoid a new subscription. Actual
 account billing eligibility, credits, usage and plan were not verified. Free/trial
 availability and hard spending limits can suspend backup retrieval; choose recovery
-access intentionally. A cost ceiling must be approved after account billing review.
+access intentionally. The proposed $1 bucket-only ceiling requires no plan change.
+Actual billing eligibility and any plan fees still need review before creation.
+
+The $1 ceiling is a monitoring/approval policy. Proposed warning: $0.75 actual or
+forecast monthly bucket spend; at $1 or uncertain accounting, pause new uploads and
+request operator review. No monitor is deployed. Check retained ciphertext sizes,
+month-to-date usage and projected rounded GB-months before each future upload;
+provider billing remains authoritative. Isolate this bucket's estimate from other
+workspace charges. Pausing uploads does not stop charges for retained data, and no
+automatic deletion, budget increase or plan upgrade is authorized. Railway's
+workspace hard usage limit is not established as a bucket-specific $1 cap and can
+suspend recovery access while stored data continues billing. Do not configure it
+as a substitute without separate approval and verified scope.
 
 The future Railway administrator needs explicit workspace permission to create the
 dedicated project, manage its environments/buckets and view billing. A designated
@@ -274,8 +292,11 @@ This would be independent of today's local disk, not independent of Railway or
 its account administrators. A later separately approved offline/provider-diverse
 copy can address that additional failure domain.
 
-**Approval boundary:** first confirm the workspace, proposed staging backup target,
-resource list and monthly ceiling; then approve resource creation explicitly.
+**Approval boundary:** confirm the exact candidate workspace and approve creation
+of only the new Supa Agent project, staging environment and private `ams` backup
+bucket under the $1 monitoring policy. If a default production environment is created
+by Railway, leave it empty; do not create a production bucket or any application
+service. Stop if creation requires an unapproved plan change or unrelated deployment.
 Independently approve encryption/signing public keys and custody, snapshot reuse or
 fresh-preflight permission, exact export/upload inventory and disposable drill.
 No keys or credentials should be sent in chat. Primary preflight can be considered
