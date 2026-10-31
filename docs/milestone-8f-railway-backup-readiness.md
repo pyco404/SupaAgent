@@ -1,5 +1,10 @@
 # Milestone 8F — Railway encrypted backup and recovery preparation
 
+Historical preparation report. The subsequently approved project/staging/bucket
+creation and current identifiers are recorded in
+[the provisioning report](milestone-8f-bucket-provisioning.md). The remaining
+encryption, credential-access, upload and recovery approvals are still outstanding.
+
 ## Outcome and approved planning choices
 
 Preparation completed; **no independent cloud backup has been established yet**.
