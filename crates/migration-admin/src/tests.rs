@@ -470,7 +470,7 @@ fn eleven_approval_is_independently_scoped_and_checksum_bound() {
             &target,
             &p.executable_sha256,
             now,
-            12
+            13
         )
         .is_err()
     );
@@ -608,5 +608,66 @@ async fn eleven_profile_atomicity_replay_concurrency_and_interruption() {
             .await
             .unwrap(),
         "prepared"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires approved backup and isolated stage-two cluster; never primary"]
+async fn twelve_profile_installs_empty_guards_without_operational_admission() {
+    let mut f = Fixture::eleven().await;
+    f.plan.target_version = 12;
+    f.plan.scope = "migrate_development_epoch_through_twelve_only".into();
+    f.plan.migration_sha384 = inventory_for(12);
+    f.raw = serde_json::to_vec(&f.plan).unwrap();
+    let sig = f.signing_key.sign(&f.raw);
+    verify_for(
+        &f.raw,
+        sig.as_ref(),
+        &f.authority,
+        &f.target,
+        &f.plan.executable_sha256,
+        Utc::now().timestamp(),
+        12,
+    )
+    .unwrap();
+    assert!(
+        verify_for(
+            &f.raw,
+            sig.as_ref(),
+            &f.authority,
+            &f.target,
+            &f.plan.executable_sha256,
+            Utc::now().timestamp(),
+            11
+        )
+        .is_err()
+    );
+    execute(
+        &f.opts,
+        &f.target,
+        &f.authority,
+        &f.plan,
+        &f.raw,
+        sig.as_ref(),
+        Fault::Never,
+    )
+    .await
+    .unwrap();
+    assert_eq!(f.version().await, 12);
+    f.prepared().await;
+    let issued:i64=sqlx::query_scalar("SELECT (SELECT count(*) FROM epoch_guard.operational_principals)+(SELECT count(*) FROM epoch_guard.operational_approvals)+(SELECT count(*) FROM epoch_guard.operational_claims)").fetch_one(&mut f.admin).await.unwrap();
+    assert_eq!(issued, 0);
+    assert!(
+        execute(
+            &f.opts,
+            &f.target,
+            &f.authority,
+            &f.plan,
+            &f.raw,
+            sig.as_ref(),
+            Fault::Never
+        )
+        .await
+        .is_err()
     );
 }
