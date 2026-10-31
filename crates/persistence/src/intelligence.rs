@@ -17,7 +17,7 @@ impl Store {
             return Err(Error::Invalid);
         }
         let reservation = policy.reservation()?;
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let a = live(&mut tx, id, cycle).await?;
         let managed: bool =
             sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_schedules WHERE agent_id=$1)")
@@ -105,7 +105,7 @@ impl Store {
         if let Some(u) = usage {
             u.validate()?;
         }
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         locked(&mut tx, id).await?;
         let r=sqlx::query("SELECT policy,reserved_microusd,cycle_id,status,budget_id FROM inference_calls WHERE id=$1 AND agent_id=$2 FOR UPDATE").bind(call).bind(id).fetch_optional(&mut *tx).await.map_err(db)?.ok_or(Error::NotFound)?;
         writable_inference_budget(r.get(4))?;
@@ -164,7 +164,7 @@ impl Store {
         if priority > 10 {
             return Err(Error::Invalid);
         }
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = locked(&mut tx, id).await?;
         if a.lifecycle == Lifecycle::Terminated {
             return Err(Error::Inactive);
@@ -189,7 +189,7 @@ impl Store {
             return Err(Error::Invalid);
         }
         clean_text(&evaluation.assessment, 500)?;
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = live(&mut tx, id, cycle).await?;
         let verified = events_by_ids_tx(&mut tx, id, evidence).await?;
         if evidence
@@ -214,7 +214,7 @@ impl Store {
         tx.commit().await.map_err(db)
     }
     pub async fn conserve(&self, id: Uuid, cycle: Uuid, action: Uuid) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let a = live(&mut tx, id, cycle).await?;
         let n=sqlx::query("UPDATE actions SET status='succeeded',finished_at=now() WHERE id=$1 AND cycle_id=$2 AND status='running' AND authorization_outcome='allowed'").bind(action).bind(cycle).execute(&mut *tx).await.map_err(db)?.rows_affected();
         if n != 1 {
@@ -227,7 +227,7 @@ impl Store {
     }
     pub async fn emergency_stop(&self, id: Uuid, reason: &str) -> Result<()> {
         clean_text(reason, 500)?;
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let mut a = locked(&mut tx, id).await?;
         if a.lifecycle == Lifecycle::Terminated {
             return Err(Error::Inactive);
@@ -247,7 +247,7 @@ impl Store {
 
 impl Store {
     pub async fn verified_events(&self, id: Uuid, ids: &[Uuid]) -> Result<Vec<Event>> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut tx = self.operational_transaction().await?;
         let result = events_by_ids_tx(&mut tx, id, ids).await?;
         tx.commit().await.map_err(db)?;
         Ok(result)
