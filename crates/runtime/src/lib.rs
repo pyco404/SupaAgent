@@ -29,7 +29,9 @@ impl Runtime {
         self
     }
     pub async fn cycle(&self, id: Uuid, scheduled: bool) -> Result<Uuid> {
-        if self.store.schedule_status(id).await?.policy.is_some() {
+        if self.store.operational_context().is_some()
+            || self.store.schedule_status(id).await?.policy.is_some()
+        {
             // A configured live/manual provider is never selected for managed schedules.
             let mut offline = Runtime::new(self.store.clone(), Arc::new(supa_providers::Offline));
             offline.worker = self.worker;
