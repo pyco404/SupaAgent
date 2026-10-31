@@ -2,7 +2,7 @@ import { navigation } from './platform.js';
 // Presentation copy of the complete function; source parity is checked in browser tests.
 export const RUNTIME_EXCERPT = Object.freeze({
   file: 'crates/runtime/src/lib.rs',
-  firstLine: 106,
+  firstLine: 108,
   title: 'cycle_inner · excerpt',
   code: String.raw`async fn cycle_inner(
     &self,
