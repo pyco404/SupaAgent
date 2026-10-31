@@ -42,3 +42,12 @@ test('Intelligence displays genuine scoped status without claiming a running wor
  assert.equal(rows.some(r=>['autonomy','schedule','live'].includes(r.kind)),false);
  }finally{globalThis.fetch=before;}
 });
+
+test('authenticated epoch metadata suppresses legacy controls when public health is unavailable',async()=>{
+ const before=globalThis.fetch;const calls=[];
+ globalThis.fetch=async path=>{calls.push(path);return Response.json({epoch,role:'owner',credential:{status:'valid'},authorization:{status:'revoked',scope:null,agent_id:null,expires_at:null},worker:{status:'unavailable',execution_running:false},eligibility:{activate_offline:false}});};
+ try {const rows=await sectionView('intelligence',{status:{error:'disconnected'},agents:{data:[]}},'');
+ assert.deepEqual(calls,['/api/operator-status']);assert.equal(rows.some(r=>r.kind==='autonomy'),false);
+ assert.ok(rows.some(r=>r.text?.includes(epoch.id)));
+ }finally{globalThis.fetch=before;}
+});
