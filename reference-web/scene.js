@@ -15,7 +15,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   const diagramControl=document.querySelector('.diagram-motion');
   const contexts = new Map();
   const portalBrand = document.querySelector('.portal-brand');
-  let savedLifecycle='unavailable',lifecycleChangedAt=-Infinity;
+  let savedLifecycle='unavailable',lifecycleChangedAt=-Infinity,entityDirty=true,entityPaintKey='';
   let code = [
     '// workspace / a small study in motion', '',
     'import { clock, cursor } from "./system.js";',
@@ -260,7 +260,13 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     ctx.globalAlpha = .6; ctx.fillText('root · Supa Agent / not runtime activity', 15, h - 12); if(!compact)ctx.fillText('decorative topology', split + 10, h - 12); ctx.globalAlpha = 1;
   }
   function drawEntity(time) {
+    // The code texture changes every 1.8s, not every frame. Preserve precise redraws
+    // for lifecycle settling, rare interference, input, palette and resize events.
+    const settling=!reduced.matches&&time-lifecycleChangedAt<800;
+    const paintKey=[reduced.matches?0:Math.floor(time/1800),!reduced.matches&&time%37000>34800&&time%37000<34880,savedLifecycle,worm,input.slice(-8),settling?Math.floor(time/33):0].join('|');
+    if(!entityDirty&&paintKey===entityPaintKey)return;
     const view = fit(entity); if (!view) return;
+    entityPaintKey=paintKey;entityDirty=false;
     ascii(view.ctx, 0, 0, view.w, view.h * .8, time, true);
     const ctx=view.ctx,known=savedLifecycle!=='unavailable';
     const emphasis={active:.65,created:.48,paused:.38,suspended:.28,terminated:.18,unavailable:.18}[savedLifecycle];
@@ -356,7 +362,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
   }
   function tick(time) { frame = 0; if (document.hidden) return; if(document.documentElement.dataset.motion!==(reduced.matches?'still':'running')){motionChange();return;} if (time - previous > 33) { draw(time); previous = time; } if (!reduced.matches || warpStart) frame = requestAnimationFrame(tick); }
   function schedule() { if (document.hidden) return; if (reduced.matches && !warpStart) draw(); else if (!frame) frame = requestAnimationFrame(tick); }
-  function resize() { drawBlueprint(); drawSpark(); draw(); schedule(); }
+  function resize() { entityDirty=true;drawBlueprint(); drawSpark(); draw(); schedule(); }
   function pointerMove(e) { if(pointer.x!==e.clientX/innerWidth||pointer.y!==e.clientY/innerHeight)pointer.movedAt=performance.now();pointer.x=e.clientX/innerWidth;pointer.y=e.clientY/innerHeight;pointer.visible=e.pointerType!=='touch';clearTimeout(pointerIdleTimer);pointerIdleTimer=setTimeout(schedule,720);schedule(); }
   function pointerLeave() { pointer.visible=false;schedule(); }
   function visibility() { introTime=null;diagramPrevious=null; if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else schedule(); }
