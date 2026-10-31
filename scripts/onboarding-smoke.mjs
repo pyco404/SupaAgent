@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Synthetic onboarding only. No primary epoch, real credentials, worker launch or provider transport. */
+/** Synthetic onboarding only. No primary epoch, real credentials or paid provider transport. Workers are isolated fixtures only. */
 import assert from 'node:assert/strict';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {spawn,execFileSync} from 'node:child_process';
@@ -59,7 +59,7 @@ async function request(path,body,user=owner,extra={}){const r=await fetch(api+pa
 async function ok(path,body,user=owner){const r=await request(path,body,user);assert.equal(r.status,200,`fixture HTTP ${r.status} at ${path}`);return r.body;}
 function denied(r){assert.ok([400,401,403,409,422].includes(r.status),'fixture_permission_or_state_denial_required');}
 const basic=user=>'Basic '+Buffer.from(`${user.username}:${user.password}`).toString('base64');
-async function capture(page,id,label,width){await page.setViewportSize({width,height:width===390?844:1000});await page.goto(site+'/operator');await page.goto(site+'/site/#intelligence');await page.waitForFunction(id=>[...document.querySelector('#agent-select').options].some(o=>o.value===id),id);await page.locator('#agent-select').evaluate((el,id)=>{el.value=id;el.dispatchEvent(new Event('change'));},id);await page.locator('.buffer[data-typing-state=complete]').waitFor();await page.locator('.schedule-panel summary').click();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:resolve(evidence,label+'.png')});}
+async function capture(page,id,label,width){await page.setViewportSize({width,height:width===390?844:1000});await page.goto(site+'/operator');await page.goto(site+'/intelligence');await page.waitForFunction(id=>[...document.querySelector('#agent-select').options].some(o=>o.value===id),id);await page.locator('#agent-select').evaluate((el,id)=>{el.value=id;el.dispatchEvent(new Event('change'));},id);await page.locator('.buffer[data-typing-state=complete]').waitFor();await page.locator('.schedule-panel summary').click();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:resolve(evidence,label+'.png')});}
 try{
  await start([owner,viewer,operator,other]);
  const agent=await ok('/agents',plan.agent_request),id=agent.id,path=`/agents/${id}`;
@@ -71,9 +71,9 @@ try{
  denied(await request('/agents',{...plan.agent_request,owner_id:owner.id},viewer));
  for(const user of [viewer,operator])await ok(path+'/access',{principal_id:user.id,role:user.role});
  await ok(path+'/memory',undefined,viewer);denied(await request(path+'/cycles',{},viewer));
- const balance=await ok(path+'/simulated-funding',{kind:'seed',amount_microusd:10000,idempotency_key:randomUUID(),simulated:true});assert.equal(balance.balance_microusd,10000);
+ const balance=await ok(path+'/simulated-funding',{kind:'seed',amount_microusd:20000,idempotency_key:randomUUID(),simulated:true});assert.equal(balance.balance_microusd,20000);
  async function command(operation,user=owner,policy=null){const state=await ok(path+'/schedule');return request(path+'/schedule',{request_id:randomUUID(),expected_revision:state.revision,operation,authorize_offline:true,consented_at:new Date().toISOString(),reason:'Explicit disposable onboarding rehearsal',policy},user);}
- const policy={...plan.future_offline_policy,goal_ids:[goals[0].id],interval_seconds:5,valid_for_seconds:60};
+ const policy={...plan.future_offline_policy,goal_ids:goals.map(goal=>goal.id),max_cycles:10,simulated_budget_microusd:11000,interval_seconds:5,valid_for_seconds:180};
  denied(await command('start',operator,policy));denied(await command('start',viewer,policy));
  assert.equal((await command('start',owner,policy)).status,200);
  await new Promise(r=>setTimeout(r,200));assert.equal((await ok(path+'/cycles')).length,0);
@@ -91,15 +91,34 @@ try{
  browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,...(process.env.SUPA_ONBOARDING_REA_PORT?{args:[`--remote-debugging-port=${Number(process.env.SUPA_ONBOARDING_REA_PORT)}`,'--remote-debugging-address=127.0.0.1']}:{})});
  const context=await browser.newContext({httpCredentials:owner,reducedMotion:'reduce',colorScheme:'dark'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await capture(page,id,'desktop-paused-owner',1440);await capture(page,id,'mobile-paused-owner',390);
+ // The unsigned primary proposal stays at three cycles. This separately scoped
+ // disposable authorization permits exactly ten; no real authorization is installed.
+ const workerPort=await port();let worker;
+ async function startWorker(){worker=launch(resolve(root,'target/debug/supa-runtime'),[],root,{SUPA_WORKER_ENABLED:'true',SUPA_WORKER_POLL_SECONDS:'1',SUPA_WORKER_BIND:`127.0.0.1:${workerPort}`});await ready(`http://127.0.0.1:${workerPort}/ready`,worker);}
+ async function completed(){return Number(sql(`SELECT count(*) FROM cycles WHERE agent_id='${id}' AND status='completed'`));}
+ async function waitCycles(count){for(let n=0;n<650;n++){assert.equal(worker.exitCode,null,'fixture_worker_exited');if(await completed()===count)return;await new Promise(r=>setTimeout(r,100));}throw Error('bounded_worker_cycle_timeout');}
+ await startWorker();
+ await new Promise(r=>setTimeout(r,1200));assert.equal(await completed(),1);
  assert.equal((await command('resume',operator)).status,200);
- for(let n=0;n<70;n++){if(Date.parse((await ok(path+'/schedule')).next_cycle_at)<=Date.now())break;await new Promise(r=>setTimeout(r,100));}
- await ok(path+'/cycles'); // Read only; a resume alone does not execute.
- assert.equal((await ok(path+'/cycles')).length,1);
- await ok(path+'/cycles',{},operator);
+ await waitCycles(5);assert.equal((await command('pause',operator)).status,200);
+ await halt(worker);await halt(web);await halt(service);await start([owner,operator,other]);
+ assert.equal((await ok(path+'/schedule')).lifecycle,'paused');
+ await startWorker();await new Promise(r=>setTimeout(r,1200));assert.equal(await completed(),5);
+ assert.equal((await command('resume',operator)).status,200);
+ await waitCycles(10);await new Promise(r=>setTimeout(r,6200));assert.equal(await completed(),10);
+ await halt(worker);
+ const exhausted=await ok(path+'/schedule');assert.equal(exhausted.lifecycle,'paused');assert.equal(exhausted.last_error,'schedule_limit_reached');assert.equal(exhausted.cycles_started,10);assert.equal(exhausted.reserved_microusd,11000);
+ const workerCycles=Number(sql(`SELECT count(*) FROM cycles WHERE agent_id='${id}' AND worker_id IS NOT NULL`));assert.equal(workerCycles,9);
+ assert.equal(sql(`SELECT count(*) FROM cycles WHERE agent_id='${id}' AND status='running'`),'0');
+ assert.equal(sql("SELECT count(*) FROM worker_health WHERE kind='worker' AND stopped_at IS NOT NULL"),'2');
+ const assessments=Number(sql(`SELECT count(*) FROM goal_evaluations WHERE agent_id='${id}'`));assert.ok(assessments>0);
+ assert.ok((await ok(path+'/memory')).length>=memories.length);
+ // New fixture-only consent tests expiry independently of the exhausted ceiling.
+ assert.equal((await command('renew',owner,{...policy,max_cycles:1,simulated_budget_microusd:1100})).status,200);
  // Fixture clock injection only. Real authorizations are never altered by this script.
  sql(`UPDATE agent_schedules SET expires_at=now()-interval '1 second' WHERE agent_id='${id}'`);
  denied(await request(path+'/cycles',{},operator));
- const expired=await ok(path+'/schedule');assert.equal(expired.lifecycle,'paused');assert.equal(expired.last_error,'authorization_expired');assert.equal(expired.cycles_started,2);assert.equal(expired.reserved_microusd,2200);
+ const expired=await ok(path+'/schedule');assert.equal(expired.lifecycle,'paused');assert.equal(expired.last_error,'authorization_expired');assert.equal(expired.cycles_started,0);assert.equal(expired.reserved_microusd,0);
  await ok(path+'/emergency-stop',{reason:'Explicit disposable emergency stop'},operator);
  assert.equal((await ok(path+'/schedule')).lifecycle,'suspended');denied(await command('resume',operator));
  assert.ok((await ok(path+'/actions')).every(action=>action.authorization_outcome==='allowed'&&action.status==='succeeded'));
@@ -107,9 +126,9 @@ try{
  assert.equal(sql('SELECT count(*) FROM live_sessions'),'0');assert.equal(sql('SELECT count(*) FROM economic_receipts'),'0');
  assert.deepEqual(errors,[]);
  for(const secret of [serviceToken,oldOwner.token,owner.token,viewer.token,operator.token,other.token,oldOwner.password,owner.password,viewer.password,...plan.goals])assert.ok(!logs.join('').includes(secret),'secret_or_private_goal_in_service_log');
- const report={passed:true,fixture_only:true,primary_epoch_connected:false,proposed_owner_installed:false,synthetic_owner_principal:owner.id,synthetic_agent_id:id,created_inactive:true,explicit_goal_count:goals.length,finite_policy:policy,offline_cycles:2,memories_after_first_cycle:memories.length,simulated_seed_microusd:10000,simulated_expenses_microusd:2200,real_spending:0,live_provider_requests:0,worker_processes_launched:0,background_cycles:0,role_boundaries_verified:true,forged_identity_denied:true,revoked_api_and_browser_credentials_denied:true,rotation_preserves_owner_and_records:true,pause_survives_restart:true,expiry_fixture_clock_injection:true,expired_authorization_denied:true,emergency_stop_fences_resume:true,final_lifecycle:'suspended',historical_accounting_imported:false,recipient:null,credentials_or_private_goals_in_logs:false,browser_errors:errors,viewports:[1440,390]};
+ const report={passed:true,fixture_only:true,primary_epoch_connected:false,proposed_owner_installed:false,synthetic_owner_principal:owner.id,synthetic_agent_id:id,created_inactive:true,explicit_goal_count:goals.length,finite_policy:policy,offline_cycles:10,memories_after_first_cycle:memories.length,simulated_seed_microusd:20000,simulated_expenses_microusd:11000,real_spending:0,live_provider_requests:0,worker_processes_launched:2,background_cycles:workerCycles,goal_assessments:assessments,worker_restart_while_paused_verified:true,execution_ceiling_verified:true,role_boundaries_verified:true,forged_identity_denied:true,revoked_api_and_browser_credentials_denied:true,rotation_preserves_owner_and_records:true,pause_survives_restart:true,expiry_fixture_clock_injection:true,expired_authorization_denied:true,emergency_stop_fences_resume:true,final_lifecycle:'suspended',historical_accounting_imported:false,recipient:null,credentials_or_private_goals_in_logs:false,browser_errors:errors,viewports:[1440,390]};
  await writeFile(resolve(evidence,'onboarding.json'),JSON.stringify(report,null,2)+'\n',{flag:'wx',mode:0o600});
- console.log(JSON.stringify({passed:true,fixture_only:true,offline_cycles:2,credential_revocation_verified:true}));
+ console.log(JSON.stringify({passed:true,fixture_only:true,offline_cycles:10,credential_revocation_verified:true}));
  if(process.env.SUPA_ONBOARDING_REA_PORT){await writeFile(resolve(evidence,'browser-ready.json'),JSON.stringify({origin:site,cdp_endpoint:`http://127.0.0.1:${process.env.SUPA_ONBOARDING_REA_PORT}`,url:page.url(),pid:process.pid})+'\n',{flag:'wx',mode:0o600});await new Promise(r=>{process.once('SIGTERM',r);process.once('SIGINT',r);});}
 }finally{
  try{await browser?.close();}finally{
