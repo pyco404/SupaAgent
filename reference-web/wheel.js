@@ -83,9 +83,10 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
     return value - Math.floor(value);
   };
   const dimensions = () => {
-    const cardWidth = Math.min(150, Math.max(104, width * 0.66));
-    const cardHeight = cardWidth * 0.74;
-    const gap = Math.min(88, Math.max(62, height / 7.5));
+    const cardWidth = Math.min(200, Math.max(104, width * 0.88));
+    const cardHeight = cardWidth * 0.64;
+    // Leave room for both the enlarged selection and its tilted neighbours.
+    const gap = Math.max(cardHeight * 0.88 + 6, Math.min(132, height / 6.5));
     return { cardWidth, cardHeight, gap };
   };
   // Shared elliptical path keeps the card and its branch attachment together.
@@ -96,7 +97,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       distance, cardWidth, cardHeight,
       x: 3 + (1 - Math.cos(orbit)) * 2 * Math.min(6, width / 38) / (.17 ** 2),
       y: height / 2 + Math.sin(orbit) * gap / .17,
-      scale: .64 + Math.max(0, 1 - Math.abs(distance) * 2) * .36,
+      scale: .72 + Math.max(0, 1 - Math.abs(distance) * 2) * .28,
       angle: -orbit / 2,
     };
   };
