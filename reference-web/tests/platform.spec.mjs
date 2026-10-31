@@ -7,7 +7,7 @@ async function showAll(page){await openUtilities(page);await page.locator('.skip
 async function reloadSaved(page){await openUtilities(page);await page.locator('.reload-records').click();}
 
 
-async function go(page,section){await page.goto(`${connected}/site/#${section}`,{waitUntil:'domcontentloaded'});await expect(page.locator('html')).toHaveAttribute('data-ready','true');await expect(page.locator('#agent-select')).toHaveValue(id);}
+async function go(page,section){await page.goto(`${connected}/${section==='home'?'':section}`,{waitUntil:'domcontentloaded'});await expect(page.locator('html')).toHaveAttribute('data-ready','true');if(section==='home')await page.locator('.enter').click();await expect(page.locator('#agent-select')).toHaveValue(id);}
 
 test('public identities are minimal and private endpoints refuse unauthenticated reads',async({request})=>{
   const response=await request.get(`${connected}/api/agents`);expect(response.status()).toBe(200);
@@ -24,7 +24,7 @@ test('public visitors see protected states without receiving private memory',asy
 
 test.describe('authorized saved records',()=>{
   test.use({httpCredentials:signIn});
-  test.beforeEach(async({page})=>{await page.goto(`${connected}/operator`);await expect(page).toHaveURL(/\/site\/#agents$/);});
+  test.beforeEach(async({page})=>{await page.goto(`${connected}/operator`);await expect(page).toHaveURL(/\/agents$/);});
   test('all ten sections use honest data and planned capability labels',async({page})=>{
     const checks={home:'Born to think. Built to survive.',agents:'Fixture Supa',intelligence:'authorization allowed',memory:'Hypothesis / unverified',economy:'Simulated ledger / hypothetical USD',social:'TEST FIXTURE: My simulated budget',trading:'strict maximum of $5', 'token-launch':'Pump.fun token launching is planned',factory:'Creation requires explicit authorization',about:'six-crate Rust runtime'};
     for(const [section,text]of Object.entries(checks)){
@@ -40,8 +40,8 @@ test.describe('authorized saved records',()=>{
     await buffer.getByText('Runway calculation',{exact:true}).click();await expect(buffer).toContainText('Insufficient recorded simulated expense history.');
   });
   test('agent selection, terminal history and escaped record text are interactive',async({page})=>{
-    await go(page,'agents');await page.locator('.terminal-entry').click();await expect(page).toHaveURL(/#intelligence$/);await expect(page.locator('.buffer')).toContainText('cycle');
-    await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa memory');await page.keyboard.press('Enter');await expect(page).toHaveURL(/#memory$/);
+    await go(page,'agents');await page.locator('.terminal-entry').click();await expect(page).toHaveURL(/\/intelligence$/);await expect(page.locator('.buffer')).toContainText('cycle');
+    await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa memory');await page.keyboard.press('Enter');await expect(page).toHaveURL(/\/memory$/);
     await page.locator('.command-toggle').click();await page.keyboard.press('ArrowUp');await expect(page.locator('.command-input')).toHaveValue('supa memory');await page.keyboard.press('Escape');
     await page.route('**/api/agents/*/memory',route=>route.fulfill({json:[{id,lesson:'<img src=x onerror=alert(1)>',kind:'hypothesis',source_event_ids:[],cycle_id:null,created_at:'fixture'}]}));
     await reloadSaved(page);await expect(page.locator('.buffer')).toContainText('<img src=x');expect(await page.locator('.buffer img').count()).toBe(0);
@@ -76,16 +76,16 @@ test('every section types in document order and replays on return',async({page})
     const before=(await buffer.textContent()).length;await page.waitForTimeout(180);expect((await buffer.textContent()).length).toBeGreaterThanOrEqual(before);
     await showAll(page);await expect(buffer).toHaveAttribute('data-typing-state','complete');
     expect(await buffer.locator('[hidden],[inert]').count()).toBe(0);await expect(page.locator('.skip-typing')).toBeHidden();await expect(buffer).toBeFocused();
-    await expect(page).toHaveURL(new RegExp(`#${section}$`));
+    await expect(page).toHaveURL(new RegExp(`/${section==='home'?'':section}$`));
   }
 });
 
 test('reloading restarts typing and navigation cancels old text safely',async({page})=>{
-  await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/site/#about');
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/about');
   await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');await showAll(page);
   await reloadSaved(page);await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
   await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa trading');await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/#trading$/);await showAll(page);
+  await expect(page).toHaveURL(/\/trading$/);await showAll(page);
   await expect(page.locator('.buffer')).toContainText('strict maximum of $5');await page.waitForTimeout(300);
   await expect(page.locator('.buffer')).not.toContainText('six-crate Rust runtime');
   await page.emulateMedia({reducedMotion:'reduce'});await reloadSaved(page);
@@ -114,7 +114,7 @@ test('agent picker stays within the viewport and supports keyboard selection and
   const inside=async()=>{const box=await list.boundingBox(),viewport=page.viewportSize();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.y).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(viewport.width);expect(box.y+box.height).toBeLessThanOrEqual(viewport.height);};
   await inside();expect(await list.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await page.locator('.buffer').evaluate(el=>el.dispatchEvent(new Event('scroll')));await expect(list).toBeVisible();
-  await page.keyboard.press('j');await expect(page).toHaveURL(/#home$/);await expect(list).toBeVisible();
+  await page.keyboard.press('j');await expect(page).toHaveURL(/\/$/);await expect(list).toBeVisible();
   await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await expect(page.locator('#agent-select')).toHaveValue(second);await expect(list).toBeHidden();await expect(trigger).toBeFocused();await expect(trigger).toContainText(longName);
   await trigger.click();await page.keyboard.press('Escape');await expect(list).toBeHidden();await expect(trigger).toBeFocused();
   await trigger.click();await page.locator('.blueprint').click({position:{x:5,y:5}});await expect(list).toBeHidden();
