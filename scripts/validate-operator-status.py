@@ -15,10 +15,26 @@ def module(name,file):
     spec=importlib.util.spec_from_file_location(name,ROOT/'scripts'/file)
     result=importlib.util.module_from_spec(spec);spec.loader.exec_module(result);return result
 
+def inspect_disposable_cluster(work):
+    relative=work.relative_to(ROOT).as_posix()
+    if not re.fullmatch(r'postgres-data/stage-two/m8a_[a-f0-9]{12}/workspace',relative):raise ValueError('fixed_disposable_path_required')
+    for path in [work.parent,work,work/'data',work/'s']:
+        if path.is_symlink() or path.resolve()!=path or not path.is_dir() or path.stat().st_uid!=os.getuid() or path.stat().st_mode&0o077:raise ValueError('private_canonical_disposable_directory_required')
+    if (work/'data/postmaster.pid').exists():raise ValueError('disposable_cluster_must_be_stopped')
+    for file in ['postgresql.conf','postgresql.auto.conf','pg_hba.conf']:
+        if (work/'data'/file).is_symlink():raise ValueError('disposable_config_symlink_rejected')
+    if (work/'server.log').is_symlink():raise ValueError('disposable_log_symlink_rejected')
+    expected={'data_directory':str(work/'data'),'listen_addresses':'','port':'55445','unix_socket_directories':str(work/'s'),'external_pid_file':''}
+    # -C reads configuration and exits; it never starts a postmaster or connects to a database.
+    for setting,value in expected.items():
+        actual=subprocess.check_output(['/usr/lib/postgresql/16/bin/postgres','-D',str(work/'data'),'-C',setting],env={'PATH':'/usr/bin:/bin','HOME':os.environ['HOME']},stderr=subprocess.DEVNULL,text=True).strip()
+        if actual!=value:raise ValueError('disposable_configuration_target_mismatch')
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--validation',type=Path,required=True)
     parser.add_argument('--rea-port',type=int)
+    parser.add_argument('--inspect-only',action='store_true')
     args=parser.parse_args();os.umask(0o077)
     if args.rea_port is not None and not 1024<=args.rea_port<=65535:raise ValueError('invalid_rea_port')
     path=args.validation.resolve()
@@ -29,7 +45,9 @@ def main():
     run=path.parent.name
     preparation=module('operator_preparation','validate-local-onboarding.py');strict,before=preparation.baseline()
     work=ROOT/'postgres-data/stage-two'/('m8a_'+run)/'workspace'
-    if work.is_symlink() or (work/'data/postmaster.pid').exists():raise ValueError('disposable_cluster_must_be_stopped')
+    inspect_disposable_cluster(work)
+    if args.inspect_only:
+        print(json.dumps({'disposable_configuration_verified':True,'primary_started':False,'database_connections':0}));return
     out=ROOT/'artifacts/milestone-8b'/uuid.uuid4().hex[:12];out.mkdir(mode=0o700,parents=True)
     env={**{k:os.environ[k] for k in ['HOME','PATH']},'CARGO_INCREMENTAL':'0','CARGO_BUILD_JOBS':'2'}
     with (out/'status-build.log').open('wb') as log:
