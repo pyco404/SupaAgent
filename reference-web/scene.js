@@ -143,6 +143,13 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     const connections=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20],[5,9,13,17]];
     for(const [hand,sign,home] of [[0,-1,[' ','f','d','s','a']],[1,1,[' ','j','k','l',';']]]){
       const mouseHand=hand===1&&mouseActive,mouseX=w/2+width*.58;
+      ctx.save();
+      if(mouseHand&&!reduced.matches){
+        // Mirror real pointer travel within the keyboard's existing margins.
+        const dx=Math.max(-.5,Math.min(.5,pointer.x-.5))*pitch*.8;
+        const dy=Math.max(-.5,Math.min(.5,pointer.y-.5))*pitch*.6;
+        ctx.translate(dx,Math.min(dy,h-3-(top+height+pitch*.36)));
+      }
       const wristX=mouseHand?mouseX:w/2+sign*width*.145,wristY=top+height+pitch*.36,points=[[wristX,wristY]];
       if(mouseHand){
         ctx.globalAlpha=.45;ctx.lineWidth=.8;ctx.beginPath();ctx.roundRect(mouseX-pitch*.7,top+pitch*.65,pitch*1.4,pitch*2.3,pitch*.7);ctx.stroke();
@@ -161,6 +168,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
       ctx.strokeStyle=ink();ctx.fillStyle=ink();ctx.globalAlpha=.6;ctx.lineWidth=.8;
       for(const path of connections){ctx.beginPath();path.forEach((id,i)=>{if(i)ctx.lineTo(...points[id]);else ctx.moveTo(...points[id]);});ctx.stroke();}
       ctx.globalAlpha=.85;for(const [px,py] of points)ctx.fillRect(px-1,py-1,2,2);
+      ctx.restore();
     }
     ctx.restore();
     surface.dataset.handState=typing?'typing':'idle';surface.dataset.rightHand=mouseActive?'mouse':'keyboard';surface.dataset.leftHand='keyboard';
