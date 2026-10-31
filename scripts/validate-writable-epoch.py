@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import uuid
@@ -18,7 +19,7 @@ def main():
     strict,before=preparation.baseline()
     run=uuid.uuid4().hex[:12]
     out=ROOT/'artifacts/milestone-8a'/run;out.mkdir(parents=True,mode=0o700)
-    env={k:os.environ[k] for k in ['PATH','HOME']}
+    env={**{k:os.environ[k] for k in ['PATH','HOME']},'CARGO_INCREMENTAL':'0','CARGO_BUILD_JOBS':'2'}
     with (out/'build.log').open('wb') as log:
         subprocess.run(['cargo','build','--workspace','--bins','--locked','--offline'],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
     strict.BASE=ROOT/'postgres-data/stage-two'/('m8a_'+run)
@@ -63,10 +64,12 @@ def main():
         preparation.check_sequence_progress(sequences,preparation.sequence_snapshot(pg,source))
         if pg.sql('SELECT count(*) FROM epoch_guard.operational_claims c WHERE epoch_guard.operation_live(c.approval_id)',source)!='0':raise ValueError('server_restart_failed_to_fence_claims')
         for db in names:
+            strict.checksums(db,12)
             if pg.sql("SELECT state||':'||revision FROM application_epoch",db)!='prepared:0':raise ValueError('fixture_epoch_activated')
         if preparation.baseline()[1]!=before:raise ValueError('protected_files_changed')
         tests=json.loads((out/'rust-tests/tests.json').read_text())
-        report={'passed':True,'rust_tests_passed':tests['passed'],'writable_epoch_tests':6,'primary_started':False,'primary_connected':False,'primary_last_verified_schema':8,'protected_files_unchanged':len(before),'unresolved_hold_microusd':4048,'historical_database':'unrecovered','source_database':source,'restored_database':restored,'restored_rows_and_effective_acl_verified':True,'cross_database_restored_claims_denied':True,'postgres_crash_restart_fences_all_claims':True,'committed_rows_and_audit_preserved':True,'sequence_forward_progress_verified':True,'real_credentials_or_grants_created':False,'paid_provider_requests':0,'real_financial_transactions':0,'primary_frontend_repointed':False}
+        security_names=set(re.findall(r'async fn ([a-z_]+)\(\)',(ROOT/'crates/api/tests/writable_epoch.rs').read_text()))
+        report={'passed':True,'rust_tests_passed':tests['passed'],'writable_epoch_tests':sum(name in security_names for name in tests['tests']),'migration_checksums_verified':list(range(1,13)),'primary_started':False,'primary_connected':False,'primary_last_verified_schema':8,'protected_files_unchanged':len(before),'unresolved_hold_microusd':4048,'historical_database':'unrecovered','source_database':source,'restored_database':restored,'restored_rows_and_effective_acl_verified':True,'cross_database_restored_claims_denied':True,'postgres_crash_restart_fences_all_claims':True,'committed_rows_and_audit_preserved':True,'sequence_forward_progress_verified':True,'real_credentials_or_grants_created':False,'paid_provider_requests':0,'real_financial_transactions':0,'primary_frontend_repointed':False}
     finally:
         if started:pg.command('pg_ctl','-D',work/'data','-m','fast','-w','stop')
     report['all_clusters_stopped']=True
