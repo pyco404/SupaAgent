@@ -25,3 +25,7 @@ test('economic reads are private and public registry is strictly validated',asyn
  assert.equal((await readResource('/api/agents/'+id+'/economy',{host:headers.host},fetcher)).status,401);assert.equal(calls,0);
  assert.equal((await readResource('/api/services',{host:headers.host},fetcher)).status,200);assert.equal(calls,1);
 });
+
+test('pending receipt is distinguished from a stale job command without replay',async()=>{
+ let calls=0;const result=await runAutonomy('/api/jobs/'+id+'/verify-payment',headers,JSON.stringify({signature:'1'.repeat(64),authorize_read_only_verification:true}),async()=>{calls++;return new Response('{}',{status:409});});assert.equal(calls,1);assert.equal(result.status,409);assert.equal(result.body.error,'receipt_not_finalized_or_reconciliation_conflict');
+});
