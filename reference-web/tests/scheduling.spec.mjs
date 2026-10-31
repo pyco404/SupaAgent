@@ -6,7 +6,7 @@ test.use({httpCredentials:{username:'fixture',password:'fixture-password-'.repea
 async function visit(page,handler,view=status()){
   await page.route('**/api/agents/*/schedule',route=>route.request().method()==='GET'?route.fulfill({json:view}):handler(route));
   await page.route('**/api/agents/*/goals',route=>route.fulfill({json:[{id,description:'Review verified outcomes',completed:false,priority:1,suggested_progress_bps:0}]}));
-  await page.goto('http://127.0.0.1:3202/operator');await page.goto('http://127.0.0.1:3202/site/#intelligence');await page.locator('.schedule-panel summary').click();
+  await page.goto('http://127.0.0.1:3202/operator');await page.goto('http://127.0.0.1:3202/intelligence');await page.locator('.schedule-panel summary').click();
 }
 test('scheduling requires goal selection and explicit consent without triggering navigation',async({page})=>{
   const calls=[];await visit(page,async route=>{calls.push(route.request().postDataJSON());await route.fulfill({json:status('active')});});
