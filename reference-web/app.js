@@ -149,7 +149,7 @@ async function select(index,background=false){
   if(document.body.dataset.view==='projects')history.replaceState(null,'',`#${item.id}`);
   const buffer=$('.buffer');
   if(!background){
-    $('.tab-file').textContent=item.label;$('.winbar').textContent=`supa@local — ${item.label} / read-only`;
+    $('.tab-file').textContent=item.label.split(' · ')[0];$('.winbar').textContent=`supa@local — ${item.label} / read-only`;
     buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
     $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
     line('supa@local ~','prompt');line('Loading saved view…','prompt');
