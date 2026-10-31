@@ -143,6 +143,58 @@ async fn contracts_are_durable_scoped_fenced_and_conserve_liabilities() {
     ])
     .unwrap();
     let app = router(state);
+    let recipient_path = format!("/agents/{}/economy/recipient", a.id);
+    let recipient_body =
+        json!({"address":"11111111111111111111111111111112","confirm_watch_only":true});
+    assert_eq!(
+        req(
+            &app,
+            &recipient_path,
+            CUSTOMER,
+            Some(recipient_body.clone())
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        req(
+            &app,
+            &recipient_path,
+            OWNER,
+            Some(json!({"address":"11111111111111111111111111111112","confirm_watch_only":false}))
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let (code, public_wallet) =
+        req(&app, &recipient_path, OWNER, Some(recipient_body.clone())).await;
+    assert_eq!(code, StatusCode::OK);
+    assert_eq!(public_wallet["watch_only"], true);
+    assert_eq!(public_wallet["external_control_verified"], false);
+    assert_eq!(public_wallet["signing_enabled"], false);
+    let identity = store.wallet(a.id).await.unwrap().id;
+    assert_eq!(
+        req(&app, &recipient_path, OWNER, Some(recipient_body))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(store.wallet(a.id).await.unwrap().id, identity);
+    assert_eq!(
+        req(
+            &app,
+            &recipient_path,
+            OWNER,
+            Some(json!({"address":"11111111111111111111111111111113","confirm_watch_only":true}))
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(req(&app,&recipient_path,OWNER,Some(json!({"address":"11111111111111111111111111111112","confirm_watch_only":true,"private_key":"forbidden"}))).await.0,StatusCode::UNPROCESSABLE_ENTITY);
+
     let spoof = Request::builder()
         .method("POST")
         .uri(format!("/agents/{}/economy/capital", a.id))
