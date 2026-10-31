@@ -523,6 +523,7 @@ test('navigation fibers keep moving while cards stay still and can be paused',as
   const canvas=page.locator('.wheel-ink'),selected=page.locator('.wheel-item[aria-selected=true]');
   const pixels=()=>canvas.evaluate(el=>{const data=el.getContext('2d').getImageData(0,0,el.width,el.height).data;let hash=0;for(let i=0;i<data.length;i+=4)hash=(Math.imul(hash,31)+data[i]+data[i+3])|0;return hash;});
   await expect(canvas).toHaveAttribute('data-motion-state','running');
+  await expect(page.locator('.wheel')).toHaveAttribute('data-carousel-state','settled');
   const first=await pixels(),transform=await selected.getAttribute('style');await expect.poll(pixels).not.toBe(first);expect(await selected.getAttribute('style')).toBe(transform);
   await page.keyboard.press(':');const control=page.getByRole('button',{name:'Animate navigation branches'});await control.click();await expect(canvas).toHaveAttribute('data-motion-state','paused');await expect(control).toHaveText('Play branches');
   const frozen=await pixels();await page.waitForTimeout(200);expect(await pixels()).toBe(frozen);
