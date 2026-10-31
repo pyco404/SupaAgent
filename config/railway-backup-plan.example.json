@@ -6,9 +6,13 @@
     "name": "Supa Agent",
     "id": null,
     "status": "not_created_or_accessible",
-    "workspace_id": null,
+    "workspace_id": "e319f68a-9897-49ed-b119-743f1f846aa0",
+    "workspace_name": "Daniel 's Projects",
+    "workspace_identity_confirmed_by_operator": false,
     "reuse_existing_projects": false,
-    "planned_environments": ["staging", "production"]
+    "planned_environments": ["staging", "production"],
+    "initial_resource_scope": "staging_backup_infrastructure_only",
+    "production_resource_creation_authorized": false
   },
   "bucket": {
     "display_name": "supa-agent-backups",
@@ -62,7 +66,12 @@
   "cost_review": {
     "bucket_usd_per_gb_month": 0.015,
     "workspace_usage_rounded_up_to_whole_gb_month": true,
-    "monthly_ceiling_usd": null,
+    "monthly_ceiling_usd": 1,
+    "ceiling_policy": "monitoring_and_operator_approval_not_a_provider_hard_cap",
+    "bucket_specific_hard_limit_verified": false,
+    "monitoring_automation_enabled": false,
+    "proposed_warning_usd": 0.75,
+    "proposed_threshold_action": "pause_new_uploads_and_request_review_without_automatic_deletion",
     "estimated_snapshot_envelope_bytes": 1048576,
     "proposed_retained_snapshots": 23,
     "estimated_steady_storage_usd_month_if_only_bucket_usage": 0.015,
