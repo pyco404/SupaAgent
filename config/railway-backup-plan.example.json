@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "purpose": "review_only_not_an_executable_authorization",
+  "provider": "railway_storage_buckets",
+  "project": {
+    "name": "Supa Agent",
+    "id": null,
+    "status": "not_created_or_accessible",
+    "workspace_id": null,
+    "reuse_existing_projects": false,
+    "planned_environments": ["staging", "production"]
+  },
+  "bucket": {
+    "display_name": "supa-agent-backups",
+    "proposed_initial_environment": "staging",
+    "environment_id": null,
+    "placement_region": "ams",
+    "actual_s3_bucket_name": null,
+    "endpoint": null,
+    "s3_signing_region": null,
+    "url_style": null,
+    "public_access": false,
+    "presigned_urls": false,
+    "versioning_available": false,
+    "object_lock_available": false,
+    "lifecycle_configuration_available": false,
+    "credential_scope": "treat_as_bucket_wide_unless_provider_proves_narrower_scope"
+  },
+  "source": {
+    "cluster": "postgres-data/infrastructure-v1/data",
+    "database": "supa_epoch_dev_fd2f52e033fc4c0d893a7b08b26ab748",
+    "epoch_id": "fd2f52e0-33fc-4c0d-893a-7b08b26ab748",
+    "accounting_namespace": "641457b2-5fd8-4b31-b85f-c58839626831",
+    "last_verified_schema": 8,
+    "expected_epoch_state": "prepared",
+    "snapshot_candidate": "existing_verified_stage_one_archive_pending_export_approval",
+    "archive_sha256": "600d2bb19b52b4f17d4278459ba722ea5f1135df703b8efc1b0b3db0c8360671",
+    "historical_database": "unrecovered",
+    "quarantined_budget_uuid": "ad91e475-f1da-495a-8247-139643d2d8b1",
+    "historical_unresolved_hold_microusd": 4048
+  },
+  "encryption": {
+    "method": "client_side_openpgp",
+    "approved_recipient_fingerprint": null,
+    "approved_encryption_subkey_fingerprint": null,
+    "approved_manifest_signer_fingerprint": null,
+    "recovery_key_custody_verified": false,
+    "private_decryption_keys_allowed_on_railway": false,
+    "private_decryption_keys_allowed_on_primary_machine": false,
+    "detailed_manifest_inside_encrypted_bundle": true,
+    "outer_manifest": "minimal_ciphertext_inventory_with_pinned_external_signature"
+  },
+  "retention_proposal": {
+    "daily": 7,
+    "weekly": 4,
+    "monthly": 12,
+    "unique_snapshot_prefix": "snapshots/<random-uuid>/",
+    "automatic_deletion": false,
+    "deletion_requires_separate_approval": true,
+    "object_overwrite_allowed": false
+  },
+  "cost_review": {
+    "bucket_usd_per_gb_month": 0.015,
+    "workspace_usage_rounded_up_to_whole_gb_month": true,
+    "monthly_ceiling_usd": null,
+    "estimated_snapshot_envelope_bytes": 1048576,
+    "proposed_retained_snapshots": 23,
+    "estimated_steady_storage_usd_month_if_only_bucket_usage": 0.015,
+    "plan_subscription_and_other_usage_excluded": true,
+    "actual_ciphertext_size_not_yet_measured": true
+  },
+  "operation_authorization": {
+    "resource_creation": false,
+    "credential_retrieval_or_installation": false,
+    "backup_export": false,
+    "upload": false,
+    "disposable_cloud_recovery_drill": false,
+    "primary_startup": false,
+    "primary_migration": false,
+    "epoch_activation": false,
+    "application_deployment": false
+  }
+}
