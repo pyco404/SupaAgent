@@ -1,4 +1,4 @@
-//! Pinned, independently signed schema 8 -> 10 administration. Never activates an epoch.
+//! Pinned, independently signed migration profiles. Neither profile activates an epoch.
 use chrono::Utc;
 use ring::{
     digest::{SHA256, digest},
@@ -145,9 +145,12 @@ impl Target {
     }
 }
 fn inventory() -> BTreeMap<i64, String> {
+    inventory_for(APPROVED_TARGET)
+}
+fn inventory_for(target: i64) -> BTreeMap<i64, String> {
     MIGRATIONS
         .iter()
-        .filter(|m| m.version <= APPROVED_TARGET)
+        .filter(|m| m.version <= target)
         .map(|m| (m.version, hex(&m.checksum)))
         .collect()
 }
@@ -159,6 +162,30 @@ fn verify(
     executable: &str,
     now: i64,
 ) -> Result<Plan> {
+    verify_for(
+        raw,
+        signature,
+        authority,
+        target,
+        executable,
+        now,
+        APPROVED_TARGET,
+    )
+}
+fn verify_for(
+    raw: &[u8],
+    signature: &[u8],
+    authority: &Authority,
+    target: &Target,
+    executable: &str,
+    now: i64,
+    schema: i64,
+) -> Result<Plan> {
+    let scope = match schema {
+        10 => "migrate_development_epoch_only",
+        11 => "migrate_development_epoch_through_eleven_only",
+        _ => return Err("unsupported_migration_profile"),
+    };
     check(
         authority.version == 1
             && authority.identity_and_independent_control_verified
@@ -178,7 +205,7 @@ fn verify(
     check(
         p.version == 1
             && !p.approval_id.is_nil()
-            && p.scope == "migrate_development_epoch_only"
+            && p.scope == scope
             && p.principal_id == authority.principal_id,
         "approval_scope",
     )?;
@@ -201,7 +228,7 @@ fn verify(
     )?;
     check(
         p.expected_version == 8
-            && p.target_version == 10
+            && p.target_version == schema
             && p.backup_sha256 == target.backup_sha
             && p.source_catalog_sha256 == target.catalog_sha
             && p.reviewed_state_sha256 == target.reviewed_state_sha
@@ -209,12 +236,17 @@ fn verify(
             && unhex(&p.source_snapshot_sha256, 32).is_ok(),
         "plan_limits_or_artifacts",
     )?;
+    let expected = if schema == APPROVED_TARGET {
+        inventory()
+    } else {
+        inventory_for(schema)
+    };
     check(
-        inventory().keys().copied().eq(1..=10)
-            && p.migration_sha384 == inventory()
+        expected.keys().copied().eq(1..=schema)
+            && p.migration_sha384 == expected
             && MIGRATIONS
                 .iter()
-                .filter(|m| m.version <= APPROVED_TARGET)
+                .filter(|m| m.version <= schema)
                 .all(|m| !m.no_tx),
         "migration_inventory",
     )?;
@@ -245,6 +277,13 @@ fn clean_environment() -> Result<()> {
 }
 /// The production interface has no database/socket/epoch override and no disposable switch.
 pub async fn command(args: Vec<String>) -> Result<()> {
+    command_profile(args, APPROVED_TARGET).await
+}
+/// Independent 8 -> 11 profile: its scope/signature never accepts an 8 -> 10 approval.
+pub async fn command_eleven(args: Vec<String>) -> Result<()> {
+    command_profile(args, 11).await
+}
+async fn command_profile(args: Vec<String>, schema: i64) -> Result<()> {
     clean_environment()?;
     check(
         args.len() == 6
@@ -264,14 +303,26 @@ pub async fn command(args: Vec<String>) -> Result<()> {
     let executable = std::fs::read(std::env::current_exe().map_err(|_| "executable")?)
         .map_err(|_| "executable")?;
     let target = Target::primary();
-    let plan = verify(
-        &raw,
-        &signature,
-        &authority,
-        &target,
-        &sha(&executable),
-        Utc::now().timestamp(),
-    )?;
+    let plan = if schema == APPROVED_TARGET {
+        verify(
+            &raw,
+            &signature,
+            &authority,
+            &target,
+            &sha(&executable),
+            Utc::now().timestamp(),
+        )?
+    } else {
+        verify_for(
+            &raw,
+            &signature,
+            &authority,
+            &target,
+            &sha(&executable),
+            Utc::now().timestamp(),
+            schema,
+        )?
+    };
     let creds: Credentials =
         serde_json::from_slice(&private_read(Path::new(&args[5]), uid, 4096, true)?)
             .map_err(|_| "invalid_connection_file")?;
@@ -393,6 +444,8 @@ enum Fault {
     #[cfg(test)]
     FailAfterNine,
     #[cfg(test)]
+    FailAfterEleven,
+    #[cfg(test)]
     PauseAfterNine(
         std::sync::Arc<tokio::sync::Notify>,
         std::sync::Arc<tokio::sync::Notify>,
@@ -510,13 +563,15 @@ async fn execute(
     )?;
     for migration in MIGRATIONS
         .iter()
-        .filter(|m| (9..=APPROVED_TARGET).contains(&m.version))
+        .filter(|m| (9..=p.target_version).contains(&m.version))
     {
         sql(sqlx::raw_sql(&migration.sql).execute(&mut *tx).await).await?;
         sql(sqlx::query("INSERT INTO public._sqlx_migrations(version,description,success,checksum,execution_time) VALUES($1,$2,true,$3,-1)").bind(migration.version).bind(migration.description.as_ref()).bind(migration.checksum.as_ref()).execute(&mut *tx).await).await?;
         if migration.version == 9 {
             match &fault {
                 Fault::Never => {}
+                #[cfg(test)]
+                Fault::FailAfterEleven => {}
                 #[cfg(test)]
                 Fault::FailAfterNine => {
                     sql(sqlx::query("SELECT 1/0").execute(&mut *tx).await).await?;
@@ -529,8 +584,16 @@ async fn execute(
             }
         }
     }
-    sql(sqlx::raw_sql("CREATE TABLE epoch_guard.migration_receipts(approval_id uuid PRIMARY KEY,principal_id uuid NOT NULL,plan_sha256 text NOT NULL,executable_sha256 text NOT NULL,source_snapshot_sha256 text NOT NULL,plan_text text NOT NULL,signature_hex text NOT NULL,authority_public_key_hex text NOT NULL,system_identifier text NOT NULL,backup_sha256 text NOT NULL,from_version bigint NOT NULL CHECK(from_version=8),to_version bigint NOT NULL CHECK(to_version=10),completed_at timestamptz NOT NULL DEFAULT clock_timestamp()); REVOKE ALL ON epoch_guard.migration_receipts FROM PUBLIC; CREATE TRIGGER migration_receipt_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON epoch_guard.migration_receipts FOR EACH STATEMENT EXECUTE FUNCTION epoch_guard.immutable()").execute(&mut *tx).await).await?;
-    sql(sqlx::query("INSERT INTO epoch_guard.migration_receipts(approval_id,principal_id,plan_sha256,executable_sha256,source_snapshot_sha256,plan_text,signature_hex,authority_public_key_hex,system_identifier,backup_sha256,from_version,to_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,8,10)").bind(p.approval_id).bind(p.principal_id).bind(sha(raw)).bind(&p.executable_sha256).bind(&p.source_snapshot_sha256).bind(std::str::from_utf8(raw).map_err(|_|"plan_encoding")?).bind(hex(signature)).bind(&authority.public_key_hex).bind(&p.system_identifier).bind(&p.backup_sha256).execute(&mut *tx).await).await?;
+    #[cfg(test)]
+    if matches!(fault, Fault::FailAfterEleven) {
+        sql(sqlx::query("SELECT 1/0").execute(&mut *tx).await).await?;
+    }
+    let receipt_ddl = format!(
+        "CREATE TABLE epoch_guard.migration_receipts(approval_id uuid PRIMARY KEY,principal_id uuid NOT NULL,plan_sha256 text NOT NULL,executable_sha256 text NOT NULL,source_snapshot_sha256 text NOT NULL,plan_text text NOT NULL,signature_hex text NOT NULL,authority_public_key_hex text NOT NULL,system_identifier text NOT NULL,backup_sha256 text NOT NULL,from_version bigint NOT NULL CHECK(from_version=8),to_version bigint NOT NULL CHECK(to_version={}),completed_at timestamptz NOT NULL DEFAULT clock_timestamp()); REVOKE ALL ON epoch_guard.migration_receipts FROM PUBLIC; CREATE TRIGGER migration_receipt_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON epoch_guard.migration_receipts FOR EACH STATEMENT EXECUTE FUNCTION epoch_guard.immutable()",
+        p.target_version
+    );
+    sql(sqlx::raw_sql(&receipt_ddl).execute(&mut *tx).await).await?;
+    sql(sqlx::query("INSERT INTO epoch_guard.migration_receipts(approval_id,principal_id,plan_sha256,executable_sha256,source_snapshot_sha256,plan_text,signature_hex,authority_public_key_hex,system_identifier,backup_sha256,from_version,to_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,8,$11)").bind(p.approval_id).bind(p.principal_id).bind(sha(raw)).bind(&p.executable_sha256).bind(&p.source_snapshot_sha256).bind(std::str::from_utf8(raw).map_err(|_|"plan_encoding")?).bind(hex(signature)).bind(&authority.public_key_hex).bind(&p.system_identifier).bind(&p.backup_sha256).bind(p.target_version).execute(&mut *tx).await).await?;
     check(
         snapshot(&mut tx, &names).await? == p.source_snapshot_sha256,
         "application_records_changed",
