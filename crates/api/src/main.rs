@@ -43,7 +43,7 @@ async fn run() -> Result<()> {
         &provider,
         &[
             scheduler_enabled,
-            flag("SUPA_ALLOW_OPENAI", false)?,
+            flag("SUPA_ALLOW_OPENAI", false)? || flag("SUPA_ALLOW_ANTHROPIC", false)?,
             flag("SUPA_CONTROLLED_INFERENCE", false)?,
             flag("SUPA_WALLET_ENABLED", false)?,
             std::env::var("SUPA_OPERATOR_ID").is_ok(),
@@ -67,6 +67,7 @@ async fn run() -> Result<()> {
             || private_staging
             || scheduler_enabled
             || provider != "offline"
+            || flag("SUPA_ALLOW_ANTHROPIC", false)?
             || flag("SUPA_ALLOW_OPENAI", false)?
             || flag("SUPA_CONTROLLED_INFERENCE", false)?
             || flag("SUPA_WALLET_ENABLED", false)?
@@ -118,6 +119,7 @@ async fn run() -> Result<()> {
             || (mode == "active_read_only" && preview)
             || provider != "offline"
             || scheduler_enabled
+            || flag("SUPA_ALLOW_ANTHROPIC", false)?
             || flag("SUPA_ALLOW_OPENAI", false)?
             || flag("SUPA_CONTROLLED_INFERENCE", false)?
             || flag("SUPA_WALLET_ENABLED", false)?
@@ -167,7 +169,7 @@ async fn run() -> Result<()> {
         }
         state = state.with_controlled_inference(supa_runtime::controlled::ControlledInference {
             store: store.clone(),
-            provider: Arc::new(supa_providers::OpenAi::controlled_from_env()?),
+            provider: supa_providers::controlled::configured_provider()?,
         });
     }
     store.recover_live_sessions().await?;
