@@ -20,7 +20,7 @@ impl Store {
         consent: &LiveConsent,
         policy: &InferencePolicy,
     ) -> Result<(LiveSession, Vec<Memory>)> {
-        self.reserve_live_session_bound(agent, actor, consent, policy, None)
+        self.reserve_live_session_bound(agent, actor, consent, policy, None, None)
             .await
     }
     pub async fn reserve_live_work_session(
@@ -37,6 +37,36 @@ impl Store {
             &authorization.consent,
             policy,
             Some((authorization, provider_evidence)),
+            None,
+        )
+        .await
+    }
+    pub async fn reserve_live_session_scoped(
+        &self,
+        agent: Uuid,
+        actor: Uuid,
+        consent: &LiveConsent,
+        policy: &InferencePolicy,
+        scope: &str,
+    ) -> Result<(LiveSession, Vec<Memory>)> {
+        self.reserve_live_session_bound(agent, actor, consent, policy, None, Some(scope))
+            .await
+    }
+    pub async fn reserve_live_work_session_scoped(
+        &self,
+        agent: Uuid,
+        actor: Uuid,
+        authorization: &LiveWorkConsent,
+        policy: &InferencePolicy,
+        provider: (&str, &str),
+    ) -> Result<(LiveSession, Vec<Memory>)> {
+        self.reserve_live_session_bound(
+            agent,
+            actor,
+            &authorization.consent,
+            policy,
+            Some((authorization, provider.0)),
+            Some(provider.1),
         )
         .await
     }
@@ -47,7 +77,11 @@ impl Store {
         consent: &LiveConsent,
         policy: &InferencePolicy,
         work: Option<(&LiveWorkConsent, &str)>,
+        scope: Option<&str>,
     ) -> Result<(LiveSession, Vec<Memory>)> {
+        if let Some(scope) = scope {
+            clean_text(scope, 120)?;
+        }
         writable_inference_budget(policy.budget_id)?;
         consent.validate()?;
         policy.validate()?;
@@ -77,6 +111,12 @@ impl Store {
         .await
         .map_err(db)?
         .ok_or(Error::LiveBudget)?;
+        // A live budget cannot be repurposed for a different provider/model after use.
+        let mismatched: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM live_sessions WHERE budget_id=$1 AND (data->'policy'->>'model' IS DISTINCT FROM $2 OR ($3::text IS NOT NULL AND data->>'provider_scope' IS DISTINCT FROM $3))) OR EXISTS(SELECT 1 FROM inference_calls WHERE budget_id=$1 AND policy->>'model' IS DISTINCT FROM $2)")
+            .bind(budget).bind(&policy.model).bind(scope).fetch_one(&mut *tx).await.map_err(db)?;
+        if mismatched {
+            return Err(Error::LiveBudget);
+        }
         // Fence ambiguous prior requests, including historical evaluator evidence.
         let uncertain:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM live_sessions WHERE budget_id=$1 AND status IN ('reserved','unknown')) OR EXISTS(SELECT 1 FROM inference_calls WHERE budget_id=$1 AND status IN ('reserved','unknown'))").bind(budget).fetch_one(&mut *tx).await.map_err(db)?;
         if uncertain {
@@ -131,7 +171,7 @@ impl Store {
             } else {
                 memory.clear();
             }
-            if !matches!(provider_evidence, "mock" | "openai") {
+            if !matches!(provider_evidence, "mock" | "openai" | "anthropic") {
                 return Err(Error::Denied);
             }
             Some(LiveWorkRecord {
@@ -147,6 +187,7 @@ impl Store {
             None
         };
         let session = LiveSession {
+            provider_scope: scope.map(str::to_owned),
             id: consent.request_id,
             agent_id: agent,
             approved_by: actor,
@@ -235,11 +276,10 @@ impl Store {
         self.settle_live_session_bound(
             agent,
             id,
-            proposal,
+            (proposal, None),
             usage,
             failure,
             generation_started,
-            None,
         )
         .await
     }
@@ -260,11 +300,10 @@ impl Store {
         self.settle_live_session_bound(
             agent,
             id,
-            proposal,
+            (proposal, report),
             usage,
             failure,
             generation_started,
-            report,
         )
         .await
     }
@@ -272,12 +311,12 @@ impl Store {
         &self,
         agent: Uuid,
         id: Uuid,
-        proposal: Option<LiveProposal>,
+        reports: (Option<LiveProposal>, Option<WorkProposal>),
         usage: Option<TokenUsage>,
         failure: Option<&Error>,
         generation_started: bool,
-        work_report: Option<WorkProposal>,
     ) -> Result<LiveSession> {
+        let (proposal, work_report) = reports;
         let mut tx = self.pool.begin().await.map_err(db)?;
         let current = locked(&mut tx, agent).await?;
         let mut s = live_locked(&mut tx, agent, id).await?;
