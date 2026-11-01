@@ -2,6 +2,7 @@ mod access;
 mod autonomy;
 mod controlled;
 mod economy;
+mod live_work;
 mod operator_status;
 pub use access::{OperatorCredential, Principal};
 use axum::Extension;
@@ -31,6 +32,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub live_work_enabled: bool,
     pub controlled: Option<supa_runtime::controlled::ControlledInference>,
     pub store: Store,
     pub runtime: Runtime,
@@ -53,6 +55,7 @@ impl AppState {
         }
         Ok(Self {
             controlled: None,
+            live_work_enabled: false,
             store,
             runtime,
             token: Arc::new(token),
@@ -211,6 +214,7 @@ pub fn router(state: AppState) -> Router {
         .route("/operator-status", get(operator_status::status))
         .merge(economy::routes())
         .merge(controlled::routes())
+        .merge(live_work::routes())
         .merge(wallet::routes())
         .merge(autonomy::routes())
         .merge(scheduling::routes())
