@@ -1,3 +1,4 @@
+pub mod anthropic;
 mod authentication;
 pub mod controlled;
 mod social;
