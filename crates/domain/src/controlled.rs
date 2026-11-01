@@ -68,6 +68,9 @@ impl LiveProposal {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveSession {
+    /// Server-configured account scope; verification is tracked separately.
+    #[serde(default)]
+    pub provider_scope: Option<String>,
     pub id: Uuid,
     pub agent_id: Uuid,
     pub approved_by: Uuid,
