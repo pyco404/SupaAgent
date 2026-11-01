@@ -223,3 +223,77 @@ async fn bounded_goal_reasoning_cannot_expand_tools_or_invent_memories() {
         server.await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn social_empty_context_abstains_without_transport_or_usage() {
+    let context = SocialContext {
+        personality: Personality::default(),
+        candidates: vec![],
+        memories: vec![],
+        previous_drafts: vec![],
+    };
+    let result = provider().social(&context).await;
+    assert!(result.usage.is_none());
+    assert_eq!(result.result.unwrap().reason, SocialReason::NothingNew);
+}
+
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls either provider"]
+async fn social_transports_share_personality_evidence_and_rejection_contract() {
+    let config: Value = serde_json::from_str(include_str!("../../../config/supa.json")).unwrap();
+    let event: Event = serde_json::from_value(json!({"id":"e4650e8b-78db-42a5-82db-187869a1eb77","cycle_id":null,"kind":"cycle","code":"completed","simulated":false,"created_at":"2026-10-27T00:00:00Z"})).unwrap();
+    let memory: Memory = serde_json::from_value(json!({"id":"8e00bb1b-1e56-4b70-a6fb-fd01ee220afc","cycle_id":event.id,"kind":"verified_observation","lesson":"A completed cycle is evidence, not a commercial achievement.","source_event_ids":[event.id],"created_at":"2026-10-27T00:00:00Z"})).unwrap();
+    let context = social_context(
+        serde_json::from_value(config["personality"].clone()).unwrap(),
+        &[event],
+        &[memory],
+        &[],
+    );
+    assert_eq!(context.memories.len(), 1);
+    let candidate = &context.candidates[0];
+    let valid = json!({"choice":"draft","reason":"worth_sharing","style":"reflection","text":"A completed reasoning cycle. Confidence may take a seat; evidence gets the microphone.","event_ids":[candidate.event.id],"memory_ids":[context.memories[0].id],"claims":[{"event_id":candidate.event.id,"fact":candidate.canonical_fact,"wording":candidate.public_fact}]});
+    for mode in 0..5 {
+        let mut output = valid.clone();
+        match mode {
+            1 => output["memory_ids"] = json!([uuid::Uuid::nil()]),
+            2 => output["claims"][0]["fact"] = json!("An unsupported accomplishment"),
+            3 => output["text"] = json!("A completed reasoning cycle. Draft for human review."),
+            4 => {
+                output =
+                    serde_json::to_value(SocialDecision::abstain(SocialReason::Conserve)).unwrap()
+            }
+            _ => {}
+        }
+        let (url, server) =
+            crate::wire_tests::fixture(200, envelope(output.clone()).to_string()).await;
+        let mut claude = provider();
+        claude.endpoint = Some(url);
+        let result = claude.social(&context).await;
+        assert_eq!(result.result.is_ok(), mode == 0 || mode == 4);
+        assert!(result.usage.is_some());
+        let request = server.await.unwrap();
+        let (_, body) = request.split_once("\r\n\r\n").unwrap();
+        let claude_body: Value = serde_json::from_str(body).unwrap();
+        let response = json!({"status":"completed","usage":{"input_tokens":100,"output_tokens":50},"output":[{"type":"message","content":[{"type":"output_text","text":output.to_string()}]}]});
+        let (url, server) = crate::wire_tests::fixture(200, response.to_string()).await;
+        let mut openai =
+            OpenAi::new("sk-fake-social-comparison".into(), "gpt-6-luna".into()).unwrap();
+        openai.endpoint = Some(url);
+        let result = controlled::ControlledProvider::social(&openai, &context).await;
+        assert_eq!(result.result.is_ok(), mode == 0 || mode == 4);
+        assert!(result.usage.is_some());
+        let request = server.await.unwrap();
+        let (_, body) = request.split_once("\r\n\r\n").unwrap();
+        let openai_body: Value = serde_json::from_str(body).unwrap();
+        assert_eq!(claude_body["system"], openai_body["instructions"]);
+        assert_eq!(claude_body["messages"][0]["content"], openai_body["input"]);
+        assert_eq!(
+            claude_body["output_config"]["format"]["schema"],
+            openai_body["text"]["format"]["schema"]
+        );
+        let input: Value = serde_json::from_str(openai_body["input"].as_str().unwrap()).unwrap();
+        assert_eq!(input["personality"], config["personality"]);
+        assert_eq!(input["memories"][0]["id"], json!(context.memories[0].id));
+        assert!(claude_body.get("tools").is_none());
+    }
+}
