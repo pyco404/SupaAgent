@@ -4,7 +4,13 @@ use super::*;
 pub trait ControlledProvider: Send + Sync {
     fn policy(&self) -> InferencePolicy;
     fn project(&self) -> &str;
+    fn work_evidence_kind(&self) -> &str {
+        "mock"
+    }
     async fn verify(&self) -> Result<()>;
+    async fn work(&self, _input: &LiveWorkInput) -> Invocation<WorkProposal> {
+        Invocation::unmetered(Err(Error::Denied))
+    }
     async fn reason(&self, goal: &str, memory: &[Memory]) -> Invocation<LiveProposal>;
 }
 impl OpenAi {
@@ -29,6 +35,9 @@ impl OpenAi {
 }
 #[async_trait]
 impl ControlledProvider for OpenAi {
+    fn work_evidence_kind(&self) -> &str {
+        "openai"
+    }
     fn policy(&self) -> InferencePolicy {
         self.policy.clone()
     }
@@ -69,6 +78,9 @@ impl ControlledProvider for OpenAi {
             return Err(Error::Provider);
         }
         Ok(())
+    }
+    async fn work(&self, input: &LiveWorkInput) -> Invocation<WorkProposal> {
+        self.work_request(input).await
     }
     async fn reason(&self, goal: &str, memory: &[Memory]) -> Invocation<LiveProposal> {
         let schema = json!({"type":"object","additionalProperties":false,"required":["summary","memory_ids","actions"],"properties":{
