@@ -19,7 +19,7 @@ async fn list(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult {
         .map(InferencePolicy::reservation)
         .transpose()?;
     Ok(Json(
-        json!({"enabled":s.controlled.is_some(),"mode":"controlled_live","continuous":false,"policy":policy,"minimum_reservation_microusd":minimum_reservation_microusd,"sessions":s.store.live_sessions(id).await?}),
+        json!({"enabled":s.controlled.is_some(),"mode":"controlled_live","continuous":false,"policy":policy,"minimum_reservation_microusd":minimum_reservation_microusd,"sessions":s.store.live_sessions(id).await?.into_iter().filter(|session|session.work.is_none()).collect::<Vec<_>>()}),
     ))
 }
 async fn run(
