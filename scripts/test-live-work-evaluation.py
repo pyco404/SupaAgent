@@ -60,4 +60,25 @@ class Readiness(unittest.TestCase):
         for _ in range(2):
             with tempfile.TemporaryDirectory(prefix='supa-m10a-nonce-') as tmp,patch.object(m,'ROOT',Path(tmp)),patch.dict(m.os.environ,{'SUPA_WORK_OPERATOR_TOKEN':'fixture-owner-token-'*3}),patch.object(m.subprocess,'run',return_value=checked),patch.object(m.urllib.request,'build_opener',return_value=Opener()),patch('sys.stdout',io.StringIO()):m.run(p,approval,p['model'],4000)
         self.assertEqual(posted,[nonce,nonce])  # The Rust reservation rejects the second use; a lost file cannot mint a new nonce.
+    def test_claude_is_independent_and_workspace_is_required(self):
+        plan=json.loads((m.ROOT/'config/claude-work-evaluation-plan.json').read_text())
+        result,_=m.inspect(plan)
+        self.assertFalse(result['ready']);self.assertIn('project_id_unassigned',result['blockers'])
+        plan['project_id']='wrkspc_fixture'
+        report,_=m.inspect(plan);self.assertTrue(report['ready'])
+        self.assertNotEqual(report['scope_sha256'],result['scope_sha256'])
+        for field,value in [('provider','unverified'),('model','claude-invented'),('max_requests',2),('project_id','proj_openai'),('budget_limit_microusd',50000)]:
+            bad=copy.deepcopy(plan);bad[field]=value;self.assertFalse(m.inspect(bad)[0]['ready'])
+    def test_claude_wrong_or_unassigned_scope_never_reaches_http(self):
+        plan=json.loads((m.ROOT/'config/claude-work-evaluation-plan.json').read_text())
+        with patch.object(m.urllib.request,'build_opener',side_effect=AssertionError('HTTP forbidden')):
+            with self.assertRaises(ValueError):m.run(plan,m.inspect(plan)[0]['scope_sha256'],plan['model'],4000)
+    def test_claude_database_preflight_rejects_borrowed_budget_and_wrong_target(self):
+        spec=importlib.util.spec_from_file_location('claude',m.ROOT/'scripts/claude-work-preflight.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        plan=json.loads((m.ROOT/'config/claude-work-evaluation-plan.json').read_text())
+        for field,value in [('budget_id','e6076529-e302-403e-b846-1ff902c1f641'),('input_sha256','0'*64)]:
+            bad=copy.deepcopy(plan);bad[field]=value
+            with self.assertRaises(ValueError):module.inspect(bad)
+        bad=copy.deepcopy(plan);bad['preflight']['database']['data_directory']='postgres-data/infrastructure-v1/data'
+        with self.assertRaises(ValueError):module.inspect(bad)
 if __name__=='__main__':unittest.main()
