@@ -84,6 +84,8 @@ pub struct LiveSession {
     pub generation_requests: u8,
     pub project_verified: bool,
     pub tool_result: Option<serde_json::Value>,
+    #[serde(default)]
+    pub work: Option<LiveWorkRecord>,
     pub created_at: DateTime<Utc>,
     pub finished_at: Option<DateTime<Utc>>,
 }
