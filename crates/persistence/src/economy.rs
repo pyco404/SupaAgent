@@ -171,8 +171,8 @@ impl Store {
     }
     pub async fn economic_job(&self, id: Uuid, actor: Uuid) -> Result<EconomicJob> {
         let v: Option<Value> =
-            sqlx::query_scalar("SELECT to_jsonb(j) FROM economic_jobs j WHERE id=$1")
-                .bind(id)
+            sqlx::query_scalar("SELECT CASE WHEN EXISTS(SELECT 1 FROM agent_access a WHERE a.agent_id=j.agent_id AND a.principal_id=$2 AND a.role IN ('owner','operator')) THEN to_jsonb(j) ELSE to_jsonb(j)||jsonb_build_object('assessment',j.assessment-'private_memory_references') END FROM economic_jobs j WHERE id=$1")
+                .bind(id).bind(actor)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(db)?;
@@ -236,7 +236,7 @@ impl Store {
         actor: Uuid,
         agent: Option<Uuid>,
     ) -> Result<Vec<EconomicJob>> {
-        let rows:Vec<Value>=sqlx::query_scalar("SELECT to_jsonb(j) FROM economic_jobs j WHERE ($2::uuid IS NULL OR agent_id=$2) AND (customer_id=$1 OR EXISTS(SELECT 1 FROM agent_access a WHERE a.agent_id=j.agent_id AND a.principal_id=$1 AND a.role IN ('owner','operator'))) ORDER BY created_at DESC,id LIMIT 100").bind(actor).bind(agent).fetch_all(&self.pool).await.map_err(db)?;
+        let rows:Vec<Value>=sqlx::query_scalar("SELECT CASE WHEN EXISTS(SELECT 1 FROM agent_access a WHERE a.agent_id=j.agent_id AND a.principal_id=$1 AND a.role IN ('owner','operator')) THEN to_jsonb(j) ELSE to_jsonb(j)||jsonb_build_object('assessment',j.assessment-'private_memory_references') END FROM economic_jobs j WHERE ($2::uuid IS NULL OR agent_id=$2) AND (customer_id=$1 OR EXISTS(SELECT 1 FROM agent_access a WHERE a.agent_id=j.agent_id AND a.principal_id=$1 AND a.role IN ('owner','operator'))) ORDER BY created_at DESC,id LIMIT 100").bind(actor).bind(agent).fetch_all(&self.pool).await.map_err(db)?;
         rows.into_iter().map(decode_job).collect()
     }
     pub async fn economic_command(
@@ -553,10 +553,15 @@ impl Store {
         {
             return Err(Error::Stale);
         }
-        if let Some(ref output) = output {
-            if output.to_string().len() > 16000 {
-                return Err(Error::Invalid);
-            }
+        if output.as_ref().is_some_and(|v| v.to_string().len() > 16000) {
+            return Err(Error::Invalid);
+        }
+        let delivered = output
+            .as_ref()
+            .map(work_delivered)
+            .transpose()?
+            .unwrap_or(false);
+        if delivered {
             posting(
                 &mut tx,
                 j.agent_id,
@@ -593,12 +598,12 @@ impl Store {
                 .await?;
             }
         }
-        let next = if output.is_some() {
+        let next = if delivered {
             JobState::Completed
         } else {
             JobState::Failed
         };
-        sqlx::query("UPDATE economic_jobs SET state=$2,revision=revision+1,execution_token=NULL,lease_until=NULL,output=$3,output_sha256=CASE WHEN $3::jsonb IS NULL THEN NULL ELSE encode(sha256(convert_to(($3::jsonb)::text,'UTF8')),'hex') END,earned_atoms=CASE WHEN $3::jsonb IS NULL THEN 0 ELSE (spec->>'price_atoms')::bigint END,failure_code=$4 WHERE id=$1")
+        sqlx::query("UPDATE economic_jobs SET state=$2,revision=revision+1,execution_token=NULL,lease_until=NULL,output=$3,output_sha256=CASE WHEN $3::jsonb IS NULL THEN NULL ELSE encode(sha256(convert_to(($3::jsonb)::text,'UTF8')),'hex') END,earned_atoms=CASE WHEN $2='completed' THEN (spec->>'price_atoms')::bigint ELSE 0 END,failure_code=$4 WHERE id=$1")
             .bind(id).bind(next.name()).bind(output).bind(failure).execute(&mut *tx).await.map_err(db)?;
         sqlx::query("UPDATE economic_holds SET held=false WHERE job_id=$1")
             .bind(id)
