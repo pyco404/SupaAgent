@@ -169,6 +169,17 @@ impl Store {
         }
         Ok(saved)
     }
+    /// Only scoped callers can obtain the exact input binding used by live-work consent.
+    pub async fn work_input_sha256(&self, id: Uuid, actor: Uuid) -> Result<String> {
+        self.economic_job(id, actor).await?;
+        sqlx::query_scalar(
+            "SELECT encode(sha256(convert_to(input,'UTF8')),'hex') FROM economic_jobs WHERE id=$1",
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(db)
+    }
     pub async fn economic_job(&self, id: Uuid, actor: Uuid) -> Result<EconomicJob> {
         let v: Option<Value> =
             sqlx::query_scalar("SELECT CASE WHEN EXISTS(SELECT 1 FROM agent_access a WHERE a.agent_id=j.agent_id AND a.principal_id=$2 AND a.role IN ('owner','operator')) THEN to_jsonb(j) ELSE to_jsonb(j)||jsonb_build_object('assessment',j.assessment-'private_memory_references') END FROM economic_jobs j WHERE id=$1")
