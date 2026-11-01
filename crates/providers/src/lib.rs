@@ -61,6 +61,22 @@ pub struct Offline;
 #[async_trait]
 impl Reasoner for Offline {
     async fn plan(&self, c: &Context) -> Result<Plan> {
+        // Economic work uses pure read-only tools, distinct from lifecycle actions.
+        if c.permitted_tools.iter().any(|t| t == "inspect_input") {
+            return Ok(Plan {
+                actions: c
+                    .permitted_tools
+                    .iter()
+                    .take(c.max_steps)
+                    .map(|tool| ProposedAction {
+                        tool: tool.clone(),
+                        event_ids: vec![],
+                        lesson: None,
+                        evaluation: None,
+                    })
+                    .collect(),
+            });
+        }
         let mut actions = vec![];
         if c.permitted_tools.iter().any(|s| s == "read_memory") {
             actions.push(ProposedAction {
