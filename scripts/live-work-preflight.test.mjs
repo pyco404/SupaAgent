@@ -9,7 +9,7 @@ const original=JSON.parse(await readFile(new URL('../config/live-work-evaluation
 test('frozen scope matches the existing Python execution digest',()=>{
  const checked=scopeCheck(original,fixture);assert.equal(checked.scope_valid,true);
  const report=JSON.parse(execFileSync('python3',['scripts/live-work-evaluation.py','--plan','config/live-work-evaluation-10a.json'],{encoding:'utf8'}));
- assert.equal(checked.scope_sha256,report.scope_sha256);assert.equal(checked.paid_requests,0);assert.equal(report.ready,false);
+ assert.equal(checked.scope_sha256,report.scope_sha256);assert.equal(checked.paid_requests,0);assert.equal(report.ready,Boolean(original.project_id));assert.equal(report.readiness_basis,'scope_structure_only');assert.equal(report.paid_execution_authorized,false);
 });
 test('tampered evidence, database targeting, nonce and limits fail closed',()=>{
  for(const mutate of [p=>p.preflight.task_input+=' ',p=>p.max_requests=2,p=>p.max_cost_microusd=4001,p=>p.model='other',p=>p.budget_id=p.agent_id,p=>p.preflight.database.name='primary',p=>p.preflight.database.socket_directory='/tmp/other',p=>p.preflight.request_id='bad']){
