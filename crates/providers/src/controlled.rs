@@ -97,6 +97,20 @@ impl ControlledProvider for OpenAi {
     }
 }
 
+/// Server-selected controlled provider; never selected by model output or public request fields.
+pub fn configured_provider() -> Result<std::sync::Arc<dyn ControlledProvider>> {
+    match std::env::var("SUPA_CONTROLLED_PROVIDER")
+        .as_deref()
+        .unwrap_or("openai")
+    {
+        "openai" => Ok(std::sync::Arc::new(OpenAi::controlled_from_env()?)),
+        "anthropic" => Ok(std::sync::Arc::new(
+            crate::anthropic::Anthropic::controlled_from_env()?,
+        )),
+        _ => Err(Error::Invalid),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
