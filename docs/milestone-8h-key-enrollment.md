@@ -5,6 +5,12 @@ disposable key was generated in 8H, no key home was inspected, and no fingerprin
 was enrolled. This is the human terminal handoff, not a completed key enrollment.
 Read the [8G design and tested limits](milestone-8g-encryption-readiness.md) first.
 
+The owner has now confirmed that **no separate trusted machine is available** and
+**no independent fingerprint verifier has been appointed**. Recovery-storage
+availability is not confirmed. Enrollment remains pending and all four fingerprints
+remain unverified/null. Do not start the generation commands below or encrypt
+database backups while these prerequisites are unresolved.
+
 ## Checks completed
 
 - Working branch `main`; no initial working-tree changes.
@@ -150,6 +156,75 @@ one machine is **not independent verification**. UIDs, names and proposed owner
 records are not identity proof. Do not trust a keyserver or an unsolicited contact
 merely because it supplies matching labels.
 
+### Procedure for the future independent technical reviewer
+
+This procedure is prepared only. No reviewer is appointed by this document, and
+none of the checks below has been performed for real keys.
+
+1. **Accept a limited appointment.** The owner identifies a trusted independent
+   technical reviewer and explicitly defines the scope as Supa Agent backup public-key
+   review. The reviewer is independent of the key controller's self-attestation and
+   can inspect public certificates on a separately trusted system. The appointment
+   grants no application ownership, credential issuance or backup-upload authority.
+2. **Authenticate the communication channel first.** Use an already established,
+   authenticated contact path or an in-person meeting. Independently confirm the
+   owner's and reviewer's identities through known contact details, not addresses,
+   links or telephone numbers embedded in the submitted certificate or its message.
+   For a newly established channel, complete its separate identity/bootstrap review
+   first. Stop if neither side can establish the other's identity. Record a private
+   reference to the verification method; do not put identity documents in Git or chat.
+3. **Receive public material only.** Obtain the two public certificates through the
+   agreed path. Confirm they contain public material only before inspection; reject
+   secret-key exports or mixed/ambiguous submissions without forwarding them. In a
+   private inspection home, independently extract both full primary and subkey
+   fingerprints and certificate hashes. Do not install ownertrust, retrieve keys
+   automatically or rely on a filename, UID, short ID or screenshot.
+4. **Compare all four bindings through the authenticated channel.** Read back or
+   compare the complete fingerprint strings and certificate hashes with the verified
+   controller. Confirm certification-only Ed25519 primaries, cv25519 encryption and
+   separate Ed25519 signing subkeys, valid binding/self-signatures, dates and current
+   revocation information. Establish the source and freshness of that information;
+   an old export alone does not prove there has been no subsequent revocation.
+   Confirm that the certificates and operational keys are distinct and dedicated.
+   Resolve any mismatch or ambiguity before proceeding.
+5. **Prove control with fresh synthetic challenges.** The reviewer generates a fresh
+   unpredictable nonce on their own system, bound to purpose
+   `supa-backup-public-key-review-only`, all four fingerprints, both certificate
+   hashes, the exact project/environment/bucket IDs in the provisioning report,
+   issuance time and a short expiry (at most 15 minutes). The signing controller
+   signs the exact agreed canonical challenge bytes externally; the reviewer checks
+   the detached signature against the independently established signing pins.
+   Separately, the reviewer encrypts a fresh purpose-bound challenge to the exact
+   encryption subkey; its controller decrypts it externally and returns the expected
+   nonce through the authenticated channel. Private keys and passphrases stay with
+   their controllers. Challenge success proves key control, not identity or custody
+   independence by itself. No real database data is needed.
+6. **Review recovery independently.** Confirm the actual separate workstation and
+   two independently stored encrypted media, passphrase protection, role separation,
+   expiry/renewal and revocation arrangements. Witness or independently validate a
+   synthetic recovery rehearsal from each copy, using fresh key homes without the
+   original machine or cached agents. Observe sanitized results only; never collect
+   private key exports, passphrases or a recording of their entry. A hash or a verbal
+   claim that copies exist does not establish recoverability. Mark incomplete checks
+   pending rather than inferring success.
+7. **Issue a scoped review result and stop.** Record reviewer/controller references,
+   authenticated-channel method/reference, date, all four fingerprints, certificate
+   hashes, algorithms/capabilities, validity/revocation sources, nonce/expiry and
+   challenge outcomes, recovery-copy evidence references, renewal policy and any
+   limitations. Authenticate this result through the established independent channel.
+   Preserve its digest and references in private local evidence. Do not accept a
+   requester-supplied receipt as its own trust anchor. A passed technical review
+   still requires a separate explicit decision to enroll those exact public values;
+   it never authorizes database export, credential access, signing actual backups,
+   upload, ownership grants or agent activation.
+
+Reject expired/replayed challenges and changed certificate contents. A renewed or
+amended certificate requires review of the new hash and relevant bindings even if
+the primary fingerprint stays the same. A fresh challenge must be obtained for a
+later consent action; verification receipts are not reusable execution permits.
+The reviewer must not bypass a failed check by relaxing signature, expiry or trust
+settings. Record rejection/pending reasons without sensitive material.
+
 ## D. Protected recovery copies, controlled by the owner
 
 On the external workstation only, verify that `/MEDIA_A` and `/MEDIA_B` are actually
@@ -240,8 +315,9 @@ remains quarantined; no refund, settlement, reuse or reconstruction is authorize
 
 ## Stop condition and remaining decisions
 
-This milestone is paused at the **human private-key setup checkpoint**, not marked
-complete enrollment. Needed from the owner: confirmation of the separate workstation,
+This milestone is stopped at the **human private-key setup checkpoint**, not marked
+complete enrollment. The separate workstation is unavailable and the reviewer is
+unappointed, as confirmed by the owner. Needed before proceeding: a trusted workstation,
 two independent encrypted storage locations, controller/reviewer arrangement and
 chosen expiry policy. Later provide **public material only**, independent review
 references and sanitized recovery-copy confirmation. Never provide private keys,
