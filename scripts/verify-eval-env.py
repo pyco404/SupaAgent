@@ -53,8 +53,12 @@ with tempfile.TemporaryDirectory(prefix='supa-eval-env-') as directory:
     results.append('unrelated environment keys rejected')
 
     config.unlink()
-    config.symlink_to(root / '.env.example')
-    assert check().returncode == 1
+    target = scratch / 'symlink-target'
+    target.write_text('OPENAI_MODEL=gpt-6-luna\n')
+    target.chmod(0o600)
+    config.symlink_to(target)
+    run = check()
+    assert run.returncode == 1 and json.loads(run.stderr)['error'] == 'invalid_input'
     results.append('symbolic links rejected')
     config.unlink()
 
@@ -62,7 +66,8 @@ with tempfile.TemporaryDirectory(prefix='supa-eval-env-') as directory:
     subprocess.run(['git', 'init', '--quiet', str(scratch)], check=True, capture_output=True)
     shutil.copyfile(root / '.gitignore', scratch / '.gitignore')
     assert subprocess.run(['git', '-C', str(scratch), 'check-ignore', '--quiet', '.env.eval']).returncode == 0
-    assert subprocess.run(['git', '-C', str(scratch), 'check-ignore', '--quiet', '.env.example']).returncode == 1
-    results.append('private file ignored; public example remains trackable')
+    for template in ['.env.example', 'web/.env.example']:
+        assert subprocess.run(['git', '-C', str(scratch), 'check-ignore', '--quiet', template]).returncode == 0
+    results.append('private file and both local example templates ignored')
 
 print(json.dumps({'environment_loading_checks_passed': len(results), 'checks': results, 'paid_calls': 0}))
