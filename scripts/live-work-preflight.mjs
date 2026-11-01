@@ -64,7 +64,7 @@ export async function main(args=process.argv.slice(2)){
  const fixture=JSON.parse(await readFile(resolve(root,'config/work-evaluation-fixtures.json'),'utf8')).cases.find(c=>c.id==='supplied-synthesis');
  const report=scopeCheck(plan,fixture);if(!report.scope_valid)throw Error('invalid_frozen_scope');
  if(args.includes('--credentials')||args.includes('--verify-project')){const c=await credentials();report.credentials=c.report;if(args.includes('--verify-project'))report.provider=await verifyModel(plan,c);}
- if(args.includes('--check-database'))report.database=await databaseCheck(plan,{forExecution:args.includes('--for-execution')});
+ if(args.includes('--check-database')){report.database=await databaseCheck(plan,{forExecution:args.includes('--for-execution')});report.budget_state=report.database.budget_state;}
  report.ready_for_paid=false;report.authorization='fresh_operator_paid_approval_required';report.project_access_verified=report.provider?.model_metadata_access_verified===true;
  console.log(JSON.stringify(report,null,2));
 }
