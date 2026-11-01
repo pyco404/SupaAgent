@@ -3,6 +3,7 @@ pub mod controlled;
 mod social;
 pub mod solana;
 pub mod vault;
+mod work;
 use async_trait::async_trait;
 pub use authentication::key_diagnostics;
 use serde::Serialize;
