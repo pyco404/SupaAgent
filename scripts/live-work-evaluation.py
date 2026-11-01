@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import subprocess
 import urllib.request
 from urllib.parse import urlparse
 import uuid
@@ -39,6 +40,11 @@ def inspect(plan):
             except (ValueError,AssertionError,TypeError):blockers.append(f'invalid_{key}')
     if plan.get('input_sha256') and not re.fullmatch('[a-f0-9]{64}',plan['input_sha256']):blockers.append('invalid_input_binding')
     if plan.get('project_id') and not re.fullmatch(r'proj_[A-Za-z0-9_-]{1,114}',plan['project_id']):blockers.append('invalid_project')
+    if 'preflight' in plan:
+        preflight=plan['preflight']
+        try:
+            nonce=uuid.UUID(preflight['request_id']);assert nonce.version==4 and nonce.int
+        except (KeyError,ValueError,TypeError,AssertionError):blockers.append('invalid_fixed_evaluation_nonce')
     return {'mode':'readiness_only','network_requests':0,'paid_requests':0,'ready':not blockers,'blockers':blockers,'scope_sha256':digest({'plan':plan,'fixture':case}),'fixture_sha256':digest(case),'proposed_reservation_microusd':3536,'maximum_provider_requests':1},case
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -47,6 +53,12 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 def run(plan,approval,model,ceiling):
     report,case=inspect(plan)
     if not report['ready'] or approval!=report['scope_sha256'] or model!=plan['model'] or ceiling!=plan['max_cost_microusd']:raise ValueError('exact_scope_model_budget_approval_required')
+    if 'preflight' in plan:
+        # Read-only identity/accounting verification before any HTTP request or paid dispatch.
+        checked=subprocess.run(['node',str(ROOT/'scripts/live-work-preflight.mjs'),'--plan-stdin','--check-database','--for-execution'],input=json.dumps(plan),text=True,capture_output=True,timeout=12)
+        if checked.returncode:raise ValueError('frozen_disposable_target_not_execution_ready')
+        target=json.loads(checked.stdout)
+        if target.get('scope_sha256')!=approval or target.get('database',{}).get('budget_state')!='installed_zero_spent':raise ValueError('frozen_target_scope_mismatch')
     token=os.environ.get('SUPA_WORK_OPERATOR_TOKEN','')
     if not 32<=len(token)<=256 or not token.isascii() or any(ord(c)<33 or ord(c)>126 for c in token):raise ValueError('scoped_owner_authentication_required')
     origin=plan['api_origin'].rstrip('/');opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
@@ -69,7 +81,7 @@ def run(plan,approval,model,ceiling):
     job=next((j for j in metadata['jobs'] if j['id']==plan['job_id']),None)
     if job is None or job['input_sha256']!=plan['input_sha256']:raise ValueError('missing_bound_job')
     now=datetime.now(timezone.utc);stamp=lambda t:t.isoformat().replace('+00:00','Z')
-    consent={'job_id':job['id'],'expected_revision':job['revision'],'input_sha256':job['input_sha256'],'approved_tools':job['approved_tools'],'use_memory':False,'consent':{'request_id':str(uuid.uuid4()),'goal':case['objective'],'model':plan['model'],'authorize_paid':True,'consented_at':stamp(now),'expires_at':stamp(now+timedelta(minutes=2)),'max_requests':1,'max_input_tokens':plan['max_input_tokens'],'max_output_tokens':plan['max_output_tokens'],'max_cost_microusd':ceiling}}
+    consent={'job_id':job['id'],'expected_revision':job['revision'],'input_sha256':job['input_sha256'],'approved_tools':job['approved_tools'],'use_memory':False,'consent':{'request_id':plan.get('preflight',{}).get('request_id') or str(uuid.uuid4()),'goal':case['objective'],'model':plan['model'],'authorize_paid':True,'consented_at':stamp(now),'expires_at':stamp(now+timedelta(minutes=2)),'max_requests':1,'max_input_tokens':plan['max_input_tokens'],'max_output_tokens':plan['max_output_tokens'],'max_cost_microusd':ceiling}}
     directory=ROOT/'artifacts/milestone-10/live-requests';directory.mkdir(parents=True,exist_ok=True,mode=0o700)
     if directory.is_symlink() or directory.stat().st_uid!=os.geteuid() or directory.stat().st_mode&0o077:raise ValueError('private_request_journal_directory_required')
     # One scope gets one journal. Ambiguous or repeated invocations never dispatch again.
