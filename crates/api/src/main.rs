@@ -60,6 +60,9 @@ async fn run() -> Result<()> {
     let preview = flag("SUPA_EPOCH_READONLY_PREVIEW", false)?;
     let epoch_mode = std::env::var("SUPA_EPOCH_MODE").ok();
     if epoch_mode.as_deref() == Some("controlled_offline") {
+        if flag("SUPA_CONTROLLED_WORK", false)? {
+            return Err(Error::Denied);
+        }
         if preview
             || private_staging
             || scheduler_enabled
@@ -201,6 +204,12 @@ async fn run() -> Result<()> {
         .transpose()?;
     if wallet_poll.is_some_and(|v| v < 30) || wallet_poll.is_some() && state.wallets.is_none() {
         return Err(Error::Invalid);
+    }
+    if flag("SUPA_CONTROLLED_WORK", false)? {
+        if state.controlled.is_none() || scheduler_enabled || provider != "offline" {
+            return Err(Error::Denied);
+        }
+        state = state.with_live_work_evaluation();
     }
     let monitor = supa_runtime::health::WorkerMonitor::start(
         state.store.clone(),
