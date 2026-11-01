@@ -103,6 +103,7 @@ async fn archived_budget_cannot_be_recreated_reserved_or_refunded() {
     sqlx::query("INSERT INTO inference_calls(id,agent_id,cycle_id,purpose,attempt,policy,budget_id,reserved_microusd,accounted_microusd,status) VALUES($1,$2,$3,'plan',0,$4,$5,4048,4048,'reserved')")
         .bind(call).bind(agent.id).bind(cycle).bind(json!(policy)).bind(archived).execute(store.pool()).await.unwrap();
     let session = LiveSession {
+        work: None,
         id: consent.request_id,
         agent_id: agent.id,
         approved_by: owner,
