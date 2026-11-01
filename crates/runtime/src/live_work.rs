@@ -15,12 +15,12 @@ impl ControlledInference {
         let policy = self.provider.policy();
         let (session, memories) = self
             .store
-            .reserve_live_work_session(
+            .reserve_live_work_session_scoped(
                 agent,
                 actor,
                 &authorization,
                 &policy,
-                self.provider.work_evidence_kind(),
+                (self.provider.work_evidence_kind(), self.provider.project()),
             )
             .await?;
         let work = session.work.as_ref().ok_or(Error::Invalid)?;
