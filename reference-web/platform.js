@@ -99,12 +99,22 @@ export async function sectionView(id, state, agentId) {
       if(profile){add('Agent profile','heading');record('Lifecycle',profile.agent.lifecycle);record('Created',profile.agent.created_at);record('Verified activity records',activity?.length);record('Wallet network',wallet?.network ?? 'No saved wallet identity');record('Wallet address',wallet?.address ?? 'unavailable');}
       if(goals){add('Goals','heading');if(!goals.length)empty('goals');goals.forEach(g=>add(`${g.completed?'complete':'open'} / priority ${g.priority} / suggested progress ${g.suggested_progress_bps/100}%\n${g.description}\nref ${g.id}`));}
       if(cycles){add(`Saved reasoning cycles / ${cycles.length}`,'heading');cycles.forEach(c=>add(`${c.status} / ${c.started_at}\ncycle ${c.id}\nfinished ${c.finished_at ?? 'not recorded'}${c.failure_code?' / failure '+c.failure_code:''}`));}
+      const workRecords=await load('economy');
+      if(workRecords?.jobs){
+        const jobs=workRecords.jobs.filter(job=>job.output?.work||job.state==='executing');
+        add('Bounded supplied-input work','heading');if(!jobs.length)empty('bounded task results');
+        for(const job of jobs.slice(0,8)){
+          const work=job.output?.work;add(`${job.spec.name} / ${job.state} / ${job.network}\njob ${job.id}\n${work?`${work.status} / ${work.steps?.length??0} recorded steps / ${work.evidence?.length??0} supplied references`:'An execution lease was claimed; completion is not verified.'}`);
+          if(work)rows.push({kind:'detail',text:'Task result and evidence',body:JSON.stringify({work,operator_memory_references:job.assessment?.private_memory_references??[]},null,2)});
+        }
+        add('Inspect Economy for scoped task controls and full reports. Offline results are not live GPT runs.','notice');
+      }
       if(actions){add(`Tool actions / ${actions.length}`,'heading');actions.forEach(a=>add(`${a.proposal.tool} / authorization ${a.authorization_outcome} / ${a.status}\ncycle ${a.cycle_id}${a.failure_code?' / failure '+a.failure_code:''}`));}
       if(activity){add(`Saved activity / ${activity.length}`,'heading');activity.forEach(e=>add(`${e.simulated?'Simulated':'Recorded'} / ${e.kind} / ${e.code}\n${e.created_at} / event ${e.id}`));}
     } else if(id==='memory') {
       add('Operator-only learning records. Hypotheses are not established facts.','notice');
       const memories=await load('memory');
-      if(memories){if(!memories.length)empty('memories');memories.forEach(m=>add(`${m.kind==='verified_observation'?'Verified observation':'Hypothesis / unverified'}\n${m.lesson}\n${m.created_at}\nevents ${m.source_event_ids.join(', ') || 'none'}\ncycle ${m.cycle_id ?? 'not recorded'}`));}
+      if(memories){if(!memories.length)empty('memories');memories.forEach(m=>add(`${m.kind==='verified_observation'?'Verified observation':'Hypothesis / unverified'}\n${m.lesson}\n${m.created_at}\nmemory ${m.id}\nevents ${m.source_event_ids.join(', ') || 'none'}\ncycle ${m.cycle_id ?? 'not recorded'}`));}
     } else if(id==='economy') {
       const economic=await load('economy');
       if(economic)rows.push({kind:'economy',view:economic,agentId});
