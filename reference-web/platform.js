@@ -85,7 +85,7 @@ export async function sectionView(id, state, agentId) {
     add(`${agent?.name ?? 'Selected agent'} / ${agent?.lifecycle ?? 'status unavailable'}`,'heading');
     record('Identity',agentId);
     if(id==='intelligence') {
-      add('Offline cycles and controlled live GPT sessions have separate histories and accounting. Viewing records never runs inference.','notice');
+      add('Offline cycles and controlled live model sessions have separate histories and accounting. Viewing records never runs inference.','notice');
       const [profile,wallet,goals,cycles,actions,activity]=await Promise.all(['','wallet','goals','cycles','actions','activity'].map(load));
       const [schedule,health,history,access]=await Promise.all(['schedule','execution-health','authorizations','access'].map(resource=>read(`/api/agents/${agentId}/${resource}`)));
       if(access.data)record('Your role',access.data.role);
@@ -108,7 +108,7 @@ export async function sectionView(id, state, agentId) {
           const work=job.output?.work;add(`${job.spec.name} / ${job.state} / ${job.network}\njob ${job.id}\n${work?`${work.status} / ${work.steps?.length??0} recorded steps / ${work.evidence?.length??0} supplied references`:'An execution lease was claimed; completion is not verified.'}`);
           if(work)rows.push({kind:'detail',text:'Task result and evidence',body:JSON.stringify({work,operator_memory_references:job.assessment?.private_memory_references??[]},null,2)});
         }
-        add('Inspect Economy for scoped task controls and full reports. Offline results are not live GPT runs.','notice');
+        add('Inspect Economy for scoped task controls and full reports. Offline results are not live model runs.','notice');
       }
       if(actions){add(`Tool actions / ${actions.length}`,'heading');actions.forEach(a=>add(`${a.proposal.tool} / authorization ${a.authorization_outcome} / ${a.status}\ncycle ${a.cycle_id}${a.failure_code?' / failure '+a.failure_code:''}`));}
       if(activity){add(`Saved activity / ${activity.length}`,'heading');activity.forEach(e=>add(`${e.simulated?'Simulated':'Recorded'} / ${e.kind} / ${e.code}\n${e.created_at} / event ${e.id}`));}
