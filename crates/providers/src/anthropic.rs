@@ -298,6 +298,14 @@ impl ControlledProvider for Anthropic {
                 }),
         }
     }
+    async fn social(&self, context: &SocialContext) -> Invocation<SocialDecision> {
+        if context.candidates.is_empty() {
+            return Invocation::unmetered(Ok(SocialDecision::abstain(SocialReason::NothingNew)));
+        }
+        let (instructions, input, schema) = crate::social::social_payload(context);
+        let raw = self.request(&instructions, input, schema).await;
+        crate::social::validated_social(crate::social::social_result(raw), context)
+    }
     async fn reason(&self, goal: &str, memories: &[Memory]) -> Invocation<LiveProposal> {
         let schema = json!({"type":"object","additionalProperties":false,"required":["summary","memory_ids","actions"],"properties":{
             "summary":{"type":"string"},"memory_ids":{"type":"array","items":{"type":"string"}},
