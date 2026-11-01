@@ -14,7 +14,7 @@ impl ControlledInference {
         }
         let (session, memory) = self
             .store
-            .reserve_live_session(agent, actor, &consent, &policy)
+            .reserve_live_session_scoped(agent, actor, &consent, &policy, self.provider.project())
             .await?;
         self.store
             .live_request_stage(agent, session.id, false)
