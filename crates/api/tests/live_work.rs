@@ -317,10 +317,9 @@ async fn ambiguous_charges_concurrency_and_scope_fail_closed() {
     );
     assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
     let options = store.pool().connect_options();
-    let reopened =
-        Store::connect(&sqlx::ConnectOptions::to_url_lossy(options.as_ref()).to_string())
-            .await
-            .unwrap();
+    let reopened = Store::connect(sqlx::ConnectOptions::to_url_lossy(options.as_ref()).as_ref())
+        .await
+        .unwrap();
     assert!(
         reopened
             .live_sessions(agent)
@@ -379,10 +378,9 @@ async fn revocation_expired_leases_and_restart_retain_charge_evidence() {
     );
     store.recover_live_sessions().await.unwrap();
     let options = store.pool().connect_options();
-    let reopened =
-        Store::connect(&sqlx::ConnectOptions::to_url_lossy(options.as_ref()).to_string())
-            .await
-            .unwrap();
+    let reopened = Store::connect(sqlx::ConnectOptions::to_url_lossy(options.as_ref()).as_ref())
+        .await
+        .unwrap();
     let persisted = reopened.live_sessions(agent).await.unwrap();
     assert_eq!(persisted[0].status, "unknown");
     assert_eq!(persisted[0].generation_requests, 0);
@@ -498,4 +496,102 @@ async fn missing_usage_metadata_failure_and_timeout_do_not_replay_paid_work() {
             StatusCode::OK
         );
     }
+}
+
+/// Mocked Claude origin tag exercises persistence only; never constructs an Anthropic client.
+struct MockClaudeWork(support::MockWorkProvider, &'static str);
+#[async_trait::async_trait]
+impl supa_providers::controlled::ControlledProvider for MockClaudeWork {
+    fn policy(&self) -> InferencePolicy {
+        self.0.policy.clone()
+    }
+    fn project(&self) -> &str {
+        self.1
+    }
+    fn work_evidence_kind(&self) -> &str {
+        "anthropic"
+    }
+    async fn verify(&self) -> Result<()> {
+        Ok(())
+    }
+    async fn reason(&self, _: &str, _: &[Memory]) -> supa_providers::Invocation<LiveProposal> {
+        supa_providers::Invocation {
+            result: Err(Error::Denied),
+            usage: None,
+        }
+    }
+    async fn work(&self, input: &LiveWorkInput) -> supa_providers::Invocation<WorkProposal> {
+        supa_providers::controlled::ControlledProvider::work(&self.0, input).await
+    }
+}
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL supa_m10_test; synthetic provider only"]
+async fn claude_work_accounting_is_audited_and_budget_cannot_switch_models() {
+    let (store, agent, actor, mut policy) = setup().await;
+    policy.model = "claude-haiku-5-5".into();
+    let cases: Value = serde_json::from_str(include_str!(
+        "../../../config/work-evaluation-fixtures.json"
+    ))
+    .unwrap();
+    let j = job(&store, agent, actor, &cases["cases"][0]).await;
+    let provider = Arc::new(MockClaudeWork(
+        support::MockWorkProvider {
+            policy: policy.clone(),
+            calls: AtomicUsize::new(0),
+            mode: 0,
+        },
+        "wrkspc_synthetic_fixture",
+    ));
+    let runtime = ControlledInference {
+        store: store.clone(),
+        provider: provider.clone(),
+    };
+    let c = consent(&store, &j, actor, &policy, false).await;
+    let session = runtime.run_work(agent, actor, c.clone()).await.unwrap();
+    assert_eq!(session.status, "awaiting_approval");
+    assert_eq!(
+        session.provider_scope.as_deref(),
+        Some("wrkspc_synthetic_fixture")
+    );
+    assert_eq!(session.work.unwrap().provider_evidence, "anthropic");
+    assert_eq!(provider.0.calls.load(Ordering::SeqCst), 1);
+    assert!(runtime.run_work(agent, actor, c).await.is_err());
+    let mut other = policy.clone();
+    other.model = "gpt-6-luna".into();
+    let c = consent(&store, &j, actor, &other, false).await;
+    let rejected = ControlledInference {
+        store: store.clone(),
+        provider: Arc::new(MockClaudeWork(
+            support::MockWorkProvider {
+                policy: other,
+                calls: AtomicUsize::new(0),
+                mode: 0,
+            },
+            "wrkspc_synthetic_fixture",
+        )),
+    };
+    assert!(matches!(
+        rejected.run_work(agent, actor, c).await,
+        Err(Error::LiveBudget)
+    ));
+    let c = consent(&store, &j, actor, &policy, false).await;
+    let wrong_scope = ControlledInference {
+        store: store.clone(),
+        provider: Arc::new(MockClaudeWork(
+            support::MockWorkProvider {
+                policy,
+                calls: AtomicUsize::new(0),
+                mode: 0,
+            },
+            "wrkspc_other_account",
+        )),
+    };
+    assert!(matches!(
+        wrong_scope.run_work(agent, actor, c).await,
+        Err(Error::LiveBudget)
+    ));
+    let saved = store.economic_job(j.id, actor).await.unwrap();
+    assert_eq!(saved.state, JobState::Created);
+    assert_eq!(saved.received_atoms, 0);
+    assert_eq!(saved.earned_atoms, 0);
 }
