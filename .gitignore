@@ -1,7 +1,6 @@
 /target/
 .env
 .env.*
-!.env.example
 *.log
 __pycache__/
 # Generated evidence stays local; this does not untrack existing Git history.
