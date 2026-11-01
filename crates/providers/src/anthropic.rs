@@ -28,7 +28,13 @@ impl Anthropic {
         {
             return Err(Error::Denied);
         }
-        let value = |name| std::env::var(name).map_err(|_| Error::Invalid);
+        let local = crate::anthropic_credentials::local()?;
+        let value = |name: &str| {
+            std::env::var(name)
+                .ok()
+                .or_else(|| local.get(name).map(|value| value.to_string()))
+                .ok_or(Error::Invalid)
+        };
         let budget: uuid::Uuid = value("ANTHROPIC_LIVE_BUDGET_ID")?
             .parse()
             .map_err(|_| Error::Invalid)?;
