@@ -1,3 +1,5 @@
+mod work;
+pub use work::*;
 mod economy;
 pub use economy::*;
 pub mod controlled;
