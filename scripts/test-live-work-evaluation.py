@@ -42,4 +42,22 @@ class Readiness(unittest.TestCase):
             with self.assertRaises(FileExistsError):m.run(p,approval,p['model'],4000)
             records=list(Path(tmp).rglob('*.jsonl'));self.assertEqual(len(records),1);text=records[0].read_text();self.assertNotIn('fixture-owner-token',text)
         self.assertEqual(sum(body is not None for _,body in calls),1)
+    def test_disposable_identity_gate_rejects_before_http_or_authentication(self):
+        p=self.plan();p['preflight']={'request_id':str(uuid.uuid4())};approval=m.inspect(p)[0]['scope_sha256']
+        with patch.object(m.subprocess,'run',return_value=m.subprocess.CompletedProcess([],1,'','')),patch.object(m.urllib.request,'build_opener',side_effect=AssertionError('HTTP forbidden')):
+            with self.assertRaisesRegex(ValueError,'frozen_disposable_target_not_execution_ready'):m.run(p,approval,p['model'],4000)
+    def test_frozen_nonce_survives_local_journal_loss(self):
+        p=self.plan();case=m.inspect(p)[1];source=json.dumps({k:case[k] for k in ['objective','material','requirements']});p['input_sha256']=hashlib.sha256(source.encode()).hexdigest();nonce=str(uuid.uuid4());p['preflight']={'request_id':nonce};approval=m.inspect(p)[0]['scope_sha256'];posted=[]
+        class Opener:
+            def open(self,req,timeout):
+                if req.full_url.endswith('/health'):result={'epoch':None}
+                elif req.full_url.endswith('/jobs/'+p['job_id']):result={'job':{'state':'created','agent_id':p['agent_id'],'received_atoms':0,'earned_atoms':0,'input':source}}
+                elif req.data:
+                    body=json.loads(req.data);posted.append(body['consent']['request_id']);result={'id':nonce,'status':'awaiting_approval'}
+                else:result={'enabled':True,'project_id':p['project_id'],'policy':{'model':p['model'],'budget_id':p['budget_id'],'budget_limit_microusd':5000,'input_token_bound':24192,'max_output_tokens':1024},'jobs':[{'id':p['job_id'],'revision':0,'input_sha256':p['input_sha256'],'approved_tools':['inspect_input','extract_evidence','check_requirements']}]}
+                return io.BytesIO(json.dumps(result).encode())
+        checked=m.subprocess.CompletedProcess([],0,json.dumps({'scope_sha256':approval,'database':{'budget_state':'installed_zero_spent'}}),'')
+        for _ in range(2):
+            with tempfile.TemporaryDirectory(prefix='supa-m10a-nonce-') as tmp,patch.object(m,'ROOT',Path(tmp)),patch.dict(m.os.environ,{'SUPA_WORK_OPERATOR_TOKEN':'fixture-owner-token-'*3}),patch.object(m.subprocess,'run',return_value=checked),patch.object(m.urllib.request,'build_opener',return_value=Opener()),patch('sys.stdout',io.StringIO()):m.run(p,approval,p['model'],4000)
+        self.assertEqual(posted,[nonce,nonce])  # The Rust reservation rejects the second use; a lost file cannot mint a new nonce.
 if __name__=='__main__':unittest.main()
