@@ -121,7 +121,7 @@ impl Runtime {
         if !verified.is_empty() {
             context.permitted_tools.insert(0, "read_memory".into());
         }
-        if context.permitted_tools.len() > a.config.max_steps as usize {
+        if context.permitted_tools.len() > a.config.max_steps {
             return Err(Error::ResourceBudget);
         }
         context.max_steps = context.permitted_tools.len();
