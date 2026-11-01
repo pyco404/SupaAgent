@@ -190,6 +190,7 @@ async function select(index,background=false){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
     }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
     else if(row.kind==='economy')buffer.append(economyPanel(row.view,row.agentId));
+    else if(row.kind==='livework')buffer.append(liveWorkPanel(row.view,row.agentId));
     else if(row.kind==='live')buffer.append(livePanel(row.view,row.role,row.agentId));
     else if(row.kind==='schedule')buffer.append(schedulePanel(row.status,row.goals,row.role));
     else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
@@ -455,3 +456,42 @@ window.addEventListener('keydown',async event=>{
   else if(event.key==='G')$('.buffer').scrollTo({top:$('.buffer').scrollHeight});
 });
 window.addEventListener('pagehide',event=>{if(!event.persisted){clearInterval(liveTimer);cancelTyping();wheel?.destroy();scenes?.destroy();}});
+
+function liveWorkPanel(view,id){
+  const panel=node('details','calculation autonomy-panel');panel.dataset.liveWork='evaluation';panel.append(node('summary','','GPT work evaluation / separate inference accounting'));
+  panel.append(node('p','terminal-notice','Owner-only evaluation of unpaid supplied-input jobs. No customer payment or commercial delivery. Model interpretations require human review; exact citations and integer totals are checked by the application. No automatic paid retry.'));
+  const feedback=node('p','terminal-notice');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
+  const reload=node('button','','Reload work evaluations');reload.type='button';reload.addEventListener('click',()=>void select(itemIndex));panel.append(reload);
+  if(!view.enabled||!view.policy)panel.append(node('p','terminal-notice','Live work is disabled. Credentials, a separate approved budget, exact scope and fresh owner consent are required.'));
+  else if(!view.jobs.length)panel.append(node('p','terminal-notice','No unpaid owner-supplied job is available. Create a supplied-input simulated job without recording a payment.'));
+  else {
+    const policy=view.policy,form=node('form','autonomy-form'),jobs=node('select'),label=node('label','','Unpaid evaluation job');jobs.id='live-work-job';label.htmlFor=jobs.id;
+    for(const job of view.jobs){const option=node('option','',`${job.kind} / ${job.objective}`);option.value=job.id;jobs.append(option);}
+    const memory=node('input');memory.type='checkbox';const memoryLabel=node('label','autonomy-consent');memoryLabel.append(memory,document.createTextNode('Use up to two relevant, evidence-backed private memories for this evaluation.'));
+    const ceiling=node('input');ceiling.type='number';ceiling.id='live-work-ceiling';ceiling.min=String(view.minimum_reservation_microusd);ceiling.max='100000';ceiling.step='1';ceiling.value=ceiling.min;ceiling.required=true;const ceilingLabel=node('label','','Maximum provider cost / microUSD');ceilingLabel.htmlFor=ceiling.id;
+    const consent=node('input');consent.type='checkbox';consent.required=true;const consentLabel=node('label','autonomy-consent');consentLabel.append(consent,document.createTextNode('I authorize exactly one provider request for this job and model within the displayed token and cost limits. Real API charges are separate from simulated funds.'));
+    const submit=node('button','','Authorize one GPT work evaluation');submit.type='submit';
+    form.append(node('p','prompt',`Model ${policy.model}. Budget ${policy.budget_id}. Input ceiling ${policy.input_token_bound}; output ceiling ${policy.max_output_tokens}. Reservation ${units(view.minimum_reservation_microusd)} USD. No financial actions or hosted tools.`),label,jobs,memoryLabel,ceilingLabel,ceiling,consentLabel,submit);panel.append(form);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();event.stopPropagation();if(!form.reportValidity()||!consent.checked)return;
+      const job=view.jobs.find(j=>j.id===jobs.value),now=new Date(),scope={job_id:job.id,expected_revision:job.revision,input_sha256:job.input_sha256,approved_tools:[...job.approved_tools,...(memory.checked?['read_memory']:[])],use_memory:memory.checked,consent:{request_id:crypto.randomUUID(),goal:job.objective,model:policy.model,authorize_paid:true,consented_at:now.toISOString(),expires_at:new Date(now.getTime()+120000).toISOString(),max_requests:1,max_input_tokens:policy.input_token_bound,max_output_tokens:policy.max_output_tokens,max_cost_microusd:Number(ceiling.value)}};
+      panel.dataset.economicActionPending='true';submit.disabled=true;jobs.disabled=true;memory.disabled=true;consent.disabled=true;feedback.textContent='Evaluation requested. Do not resubmit; reload saved records after an uncertain result.';
+      try{const response=await fetch(`/api/agents/${id}/live-work`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Supa-Action':'controlled-inference'},body:JSON.stringify(scope),signal:AbortSignal.timeout(65000)});const result=await response.json();feedback.textContent=response.ok&&result.id===scope.consent.request_id?`Saved evaluation ${result.id} / ${result.status}. Reload to inspect evidence and usage.`:'Evaluation not confirmed. Reload saved records; no automatic retry.';}catch{feedback.textContent='Outcome uncertain. Reload saved records and review reservations before any new consent.';}
+    });
+  }
+  for(const session of view.sessions){
+    const work=session.work;if(!work)continue;const block=node('details','calculation');block.dataset.workSession=session.id;block.append(node('summary','',`${work.provider_evidence==='mock'?'Mocked GPT work':'GPT work'} / ${session.status} / ${session.policy.model}`),node('p','prompt',`Session ${session.id} / unpaid job ${work.authorization.job_id}`),node('p','terminal-notice',`Reserved ${units(session.reserved_microusd)} USD / accounted ${units(session.accounted_microusd)} USD${work.provider_evidence==='mock'?' / synthetic provider usage; no real API charge':''}. Simulated operating funds and customer liabilities are unchanged.`));
+    const offer=view.jobs.find(job=>job.id===work.authorization.job_id);
+    if(offer&&session.usage&&session.status!=='unknown')block.append(node('p','terminal-notice',`Hypothetical offer ${units(offer.hypothetical_service_revenue_atoms)} nominal USD; less usage-based inference ${units(offer.hypothetical_service_revenue_atoms-session.accounted_microusd)} nominal USD. This is an illustrative comparison, not revenue or spendable funds.`));
+    if(session.usage)block.append(node('p','prompt',`Provider usage: ${session.usage.input_tokens} input / ${session.usage.output_tokens} output / ${session.usage.cached_input_tokens} cached / ${session.usage.cache_write_tokens} cache-write tokens.`));
+    else block.append(node('p','terminal-notice','Provider usage unavailable. An uncertain reservation must be reviewed; it cannot be retried automatically.'));
+    if(work.report){block.append(node('h3','terminal-heading',`Model interpretation / ${work.report.status}`),node('p','prompt',work.report.summary),node('p','terminal-notice','Interpretation is unverified model analysis, not an independently established fact or commercial completion.'));
+      for(const finding of work.report.findings){block.append(node('p','prompt',finding.observation),node('p','terminal-notice',finding.interpretation));for(const evidence of finding.evidence)block.append(node('p','prompt',`${evidence.source}:${evidence.line} / exact supplied quote\n${evidence.quote}`));}
+      for(const missing of work.report.missing_information)block.append(node('p','terminal-notice',`Missing information: ${missing}`));
+      block.append(node('p','prompt',`Memory references: ${work.report.memory_ids.join(', ')||'none'}. Proposed read-only tools: ${work.report.tools.join(', ')}.`));
+      const full=node('details','calculation');full.append(node('summary','','Full model report and deterministic checks'));const pre=node('pre','',JSON.stringify({report:work.report,baseline:work.baseline,checks:work.tool_results},null,2));pre.style.whiteSpace='pre-wrap';pre.style.overflowWrap='anywhere';full.append(pre);block.append(full);
+    }
+    if(session.failure_code)block.append(node('p','terminal-notice',session.failure_code));panel.append(block);
+  }
+  panel.append(feedback);return panel;
+}
