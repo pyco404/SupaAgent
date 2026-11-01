@@ -20,6 +20,34 @@ impl Store {
         consent: &LiveConsent,
         policy: &InferencePolicy,
     ) -> Result<(LiveSession, Vec<Memory>)> {
+        self.reserve_live_session_bound(agent, actor, consent, policy, None)
+            .await
+    }
+    pub async fn reserve_live_work_session(
+        &self,
+        agent: Uuid,
+        actor: Uuid,
+        authorization: &LiveWorkConsent,
+        policy: &InferencePolicy,
+        provider_evidence: &str,
+    ) -> Result<(LiveSession, Vec<Memory>)> {
+        self.reserve_live_session_bound(
+            agent,
+            actor,
+            &authorization.consent,
+            policy,
+            Some((authorization, provider_evidence)),
+        )
+        .await
+    }
+    async fn reserve_live_session_bound(
+        &self,
+        agent: Uuid,
+        actor: Uuid,
+        consent: &LiveConsent,
+        policy: &InferencePolicy,
+        work: Option<(&LiveWorkConsent, &str)>,
+    ) -> Result<(LiveSession, Vec<Memory>)> {
         writable_inference_budget(policy.budget_id)?;
         consent.validate()?;
         policy.validate()?;
@@ -69,7 +97,55 @@ impl Store {
         {
             return Err(Error::LiveBudget);
         }
-        let memory = relevant_memories(&a, &consent.goal, 12);
+        let mut memory = relevant_memories(&a, &consent.goal, 12);
+        let work_record = if let Some((authorization, provider_evidence)) = work {
+            if !a.capabilities.contains(&Capability::EvaluateGoal) {
+                return Err(Error::Denied);
+            }
+            let job = work_job(&mut tx, agent, actor, authorization).await?;
+            let request = WorkRequest::parse(&job.input, job.spec.kind)?;
+            authorization.validate(&request, job.spec.kind)?;
+            if authorization.approved_tools.len() > a.config.max_steps as usize {
+                return Err(Error::ResourceBudget);
+            }
+            let pending:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM live_sessions WHERE agent_id=$1 AND status IN ('reserved','unknown') AND data->'work'->'authorization'->>'job_id'=$2)").bind(agent).bind(job.id.to_string()).fetch_one(&mut *tx).await.map_err(db)?;
+            if pending {
+                return Err(Error::Busy);
+            }
+            if authorization.use_memory {
+                memory.retain(|m| {
+                    m.kind == MemoryKind::VerifiedObservation
+                        && !m.source_event_ids.is_empty()
+                        && request
+                            .objective
+                            .split_whitespace()
+                            .filter(|t| t.len() > 3)
+                            .any(|t| m.lesson.to_lowercase().contains(&t.to_lowercase()))
+                });
+                memory.truncate(2);
+                for m in &memory {
+                    clean_text(&m.lesson, 1000)?;
+                    validate_work_source(&m.lesson)?;
+                    events_by_ids_tx(&mut tx, agent, &m.source_event_ids).await?;
+                }
+            } else {
+                memory.clear();
+            }
+            if !matches!(provider_evidence, "mock" | "openai") {
+                return Err(Error::Denied);
+            }
+            Some(LiveWorkRecord {
+                provider_evidence: provider_evidence.into(),
+                authorization: authorization.clone(),
+                request: request.clone(),
+                kind: job.spec.kind,
+                baseline: analyze_work(&request, job.spec.kind)?,
+                report: None,
+                tool_results: None,
+            })
+        } else {
+            None
+        };
         let session = LiveSession {
             id: consent.request_id,
             agent_id: agent,
@@ -87,6 +163,7 @@ impl Store {
             generation_requests: 0,
             project_verified: false,
             tool_result: None,
+            work: work_record,
             created_at: Utc::now(),
             finished_at: None,
         };
@@ -115,6 +192,22 @@ impl Store {
         if s.status != "reserved" || s.consent.expires_at <= Utc::now() {
             return Err(Error::Stale);
         }
+        let lease_live: bool = sqlx::query_scalar(
+            "SELECT lease_until>clock_timestamp() FROM live_sessions WHERE id=$1",
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(db)?;
+        if !lease_live {
+            return Err(Error::Stale);
+        }
+        if let Some(work) = &s.work {
+            if !a.capabilities.contains(&Capability::EvaluateGoal) {
+                return Err(Error::Denied);
+            }
+            work_job(&mut tx, agent, s.approved_by, &work.authorization).await?;
+        }
         if generation {
             if s.generation_requests != 0 || s.metadata_requests != 1 {
                 return Err(Error::Stale);
@@ -139,12 +232,93 @@ impl Store {
         failure: Option<&Error>,
         generation_started: bool,
     ) -> Result<LiveSession> {
+        self.settle_live_session_bound(
+            agent,
+            id,
+            proposal,
+            usage,
+            failure,
+            generation_started,
+            None,
+        )
+        .await
+    }
+    pub async fn settle_live_work_session(
+        &self,
+        agent: Uuid,
+        id: Uuid,
+        report: Option<WorkProposal>,
+        usage: Option<TokenUsage>,
+        failure: Option<&Error>,
+        generation_started: bool,
+    ) -> Result<LiveSession> {
+        let proposal = report.as_ref().map(|r| LiveProposal {
+            summary: r.summary.clone(),
+            memory_ids: r.memory_ids.clone(),
+            actions: vec![],
+        });
+        self.settle_live_session_bound(
+            agent,
+            id,
+            proposal,
+            usage,
+            failure,
+            generation_started,
+            report,
+        )
+        .await
+    }
+    async fn settle_live_session_bound(
+        &self,
+        agent: Uuid,
+        id: Uuid,
+        proposal: Option<LiveProposal>,
+        usage: Option<TokenUsage>,
+        failure: Option<&Error>,
+        generation_started: bool,
+        work_report: Option<WorkProposal>,
+    ) -> Result<LiveSession> {
         let mut tx = self.pool.begin().await.map_err(db)?;
-        locked(&mut tx, agent).await?;
+        let current = locked(&mut tx, agent).await?;
         let mut s = live_locked(&mut tx, agent, id).await?;
         if s.status != "reserved" {
             return Err(Error::Stale);
         }
+        let mut work_rejected = false;
+        if let Some(report) = work_report.as_ref() {
+            let work = s.work.as_ref().ok_or(Error::Invalid)?;
+            let permitted = current
+                .memory
+                .iter()
+                .filter(|m| s.memory_ids.contains(&m.id))
+                .cloned()
+                .collect::<Vec<_>>();
+            let input = LiveWorkInput {
+                request: work.request.clone(),
+                kind: work.kind,
+                approved_tools: work.authorization.approved_tools.clone(),
+                memories: permitted,
+                deterministic_findings: work.baseline["findings"].clone(),
+            };
+            work_rejected = report.validate(&input).is_err()
+                || s.consent.expires_at <= Utc::now()
+                || matches!(
+                    current.lifecycle,
+                    Lifecycle::Terminated | Lifecycle::Suspended
+                )
+                || !current.capabilities.contains(&Capability::ReadMemory)
+                || !current.capabilities.contains(&Capability::EvaluateGoal)
+                || live_owner(&mut tx, agent, s.approved_by).await.is_err()
+                || work_job(&mut tx, agent, s.approved_by, &work.authorization)
+                    .await
+                    .is_err();
+        }
+        let denied = Error::Denied;
+        let failure = if work_rejected {
+            Some(&denied)
+        } else {
+            failure
+        };
         let valid_usage = usage.filter(|u| u.validate().is_ok());
         let cost = valid_usage.and_then(|u| s.policy.cost(u).ok());
         let bounded = valid_usage.is_some_and(|u| {
@@ -183,6 +357,13 @@ impl Store {
         };
         if s.status == "awaiting_approval" {
             s.proposal = proposal;
+            if let Some(work) = s.work.as_mut() {
+                let quality=work_report.as_ref().map(|report|serde_json::json!({"verbatim_observations_checked":report.findings.len(),"exact_citations_checked":report.findings.iter().map(|f|f.evidence.len()).sum::<usize>(),"integer_totals_checked":report.totals.len(),"semantic_quality":"human_review_pending","commercial_success_verified":false}));
+                work.report = work_report;
+                work.tool_results = Some(
+                    serde_json::json!({"contract":"live_work_evaluation_v1","external_mutations":0,"commercial_delivery":false,"earned_revenue_atoms":0,"executed_tools":work.authorization.approved_tools,"quality_checks":quality,"verification":"Exact citations and integer totals checked; model interpretations require human review."}),
+                );
+            }
         }
         save_live(&mut tx, &s).await?;
         live_audit(&mut tx, id, s.approved_by, "settle").await?;
@@ -200,7 +381,8 @@ impl Store {
         let a = locked(&mut tx, agent).await?;
         live_owner(&mut tx, agent, actor).await?;
         let mut s = live_locked(&mut tx, agent, id).await?;
-        if s.approved_by != actor
+        if s.work.is_some()
+            || s.approved_by != actor
             || s.status != "awaiting_approval"
             || s.consent.expires_at <= Utc::now()
             || matches!(a.lifecycle, Lifecycle::Terminated | Lifecycle::Suspended)
@@ -289,4 +471,41 @@ async fn live_audit(tx: &mut Tx<'_>, id: Uuid, actor: Uuid, operation: &str) -> 
         .await
         .map_err(db)?;
     Ok(())
+}
+
+/// Evaluations inspect unpaid owner-supplied jobs only; they never accept payment or settle revenue.
+async fn work_job(
+    tx: &mut Tx<'_>,
+    agent: Uuid,
+    actor: Uuid,
+    authorization: &LiveWorkConsent,
+) -> Result<EconomicJob> {
+    let value: Option<Value> =
+        sqlx::query_scalar("SELECT to_jsonb(j) FROM economic_jobs j WHERE id=$1 FOR UPDATE")
+            .bind(authorization.job_id)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(db)?;
+    let job: EconomicJob =
+        serde_json::from_value(value.ok_or(Error::NotFound)?).map_err(|_| Error::Database)?;
+    let digest: String = sqlx::query_scalar(
+        "SELECT encode(sha256(convert_to(input,'UTF8')),'hex') FROM economic_jobs WHERE id=$1",
+    )
+    .bind(job.id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(db)?;
+    if job.agent_id != agent
+        || job.customer_id != actor
+        || job.state != JobState::Created
+        || job.received_atoms != 0
+        || job.earned_atoms != 0
+        || job.network != EconomicNetwork::Simulated
+        || job.revision != authorization.expected_revision
+        || digest != authorization.input_sha256
+        || job.expires_at <= Utc::now()
+    {
+        return Err(Error::Denied);
+    }
+    Ok(job)
 }
