@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "fixture_id": "supplied-synthesis",
+  "model": "gpt-6-luna",
+  "max_requests": 1,
+  "max_input_tokens": 24192,
+  "max_output_tokens": 1024,
+  "max_cost_microusd": 4000,
+  "budget_limit_microusd": 5000,
+  "use_memory": false,
+  "api_origin": "http://127.0.0.1:55682",
+  "agent_id": "f9a17921-f31f-4154-843d-1f348622a2f4",
+  "job_id": "ec1f95dc-cf3b-4907-83b4-624937802061",
+  "input_sha256": "613e8933d52bf52f46091fb9b67ab05562393145bd5c60e0204c8a61d21fd35e",
+  "project_id": null,
+  "budget_id": "e6076529-e302-403e-b846-1ff902c1f641",
+  "note": "Frozen preflight proposal only. No paid consent, budget installation, runtime credential or agent activation is authorized.",
+  "preflight": {
+    "version": 1,
+    "test_owner_id": "28092c72-3475-48fa-b703-a68728ea4fa4",
+    "service_id": "7f39fe0f-081d-4e0d-b97e-71233017d379",
+    "request_id": "0d40f529-6574-4349-afb3-ebe5660d33cd",
+    "accounting_namespace": "c73bf689-0a1b-439b-918d-ca30f6d13267",
+    "task_input": "{\"material\":\"Document A: Replication reduces downtime but copies accidental deletion.\\nDocument B: Offline snapshots preserve earlier state but need a tested restore.\\nNeither document contains measured recovery times.\",\"objective\":\"Compare the supplied recovery strategies\",\"requirements\":[]}",
+    "database": {
+      "name": "supa_m10a_0b780645f120_test",
+      "data_directory": "/tmp/supa-m10a-pg-0b780645f120/data",
+      "socket_directory": "/tmp/supa-m10a-pg-0b780645f120/s",
+      "port": 55681,
+      "system_identifier": "7703020438665878846"
+    },
+    "authorization_state": "proposal_only",
+    "memory_policy": "none",
+    "approved_tools": [
+      "inspect_input",
+      "extract_evidence",
+      "check_requirements"
+    ],
+    "job_expires_at": "2026-11-02T02:14:32.831959Z"
+  }
+}
