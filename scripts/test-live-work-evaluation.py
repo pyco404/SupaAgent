@@ -62,6 +62,7 @@ class Readiness(unittest.TestCase):
         self.assertEqual(posted,[nonce,nonce])  # The Rust reservation rejects the second use; a lost file cannot mint a new nonce.
     def test_claude_is_independent_and_workspace_is_required(self):
         plan=json.loads((m.ROOT/'config/claude-work-evaluation-plan.json').read_text())
+        plan['project_id']=None  # Exercise missing scope independently of the enrolled public workspace.
         result,_=m.inspect(plan)
         self.assertFalse(result['ready']);self.assertIn('project_id_unassigned',result['blockers'])
         plan['project_id']='wrkspc_fixture'
@@ -71,6 +72,7 @@ class Readiness(unittest.TestCase):
             bad=copy.deepcopy(plan);bad[field]=value;self.assertFalse(m.inspect(bad)[0]['ready'])
     def test_claude_wrong_or_unassigned_scope_never_reaches_http(self):
         plan=json.loads((m.ROOT/'config/claude-work-evaluation-plan.json').read_text())
+        plan['project_id']=None  # Exercise missing scope independently of the enrolled public workspace.
         with patch.object(m.urllib.request,'build_opener',side_effect=AssertionError('HTTP forbidden')):
             with self.assertRaises(ValueError):m.run(plan,m.inspect(plan)[0]['scope_sha256'],plan['model'],4000)
     def test_claude_database_preflight_rejects_borrowed_budget_and_wrong_target(self):
