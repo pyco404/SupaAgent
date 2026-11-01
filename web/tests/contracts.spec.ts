@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { schemas, units } from "../src/lib/contracts";
+import { schemas, units, liveWorkConsentSchema } from "../src/lib/contracts";
 import { agentId, agent, financials } from "./fixtures";
 
 test("financial contracts reject unsafe integers and unlabelled or Mainnet values", () => {
@@ -22,4 +22,18 @@ test("API projections strip unrequested upstream fields", () => {
   const parsed = schemas.agent.parse({ agent: { ...agent, private_context: "not-public" }, financials, debug: "not-public" });
   expect(parsed).toEqual({ agent: { ...agent, personality: { traits: agent.personality.traits } }, financials });
   expect(parsed.agent.personality).not.toHaveProperty("voice");
+});
+
+test("work consent binds one unpaid job without frontend identity or authority fields", () => {
+  const now = new Date();
+  const input = {job_id:agentId,expected_revision:0,input_sha256:"a".repeat(64),approved_tools:["inspect_input","extract_evidence","check_requirements"],use_memory:false,consent:{request_id:agentId,goal:"Compare supplied documents",model:"gpt-6-luna",authorize_paid:true,consented_at:now.toISOString(),expires_at:new Date(now.getTime()+120000).toISOString(),max_requests:1,max_input_tokens:24192,max_output_tokens:1024,max_cost_microusd:4000}};
+  expect(liveWorkConsentSchema.safeParse(input).success).toBe(true);
+  for (const change of [{principal_id:agentId},{role:"owner"},{input_sha256:"bad"},{approved_tools:["transfer"]}]) {
+    expect(liveWorkConsentSchema.safeParse({...input,...change}).success).toBe(false);
+  }
+  expect(liveWorkConsentSchema.safeParse({...input,consent:{...input.consent,max_requests:2}}).success).toBe(false);
+  const disabled = {enabled:false,mode:"live_work_evaluation",project_id:null,continuous:false,commercial_delivery:false,policy:null,minimum_reservation_microusd:null,jobs:[],sessions:[]};
+  expect(schemas["live-work"].safeParse(disabled).success).toBe(true);
+  expect(schemas["live-work"].safeParse({...disabled,continuous:true}).success).toBe(false);
+  expect(schemas["live-work"].safeParse({...disabled,commercial_delivery:true}).success).toBe(false);
 });
