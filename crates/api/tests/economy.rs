@@ -479,10 +479,33 @@ async fn contracts_are_durable_scoped_fenced_and_conserve_liabilities() {
             .await
             .is_err()
     );
-    j = store
-        .economic_command(j.id, customer, command(&j, "dispute"))
-        .await
-        .unwrap();
+    let (status, customer_reply) = req(
+        &app,
+        &format!("/jobs/{}/commands", j.id),
+        CUSTOMER,
+        Some(json!(command(&j, "dispute"))),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        customer_reply["assessment"]
+            .get("private_memory_references")
+            .is_none()
+    );
+    j = serde_json::from_value(customer_reply).unwrap();
+    let (status, owner_reply) = req(&app, &format!("/jobs/{}", j.id), OWNER, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        owner_reply["job"]["assessment"]
+            .get("private_memory_references")
+            .is_some()
+    );
+    let (_, customer_reply) = req(&app, &format!("/jobs/{}", j.id), CUSTOMER, None).await;
+    assert!(
+        customer_reply["job"]["assessment"]
+            .get("private_memory_references")
+            .is_none()
+    );
     assert_eq!(j.state, JobState::Disputed);
     assert_eq!(j.earned_atoms, 5000); // no silent refund/revenue rewrite
     assert_eq!(
