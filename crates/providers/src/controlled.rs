@@ -11,6 +11,12 @@ pub trait ControlledProvider: Send + Sync {
     async fn work(&self, _input: &LiveWorkInput) -> Invocation<WorkProposal> {
         Invocation::unmetered(Err(Error::Denied))
     }
+    /// Proposal only. Callers must reserve provider costs and enforce owned context,
+    /// finite consent, lifecycle fencing and review before persistence. No publication.
+    /// This is deliberately not wired to continuous scheduling or an API endpoint.
+    async fn social(&self, _context: &SocialContext) -> Invocation<SocialDecision> {
+        Invocation::unmetered(Err(Error::Denied))
+    }
     async fn reason(&self, goal: &str, memory: &[Memory]) -> Invocation<LiveProposal>;
 }
 impl OpenAi {
@@ -81,6 +87,9 @@ impl ControlledProvider for OpenAi {
     }
     async fn work(&self, input: &LiveWorkInput) -> Invocation<WorkProposal> {
         self.work_request(input).await
+    }
+    async fn social(&self, context: &SocialContext) -> Invocation<SocialDecision> {
+        crate::social::validated_social(self.generate_social(context).await, context)
     }
     async fn reason(&self, goal: &str, memory: &[Memory]) -> Invocation<LiveProposal> {
         let schema = json!({"type":"object","additionalProperties":false,"required":["summary","memory_ids","actions"],"properties":{
