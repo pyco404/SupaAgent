@@ -45,7 +45,7 @@ def inspect(plan):
         try:
             nonce=uuid.UUID(preflight['request_id']);assert nonce.version==4 and nonce.int
         except (KeyError,ValueError,TypeError,AssertionError):blockers.append('invalid_fixed_evaluation_nonce')
-    return {'mode':'readiness_only','network_requests':0,'paid_requests':0,'ready':not blockers,'blockers':blockers,'scope_sha256':digest({'plan':plan,'fixture':case}),'fixture_sha256':digest(case),'proposed_reservation_microusd':3536,'maximum_provider_requests':1},case
+    return {'mode':'readiness_only','readiness_basis':'scope_structure_only','paid_execution_authorized':False,'network_requests':0,'paid_requests':0,'ready':not blockers,'blockers':blockers,'scope_sha256':digest({'plan':plan,'fixture':case}),'fixture_sha256':digest(case),'proposed_reservation_microusd':3536,'maximum_provider_requests':1},case
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):return None
