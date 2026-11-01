@@ -27,7 +27,10 @@ def inspect(plan):
     case=next((c for c in cases if c['id']==plan.get('fixture_id')),None)
     required=['api_origin','agent_id','job_id','input_sha256','project_id','budget_id']
     blockers=[f'{key}_unassigned' for key in required if not plan.get(key)]
-    if (plan.get('version'),plan.get('model'),plan.get('max_requests'),plan.get('max_input_tokens'),plan.get('max_output_tokens'),plan.get('max_cost_microusd'),plan.get('budget_limit_microusd'),plan.get('use_memory'))!=(1,'gpt-6-luna',1,24192,1024,4000,5000,False):blockers.append('unreviewed_model_or_limits')
+    provider=plan.get('provider','openai')
+    expected_model='claude-haiku-5-5' if provider=='anthropic' else 'gpt-6-luna'
+    if provider not in ('openai','anthropic'):blockers.append('unreviewed_provider')
+    if (plan.get('version'),plan.get('model'),plan.get('max_requests'),plan.get('max_input_tokens'),plan.get('max_output_tokens'),plan.get('max_cost_microusd'),plan.get('budget_limit_microusd'),plan.get('use_memory'))!=(1,expected_model,1,24192,1024,4000,5000,False):blockers.append('unreviewed_model_or_limits')
     if not case or case.get('mode')!=0 or case.get('use_memory') or case['id']!='supplied-synthesis':blockers.append('unreviewed_fixture_scope')
     if case is None:case={}
     if plan.get('api_origin'):
@@ -39,7 +42,8 @@ def inspect(plan):
                 value=uuid.UUID(plan[key]);assert value.int and value!=uuid.UUID('ad91e475-f1da-495a-8247-139643d2d8b1')
             except (ValueError,AssertionError,TypeError):blockers.append(f'invalid_{key}')
     if plan.get('input_sha256') and not re.fullmatch('[a-f0-9]{64}',plan['input_sha256']):blockers.append('invalid_input_binding')
-    if plan.get('project_id') and not re.fullmatch(r'proj_[A-Za-z0-9_-]{1,114}',plan['project_id']):blockers.append('invalid_project')
+    if plan.get('project_id') and not re.fullmatch(r'wrkspc_[A-Za-z0-9_]{1,113}' if provider=='anthropic' else r'proj_[A-Za-z0-9_-]{1,114}',plan['project_id']):blockers.append('invalid_project')
+    if provider=='anthropic' and 'preflight' not in plan:blockers.append('missing_claude_disposable_binding')
     if 'preflight' in plan:
         preflight=plan['preflight']
         try:
@@ -55,7 +59,8 @@ def run(plan,approval,model,ceiling):
     if not report['ready'] or approval!=report['scope_sha256'] or model!=plan['model'] or ceiling!=plan['max_cost_microusd']:raise ValueError('exact_scope_model_budget_approval_required')
     if 'preflight' in plan:
         # Read-only identity/accounting verification before any HTTP request or paid dispatch.
-        checked=subprocess.run(['node',str(ROOT/'scripts/live-work-preflight.mjs'),'--plan-stdin','--check-database','--for-execution'],input=json.dumps(plan),text=True,capture_output=True,timeout=12)
+        check_command=([sys.executable,str(ROOT/'scripts/claude-work-preflight.py'),'--plan-stdin','--check-database'] if plan.get('provider')=='anthropic' else ['node',str(ROOT/'scripts/live-work-preflight.mjs'),'--plan-stdin','--check-database','--for-execution'])
+        checked=subprocess.run(check_command,input=json.dumps(plan),text=True,capture_output=True,timeout=12)
         if checked.returncode:raise ValueError('frozen_disposable_target_not_execution_ready')
         target=json.loads(checked.stdout)
         if target.get('scope_sha256')!=approval or target.get('database',{}).get('budget_state')!='installed_zero_spent':raise ValueError('frozen_target_scope_mismatch')
