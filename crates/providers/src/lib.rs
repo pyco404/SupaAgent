@@ -1,4 +1,5 @@
 pub mod anthropic;
+mod anthropic_credentials;
 mod authentication;
 pub mod controlled;
 mod social;
