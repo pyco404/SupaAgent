@@ -90,6 +90,7 @@ export async function sectionView(id, state, agentId) {
       const [schedule,health,history,access]=await Promise.all(['schedule','execution-health','authorizations','access'].map(resource=>read(`/api/agents/${agentId}/${resource}`)));
       if(access.data)record('Your role',access.data.role);
       const live=await read(`/api/agents/${agentId}/live`);
+      if(access.data?.role==='owner'){const work=await read(`/api/agents/${agentId}/live-work`);if(work.data)rows.push({kind:'livework',view:work.data,agentId});else add(work.error??'Work evaluation unavailable.','notice');}
       if(!epoch && live.data && access.data)rows.push({kind:'live',view:live.data,role:access.data.role,agentId});
       else add('Controlled live inference unavailable. No paid requests are enabled by viewing this page.','notice');
       if(health.data){record('Worker health',health.data.status.replaceAll('_',' '));record('Worker process',health.data.worker_enabled===false?'Scheduling disabled in observed process':health.data.worker_enabled===true?'Scheduling enabled in observed process':'Configuration not reported');record('Execution',health.data.execution_running?'Measured active lease and recent heartbeat':'No verified running execution');record('Heartbeat observed',health.data.heartbeat_at??'No heartbeat recorded');record('Lease expires',health.data.lease_until??'No active lease');add('Authorization permits work; it does not prove a worker is running.','notice');}
@@ -118,6 +119,7 @@ export async function sectionView(id, state, agentId) {
     } else if(id==='economy') {
       const economic=await load('economy');
       if(economic)rows.push({kind:'economy',view:economic,agentId});
+      const work=await read(`/api/agents/${agentId}/live-work`);if(work.data)rows.push({kind:'livework',view:work.data,agentId});
       const [financials,ledger,wallet,balances,treasury,payments]=await Promise.all(['financials','simulated-ledger','wallet','wallet/balances','wallet/treasury','wallet/payments'].map(load));
       add('Simulated ledger / hypothetical USD','heading');
       if(financials){for(const [key,label]of [['balance_microusd','Balance'],['revenue_microusd','Revenue'],['inference_microusd','Inference expense'],['operating_microusd','Operating expense']])record(`${label} / simulated USD`,units(financials[key]));record('Runway',financials.runway_days===null?'Unavailable: a usable recurring-cost estimate is not established.':`${financials.runway_days} days (estimate)`);rows.push({kind:'detail',text:'Runway calculation',body:financials.runway_assumption});}
