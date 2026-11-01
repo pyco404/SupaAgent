@@ -23,7 +23,7 @@ cargo run -p supa-api
 
 Choose the operator UUID once and persist it with the token in ignored private configuration; reuse both across restarts. Existing agents are not automatically assigned to this identity. See [ownership rollout, roles, authorization renewal and measured worker health](docs/authorization-renewal.md).
 
-Migrations run at startup. Configuration is read from exported environment variables; `.env` is not automatically loaded. See [.env.example](.env.example). The API rejects non-loopback bind addresses, requires a bearer token even for health checks, and has no CORS policy permitting browser origins. Keep credentials out of source control and request bodies.
+Migrations run at startup. Configuration is read from exported environment variables; `.env` is not automatically loaded. Environment templates and private dotenv files stay local and are ignored. See [configuration setup](docs/local-setup.md). The API rejects non-loopback bind addresses, requires a bearer token even for health checks, and has no CORS policy permitting browser origins. Keep credentials out of source control and request bodies.
 
 Offline mode exercises the runtime without network reasoning. It reads memory and records an event-based observation when granted those capabilities. It does **not** pretend to generate witty posts. OpenAI mode generates plans and contextual tweet drafts dynamically; see [provider setup and cost boundaries](docs/local-setup.md#openai-opt-in).
 
