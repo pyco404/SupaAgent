@@ -19,9 +19,20 @@ impl ControlledInference {
         self.store
             .live_request_stage(agent, session.id, false)
             .await?;
-        let verified = tokio::time::timeout(Duration::from_secs(26), self.provider.verify())
-            .await
-            .unwrap_or(Err(Error::Timeout));
+        let verification =
+            tokio::time::timeout(Duration::from_secs(26), self.provider.verify_observed())
+                .await
+                .unwrap_or(Invocation {
+                    result: Err(Error::Timeout),
+                    usage: None,
+                    diagnostic: Some(ProviderDiagnostic::deadline(ProviderOperation::Metadata)),
+                });
+        if let Some(d) = verification.diagnostic.as_ref() {
+            self.store
+                .record_live_diagnostic(agent, session.id, d)
+                .await?;
+        }
+        let verified = verification.result;
         if let Err(e) = verified {
             return self
                 .store
@@ -44,9 +55,15 @@ impl ControlledInference {
         )
         .await
         .unwrap_or(Invocation {
+            diagnostic: Some(ProviderDiagnostic::deadline(ProviderOperation::Generation)),
             result: Err(Error::Timeout),
             usage: None,
         });
+        if let Some(d) = invocation.diagnostic.as_ref() {
+            self.store
+                .record_live_diagnostic(agent, session.id, d)
+                .await?;
+        }
         let outcome = invocation.result.and_then(|proposal| {
             proposal.validate(&memory)?;
             let a = proposal
