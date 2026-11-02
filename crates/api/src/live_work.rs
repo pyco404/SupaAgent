@@ -4,9 +4,51 @@ pub(super) fn routes() -> Router<AppState> {
     Router::new()
         .route("/agents/{id}/live-work", get(list).post(run))
         .route(
+            "/agents/{id}/live-work/{session}/review",
+            get(review_context).post(review),
+        )
+        .route(
             "/agents/{id}/live-work/diagnostics/{request}",
             get(diagnostic),
         )
+}
+async fn review_context(
+    State(s): State<AppState>,
+    Extension(actor): Extension<Principal>,
+    Path((id, session)): Path<(Uuid, Uuid)>,
+) -> std::result::Result<impl IntoResponse, ApiError> {
+    owner(&s, &actor, id).await?;
+    let context = s.store.work_review_context(id, session, actor.id).await?;
+    Ok((
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
+        Json(context),
+    ))
+}
+async fn review(
+    State(s): State<AppState>,
+    Extension(actor): Extension<Principal>,
+    Path((id, session)): Path<(Uuid, Uuid)>,
+    Json(input): Json<WorkReviewRequest>,
+) -> std::result::Result<impl IntoResponse, ApiError> {
+    owner(&s, &actor, id).await?;
+    // This path requires no provider, paid-inference enablement, or tool approval.
+    // A blocked transaction must not outlive its authenticated credential.
+    if s.credential_deadlines
+        .get(&actor.id)
+        .is_some_and(|deadline| {
+            !u64::try_from(input.expires_at.timestamp()).is_ok_and(|until| until < *deadline)
+        })
+    {
+        return Err(Error::Denied.into());
+    }
+    let review = s
+        .store
+        .review_work_evaluation(id, session, actor.id, input)
+        .await?;
+    Ok((
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
+        Json(json!(review)),
+    ))
 }
 async fn diagnostic(
     State(s): State<AppState>,
