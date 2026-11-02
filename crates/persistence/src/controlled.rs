@@ -349,7 +349,7 @@ impl Store {
         if s.status != "reserved" {
             return Err(Error::Stale);
         }
-        let mut work_rejected = false;
+        let mut work_rejection = None;
         if let Some(report) = work_report.as_ref() {
             let work = s.work.as_ref().ok_or(Error::Invalid)?;
             let permitted = current
@@ -365,8 +365,8 @@ impl Store {
                 memories: permitted,
                 deterministic_findings: work.baseline["findings"].clone(),
             };
-            work_rejected = report.validate(&input).is_err()
-                || s.consent.expires_at <= Utc::now()
+            work_rejection = report.validate(&input).err();
+            let permission_changed = s.consent.expires_at <= Utc::now()
                 || matches!(
                     current.lifecycle,
                     Lifecycle::Terminated | Lifecycle::Suspended
@@ -377,13 +377,11 @@ impl Store {
                 || work_job(&mut tx, agent, s.approved_by, &work.authorization)
                     .await
                     .is_err();
+            if permission_changed && work_rejection.is_none() {
+                work_rejection = Some(Error::Denied);
+            }
         }
-        let denied = Error::Denied;
-        let failure = if work_rejected {
-            Some(&denied)
-        } else {
-            failure
-        };
+        let failure = work_rejection.as_ref().or(failure);
         let valid_usage = usage.filter(|u| u.validate().is_ok());
         let cost = valid_usage.and_then(|u| s.policy.cost(u).ok());
         let bounded = valid_usage.is_some_and(|u| {
@@ -433,6 +431,45 @@ impl Store {
             }
         }
         save_live(&mut tx, &s).await?;
+        if let (Some(work), Some(error)) = (s.work.as_ref(), failure) {
+            let created_at = Utc::now();
+            let diagnostic = WorkDiagnostic {
+                version: 1,
+                response_schema: "bounded_work_proposal_v1".into(),
+                retention_policy: "structure_only_v1".into(),
+                provider: work.provider_evidence.clone(),
+                model: s.policy.model.clone(),
+                agent_id: s.agent_id,
+                evaluation_id: work.authorization.job_id,
+                request_id: s.id,
+                input_sha256: work.authorization.input_sha256.clone(),
+                rejection: WorkRejection::from_error(error),
+                usage: s.usage,
+                estimated_cost_microusd: s.accounted_microusd,
+                outcome: s.status.clone(),
+                provider_request_id: s
+                    .provider_diagnostics
+                    .iter()
+                    .rev()
+                    .find(|d| d.operation == ProviderOperation::Generation)
+                    .and_then(|d| d.request_id.clone()),
+                created_at,
+                expires_at: created_at + chrono::Duration::days(7),
+            };
+            diagnostic.validate()?;
+            // Private JSON extension: LiveSession's public serialization never includes it.
+            // It commits atomically with the failed outcome and usage-based accounting.
+            sqlx::query(
+                "UPDATE live_sessions SET data=jsonb_set(data,'{work_diagnostic}',$2) WHERE id=$1",
+            )
+            .bind(s.id)
+            .bind(serde_json::to_value(diagnostic).map_err(|_| Error::Invalid)?)
+            .execute(&mut *tx)
+            .await
+            .map_err(db)?;
+            sqlx::query("UPDATE live_sessions SET data=data-'work_diagnostic' WHERE agent_id=$1 AND (data->'work_diagnostic'->>'expires_at')::timestamptz<=clock_timestamp()")
+                .bind(s.agent_id).execute(&mut *tx).await.map_err(db)?;
+        }
         live_audit(&mut tx, id, s.approved_by, "settle").await?;
         tx.commit().await.map_err(db)?;
         Ok(s)
@@ -496,6 +533,27 @@ impl Store {
             .execute(&self.pool).await.map_err(db)?;
         Ok(())
     }
+    /// No raw prompts/prose. Recheck current ownership in SQL; expiry fails closed.
+    pub async fn work_diagnostic(
+        &self,
+        agent: Uuid,
+        actor: Uuid,
+        request: Uuid,
+    ) -> Result<WorkDiagnostic> {
+        self.require_access(agent, actor, Role::Owner).await?;
+        let value:Option<Value> = sqlx::query_scalar("SELECT data->'work_diagnostic' FROM live_sessions WHERE agent_id=$1 AND id=$2 AND data ? 'work_diagnostic' AND (data->'work_diagnostic'->>'expires_at')::timestamptz>clock_timestamp() AND EXISTS(SELECT 1 FROM agent_access WHERE agent_id=$1 AND principal_id=$3 AND role='owner')")
+            .bind(agent).bind(request).bind(actor).fetch_optional(&self.pool).await.map_err(db)?;
+        let diagnostic: WorkDiagnostic =
+            serde_json::from_value(value.ok_or(Error::NotFound)?).map_err(|_| Error::Database)?;
+        diagnostic.validate()?;
+        Ok(diagnostic)
+    }
+    /// Explicit owner maintenance; deletes only expired diagnostic extensions, never accounting.
+    pub async fn purge_work_diagnostics(&self, agent: Uuid, actor: Uuid) -> Result<u64> {
+        self.require_access(agent, actor, Role::Owner).await?;
+        sqlx::query("UPDATE live_sessions SET data=data-'work_diagnostic' WHERE agent_id=$1 AND (data->'work_diagnostic'->>'expires_at')::timestamptz<=clock_timestamp() AND EXISTS(SELECT 1 FROM agent_access WHERE agent_id=$1 AND principal_id=$2 AND role='owner')")
+            .bind(agent).bind(actor).execute(&self.pool).await.map(|r|r.rows_affected()).map_err(db)
+    }
 }
 async fn live_owner(tx: &mut Tx<'_>, agent: Uuid, actor: Uuid) -> Result<()> {
     let allowed:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM agent_access WHERE agent_id=$1 AND principal_id=$2 AND role='owner')").bind(agent).bind(actor).fetch_one(&mut **tx).await.map_err(db)?;
@@ -520,7 +578,7 @@ async fn live_locked(tx: &mut Tx<'_>, agent: Uuid, id: Uuid) -> Result<LiveSessi
     Ok(s)
 }
 async fn save_live(tx: &mut Tx<'_>, s: &LiveSession) -> Result<()> {
-    sqlx::query("UPDATE live_sessions SET status=$2,data=$3 WHERE id=$1")
+    sqlx::query("UPDATE live_sessions SET status=$2,data=$3 || CASE WHEN data ? 'work_diagnostic' THEN jsonb_build_object('work_diagnostic',data->'work_diagnostic') ELSE '{}'::jsonb END WHERE id=$1")
         .bind(s.id)
         .bind(&s.status)
         .bind(serde_json::to_value(s).map_err(|_| Error::Invalid)?)
