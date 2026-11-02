@@ -959,6 +959,7 @@ impl Reasoner for SocialFixture {
             }
         };
         supa_providers::Invocation {
+            diagnostic: None,
             result: Ok(decision),
             usage: None,
         }
