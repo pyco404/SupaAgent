@@ -16,6 +16,10 @@ let sceneData, revealTyping=null;
 let theme=0,wheel,scenes,itemIndex=0,typing=0,typingTimer=0,leaving=false,entryAttempt=0,worm=false;
 let state={status:{error:'Connecting to local backend…'},agents:{error:'Loading saved agents…'},retrievedAt:'not yet retrieved'},agentId='',renderVersion=0,reloadVersion=0;
 let commandHistory=[],historyIndex=0,liveTimer=0,liveBusy=false,viewFingerprint='';
+try{const saved=localStorage.getItem('supa.selected-agent');if(/^[0-9a-f-]{36}$/i.test(saved??''))agentId=saved;}catch{/* Optional public identity preference. */}
+function rememberAgent(){try{if(agentId)localStorage.setItem('supa.selected-agent',agentId);else localStorage.removeItem('supa.selected-agent');}catch{/* Authentication never depends on browser storage. */}}
+$('.buffer').addEventListener('input',event=>{const form=event.target.closest('form');if(form)form.dataset.unsavedChanges='true';});
+$('.buffer').addEventListener('change',event=>{const form=event.target.closest('form');if(form)form.dataset.unsavedChanges='true';});
 let autonomyAttempt=null;
 try{const id=sessionStorage.getItem('supa.offline-request');if(/^[0-9a-f-]{36}$/i.test(id??''))autonomyAttempt={id,status:'unknown'};}catch{/* Optional recovery hint; server UUID uniqueness remains authoritative. */}
 try{const saved=Number(localStorage.getItem('supa.dark-theme'));if(Number.isInteger(saved)&&saved>=0&&saved<palettes.length)theme=saved;}catch{/* Optional preference. */}
@@ -86,10 +90,12 @@ async function boot(){
 // Read-only polling pauses while hidden, typing or interacting. It never starts a cycle.
 async function refreshLive(){
   if($('.buffer').contains(document.activeElement)&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))return;
+  if($('.buffer').querySelector('form[data-unsaved-changes=true]'))return;
   if(liveBusy||$('.buffer').querySelector('[data-economic-action-pending=true]')||document.hidden||document.body.dataset.view!=='projects'||$('.buffer').getAttribute('aria-busy')==='true'||!$('.command').hidden||!$('#agent-options').hidden||$('.projects').classList.contains('drawer-open'))return;
   liveBusy=true;
   try{
     const version=reloadVersion,next=await overview();
+    if($('.buffer').querySelector('form[data-unsaved-changes=true]'))return;
     if(version!==reloadVersion||$('.buffer').querySelector('[data-economic-action-pending=true]')||document.hidden||document.body.dataset.view!=='projects')return;
     const changed=JSON.stringify([state.status,state.agents])!==JSON.stringify([next.status,next.agents]);
     state=next;
@@ -102,6 +108,7 @@ async function reload(currentScene=sceneData){
   try {
     const next=await overview();if(version!==reloadVersion)return;state=next;
     if(!state.agents.data?.some(agent=>agent.id===agentId))agentId=state.agents.data?.[0]?.id ?? '';
+    rememberAgent();
     const selectEl=$('#agent-select');selectEl.replaceChildren(node('option','',state.agents.error?'Agent records unavailable':state.agents.data?.length?'Choose an agent':'No saved agents'));selectEl.firstChild.value='';
     for(const agent of state.agents.data ?? []){const option=node('option','',`${agent.name} / ${agent.lifecycle}`);option.value=agent.id;selectEl.append(option);}
     selectEl.value=agentId;syncAgentPicker();
@@ -162,6 +169,7 @@ $('.tabline').addEventListener('click',()=>setDrawer($('.tabline').getAttribute(
 $('.wheel').addEventListener('click',event=>{if(event.target.closest('.wheel-item')&&matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.buffer').focus({preventScroll:true});}});
 function line(text,className='terminal-line'){const el=node('p',className,text);$('.buffer').append(el);return el;}
 async function select(index,background=false){
+  rememberAgent();
   const item=navigation[index];if(!item)return;
   // Saved lifecycle is an identity attribute, never proof of a healthy worker.
   scenes?.setLifecycle(state.agents.error?null:state.agents.data?.find(agent=>agent.id===agentId)?.lifecycle);
@@ -183,6 +191,7 @@ async function select(index,background=false){
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
   $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='economy')?'bounded economic controls':rows.some(row=>['autonomy','schedule','launch'].includes(row.kind))?'offline controls':'read-only'}`;
   const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
+  if(background&&buffer.querySelector('form[data-unsaved-changes=true]'))return;
   if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
   viewFingerprint=fingerprint;if(background)cancelTyping();
   buffer.replaceChildren();line('supa@local ~','prompt');
@@ -378,6 +387,7 @@ function livePanel(view,role,id){
   }
   panel.append(feedback,reload);return panel;
 }
+function workflowFailure(status){return ({401:'Sign-in expired or unavailable. Open Operator sign-in; execution limits are not renewed.',403:'Permission denied. Check your authorized role and inspect saved records.',400:'Request rejected. Check the fields and finite limits.',422:'Request rejected. Check the fields and finite limits.',409:'Saved state changed or this request already exists. Reload saved records; do not replay it.'})[status]??'Outcome uncertain. Inspect saved records before another authorization.';}
 function launchPanel(policy){
   const panel=node('details','calculation autonomy-panel launch-panel');panel.open=true;panel.append(node('summary','','Create a test agent'));
   panel.append(node('p','terminal-notice','Disposable development / offline reasoning only. Simulated budget; no payment, paid model or external action. Creating an identity does not start it.'));
@@ -385,7 +395,7 @@ function launchPanel(policy){
   for(const [key,label,value]of [['name','Agent name',''],['personality','Personality / voice','Curious, witty and careful. Admit uncertainty and use only verified evidence.'],['goal','Goal','']]){
     const wrap=node('label','',label),input=node(key==='name'?'input':'textarea');input.name=key;input.id='launch-'+key;input.required=true;input.minLength=3;input.maxLength=key==='name'?80:500;input.value=value;if(key!=='name')input.rows=3;wrap.append(input);form.append(wrap);fields[key]=input;
   }
-  const budgetLabel=node('label','','Simulated operating budget / microUSD'),budget=node('input');budget.name='simulated_budget_microusd';budget.type='number';budget.min='3300';budget.max='1000000';budget.step='1';budget.value='10000';budget.required=true;budgetLabel.append(budget);form.append(budgetLabel);
+  const budgetLabel=node('label','','Simulated operating budget / microUSD'),budget=node('input');budget.name='simulated_budget_microusd';budget.type='number';budget.min='3300';budget.max='1000000';budget.step='1';budget.value='10000';budget.required=true;budgetLabel.append(budget);form.append(budgetLabel);const budgetHint=node('p','prompt');const showBudget=()=>{budgetHint.textContent=`${units(Number(budget.value))} simulated USD. This is the seed balance; the session expense ceiling is authorized separately.`;};budget.addEventListener('input',showBudget);showBudget();form.append(budgetHint);
   const label=node('label','autonomy-consent'),consent=node('input');consent.type='checkbox';consent.name='launch-consent';consent.required=true;label.append(consent,document.createTextNode('Create this test identity, save this goal and assign only the simulated seed above. I will separately authorize a finite offline session.'));
   const submit=node('button','','Create authorized test agent');submit.type='submit';const feedback=node('p','terminal-notice');feedback.setAttribute('role','status');
   form.append(label,submit);panel.append(form,feedback);form.addEventListener('input',event=>{if(event.target!==consent)consent.checked=false;});
@@ -394,9 +404,9 @@ function launchPanel(policy){
     const input={request_id:crypto.randomUUID(),name:fields.name.value.trim(),personality:fields.personality.value.trim(),goal:fields.goal.value.trim(),simulated_budget_microusd:Number(budget.value),authorize_offline:true};
     form.dataset.economicActionPending='true';for(const element of form.elements)element.disabled=true;feedback.textContent='Saving the inactive identity, goal and simulated budget…';
     try{const response=await fetch('/api/launch',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Supa-Action':'offline-launch'},body:JSON.stringify(input),signal:AbortSignal.timeout(30000)}),result=await response.json();
-      if(!response.ok||result.paid_requests!==0||result.mode!=='offline')throw Object.assign(Error(),{result});
+      if(!response.ok||result.paid_requests!==0||result.mode!=='offline')throw Object.assign(Error(),{result,status:response.status});
       agentId=result.agent_id;await reload();wheel.select(2);await select(2);$('.announcement').textContent='Test agent saved, inactive. Open Agent lifecycle and bounded scheduling to authorize its first session.';
-    }catch(error){feedback.textContent=`Launch not confirmed. ${error.result?.agent_id?'Inspect saved agent '+error.result.agent_id+'. ':''}Reload saved records before another request. No automatic retry. Request ${input.request_id}.`;}
+    }catch(error){feedback.textContent=`${workflowFailure(error.status)} ${error.result?.agent_id?'Inspect saved agent '+error.result.agent_id+'. ':''}Reload saved records before another request. No automatic retry. Request ${input.request_id}.`;}
     finally{form.dataset.economicActionPending='false';}
   });return panel;
 }
@@ -404,7 +414,7 @@ function schedulePanel(view,goals,role){
   const details=node('details','calculation autonomy-panel schedule-panel');details.append(node('summary','','Agent lifecycle and bounded scheduling'));
   const stateText=node('p','terminal-notice');stateText.dataset.scheduleState='';
   stateText.textContent=`${view.lifecycle} / ${view.enabled?'authorized schedule':'scheduling disabled'} / revision ${view.revision}\nCycles started ${view.cycles_started}${view.policy?' / '+view.policy.max_cycles:''}\nConservative allowance used ${view.reserved_microusd} simulated microUSD${view.policy?' / '+view.policy.simulated_budget_microusd:''}\nNext eligible ${view.next_cycle_at}\nAuthorization expires ${view.expires_at??'not authorized'}${view.last_error?'\nLast outcome / '+view.last_error:''}`;
-  details.append(stateText,node('p','prompt','Offline only. Actual expenses appear in Economy; allowance consumption is a conservative limit, not another charge. An enabled offline scheduler service is also required. Status polls every 15 seconds when idle.'));
+  details.append(stateText,node('p','terminal-notice',({created:'Created / inactive. Select a goal and authorize finite limits to start.',active:'Active authorization. Saved cycles and lease observations show actual work.',paused:'Paused. Resume preserves the same cycle, budget and expiry limits.',suspended:'Suspended. Inspect the last outcome. Exhausted or expired limits need explicit renewal.',terminated:'Stopped permanently. Saved history remains readable.'})[view.lifecycle]),node('p','prompt','Offline only. Actual expenses appear in Economy; allowance consumption is a conservative limit, not another charge. An enabled offline scheduler service is also required. Status polls every 15 seconds when idle.'));
   const form=node('form','autonomy-form schedule-form'),operation=node('select'),operationLabel=node('label','','Lifecycle operation');operation.id='schedule-operation';operationLabel.htmlFor=operation.id;
   const choices=[];if(role==='owner'&&!view.policy&&['created','paused','suspended'].includes(view.lifecycle))choices.push(['start','Start scheduling']);
   if(role==='owner'&&view.policy&&['paused','suspended'].includes(view.lifecycle))choices.push(['renew','Renew with new finite limits']);
@@ -434,10 +444,11 @@ function schedulePanel(view,goals,role){
     submit.disabled=true;operation.disabled=true;setup.disabled=true;reason.disabled=true;consent.disabled=true;refresh.disabled=true;feedback.textContent='Saving authorized operation…';
     try{
       const response=await fetch(`/api/agents/${view.agent_id}/schedule`,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Supa-Action':'offline-autonomy'},body:JSON.stringify(command),signal:AbortSignal.timeout(35000)});
-      const result=await response.json();if(!response.ok||result.agent_id!==view.agent_id||result.mode!=='offline'||result.paid_requests_enabled!==false)throw Error();
+      const result=await response.json();if(!response.ok||result.agent_id!==view.agent_id||result.mode!=='offline'||result.paid_requests_enabled!==false)throw Object.assign(Error(),{status:response.status});
+      delete form.dataset.unsavedChanges;
       feedback.textContent=`Saved ${command.operation}. Agent ${result.lifecycle}; ${result.cycles_started} cycles started. Reload saved schedule for current records.`;
       stateText.textContent=`${result.lifecycle} / ${result.enabled?'authorized schedule':'scheduling disabled'} / revision ${result.revision}\nCycles started ${result.cycles_started}\nAllowance used ${result.reserved_microusd} simulated microUSD`;
-    }catch{feedback.textContent=`Outcome uncertain or operation rejected. Reload saved schedule before another authorization. No automatic retry. Request ${command.request_id}.`;}
+    }catch(error){feedback.textContent=`${workflowFailure(error.status)} Reload saved schedule before another authorization. No automatic retry. Request ${command.request_id}.`;}
     refresh.disabled=false;$('.announcement').textContent=feedback.textContent;
   });
   return details;
