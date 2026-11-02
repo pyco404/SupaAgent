@@ -41,9 +41,20 @@ impl ControlledInference {
                 .settle_live_work_session(agent, session.id, None, None, Some(&error), false)
                 .await;
         }
-        let verified = tokio::time::timeout(Duration::from_secs(26), self.provider.verify())
-            .await
-            .unwrap_or(Err(Error::Timeout));
+        let verification =
+            tokio::time::timeout(Duration::from_secs(26), self.provider.verify_observed())
+                .await
+                .unwrap_or(Invocation {
+                    result: Err(Error::Timeout),
+                    usage: None,
+                    diagnostic: Some(ProviderDiagnostic::deadline(ProviderOperation::Metadata)),
+                });
+        if let Some(d) = verification.diagnostic.as_ref() {
+            self.store
+                .record_live_diagnostic(agent, session.id, d)
+                .await?;
+        }
+        let verified = verification.result;
         if let Err(error) = verified {
             return self
                 .store
@@ -59,9 +70,15 @@ impl ControlledInference {
         let invocation = tokio::time::timeout(Duration::from_secs(26), self.provider.work(&input))
             .await
             .unwrap_or(Invocation {
+                diagnostic: Some(ProviderDiagnostic::deadline(ProviderOperation::Generation)),
                 result: Err(Error::Timeout),
                 usage: None,
             });
+        if let Some(d) = invocation.diagnostic.as_ref() {
+            self.store
+                .record_live_diagnostic(agent, session.id, d)
+                .await?;
+        }
         // Accounting must settle even if permissions were revoked during the provider request.
         let report = async {
             let report = invocation.result?;
