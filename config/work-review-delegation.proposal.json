@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "state": "proposal_only_not_an_authorization",
+  "delegations_issued": 0,
+  "target": {
+    "database": "supa_m10a_8c6356653dc2_test",
+    "data_directory": "/tmp/supa-m10a-pg-8c6356653dc2/data",
+    "system_identifier": "7703596362529484555",
+    "epoch_id": null,
+    "accounting_namespace": null,
+    "agent_id": "82c254ff-4659-4404-94c4-c497565567e6",
+    "session_id": "41316d3e-40b8-4b7d-8605-83db7aab36b8",
+    "original_approver_principal": "acede749-746b-4541-b178-0085434dcd39",
+    "report_sha256": "01fcfc0576fb7d8cebfc09666c060eb1bff5c85a08b2682d2b17842cfe5abc42",
+    "generation_scope_sha256_reference_only": "3c3e5a2f689f6af3347b78c9c19f639842ae6ec1472aea61ace5c853287471ba"
+  },
+  "proposed_reviewer": {
+    "display_name": "KI Daniel",
+    "principal_id": "6fd863e1-745d-4a06-b68e-eea69e854a69",
+    "identity_verified": false,
+    "authentication_provisioned": false
+  },
+  "proposed_scope": {
+    "purpose": "retained_evaluation_review_only",
+    "decision": "accept_evaluation_only",
+    "maximum_decisions": 1,
+    "allowed_operations": [
+      "read_exact_evaluation_context",
+      "record_exact_evaluation_only_decision"
+    ],
+    "general_agent_ownership": false,
+    "customer_delivery": false,
+    "job_completion": false,
+    "revenue_recognition": false,
+    "accounting_mutation": false,
+    "generation_requests": 0,
+    "agent_activation": false,
+    "primary_epoch_operations": false
+  },
+  "unassigned_authorization_fields": {
+    "approval_id": null,
+    "verified_issuer_principal": null,
+    "owner_identity_evidence_sha256": null,
+    "issuer_identity_evidence_sha256": null,
+    "independent_test_fixture_provenance_review_sha256": null,
+    "credential_id": null,
+    "executor_login": null,
+    "issued_at": null,
+    "expires_at": null,
+    "approved_plan_sha256": null,
+    "independent_approval_signature": null
+  },
+  "required_controls": [
+    "independently_anchored_human_identity_and_separate_issuer_control",
+    "explicit_fixture_custodianship_review_not_a_test_principal_self_delegation",
+    "immutable_approval_record_unwritable_by_runtime",
+    "session_report_actor_database_and_decision_binding",
+    "finite_expiration_revocation_and_atomic_single_use_consumption",
+    "separate_reviewer_and_original_approver_audit_fields",
+    "review_specific_authorization_resolver_without_global_acl_transfer",
+    "disposable_delegation_and_restricted_login_regressions_before_installation"
+  ],
+  "current_endpoint_supports_this_delegation": false,
+  "requires_separate_reviewed_authorization_extension": true
+}
