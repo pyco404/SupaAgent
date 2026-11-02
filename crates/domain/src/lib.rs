@@ -2,6 +2,8 @@ mod provider_diagnostics;
 pub use provider_diagnostics::*;
 mod live_work;
 pub use live_work::*;
+mod work_review;
+pub use work_review::*;
 mod work_diagnostics;
 pub use work_diagnostics::*;
 mod work;
