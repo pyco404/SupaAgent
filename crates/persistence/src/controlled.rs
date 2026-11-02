@@ -187,6 +187,8 @@ impl Store {
             None
         };
         let session = LiveSession {
+            provider_diagnostics: vec![],
+            technical_failure_code: None,
             provider_scope: scope.map(str::to_owned),
             id: consent.request_id,
             agent_id: agent,
@@ -283,6 +285,30 @@ impl Store {
         )
         .await
     }
+    /// Append bounded evidence to an in-flight request only. Never touches budgets or old outcomes.
+    pub async fn record_live_diagnostic(
+        &self,
+        agent: Uuid,
+        id: Uuid,
+        diagnostic: &ProviderDiagnostic,
+    ) -> Result<()> {
+        diagnostic.validate()?;
+        let mut tx = self.pool.begin().await.map_err(db)?;
+        let mut session = live_locked(&mut tx, agent, id).await?;
+        writable_inference_budget(session.policy.budget_id)?;
+        if session.status != "reserved"
+            || session.provider_diagnostics.len() >= 8
+            || match diagnostic.operation {
+                ProviderOperation::Metadata => session.metadata_requests != 1,
+                ProviderOperation::Generation => session.generation_requests != 1,
+            }
+        {
+            return Err(Error::Stale);
+        }
+        session.provider_diagnostics.push(diagnostic.clone());
+        save_live(&mut tx, &session).await?;
+        tx.commit().await.map_err(db)
+    }
     pub async fn settle_live_work_session(
         &self,
         agent: Uuid,
@@ -378,6 +404,8 @@ impl Store {
             .execute(&mut *tx)
             .await
             .map_err(db)?;
+        // Financial uncertainty must not erase the independently safe technical cause.
+        s.technical_failure_code = failure.map(ToString::to_string);
         s.accounted_microusd = accounted;
         s.usage = valid_usage;
         s.finished_at = Some(Utc::now());
