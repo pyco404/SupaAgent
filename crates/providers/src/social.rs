@@ -20,6 +20,7 @@ pub(super) fn social_payload(c: &SocialContext) -> (String, Value, Value) {
 }
 pub(super) fn social_result(raw: Invocation<Value>) -> Invocation<SocialDecision> {
     Invocation {
+        diagnostic: raw.diagnostic,
         usage: raw.usage,
         result: raw
             .result
@@ -31,6 +32,7 @@ pub(super) fn validated_social(
     c: &SocialContext,
 ) -> Invocation<SocialDecision> {
     Invocation {
+        diagnostic: raw.diagnostic,
         usage: raw.usage,
         result: raw.result.and_then(|decision| {
             decision.validate(c)?;
