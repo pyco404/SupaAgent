@@ -107,6 +107,22 @@ def safe_ci_diagnostic(text, private_values=()):
     return '\n'.join(text.splitlines()[-40:])[-12000:]
 
 
+def wait_for_database(docker, database, private_values):
+    """Fail at the actual startup stage and retain bounded, scrubbed logs."""
+    for _ in range(120):
+        running = docker('inspect', '--format', '{{.State.Running}}', database).stdout.strip()
+        if running != 'true':
+            break
+        if docker('exec', database, 'pg_isready', '-h', '127.0.0.1',
+                  '-U', 'postgres', '-d', 'supa_ci_test', check=False).returncode == 0:
+            return
+        time.sleep(1)
+    logs = docker('logs', '--tail', '40', database, check=False)
+    print(json.dumps({'stage': 'database_startup_failed',
+                      'diagnostic': safe_ci_diagnostic(logs.stdout + logs.stderr, private_values)}), flush=True)
+    raise RuntimeError('database_startup_failed')
+
+
 def request(port, path, authorization=None):
     headers = {'Authorization': authorization} if authorization else {}
     try:
@@ -226,6 +242,8 @@ def validate(service, trivy):
         if service != 'frontend':
             postgres = 'ghcr.io/railwayapp-templates/postgres-ssl:18'
             docker('pull', postgres)
+            postgres_digest = json.loads(docker('image', 'inspect', postgres).stdout)[0]['RepoDigests']
+            print(json.dumps({'stage': 'postgres_image_pulled', 'repo_digests': postgres_digest}), flush=True)
             pg_env = work / 'postgres.env'
             # PGPASSWORD is inherited by exec probes; never put it in argv/logs.
             pg_env.write_text('POSTGRES_DB=supa_ci_test\nPOSTGRES_PASSWORD=' + password + '\nPGPASSWORD=' + password + '\n')
@@ -233,14 +251,10 @@ def validate(service, trivy):
             # Fresh anonymous volume, removed with this owned test container only.
             owned_containers.append(database)
             docker('run', '--detach', '--name', database, '--network', network, '--env-file', pg_env, postgres)
-            for _ in range(120):
-                # The initdb bootstrap server is socket-only. Wait for the final
-                # TCP listener, not pg_isready's unauthenticated socket response.
-                if docker('exec', database, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'supa_ci_test', check=False).returncode == 0:
-                    break
-                time.sleep(1)
+            # The initdb bootstrap server is socket-only. Wait for the final
+            # TCP listener and diagnose an exited container before SQL probes.
+            wait_for_database(docker, database, private_values)
             assert sql('SHOW server_version_num').startswith('18')
-            postgres_digest = json.loads(docker('image', 'inspect', postgres).stdout)[0]['RepoDigests']
             if service == 'api':
                 pg_archive, pg_scan = work / 'postgres.tar', work / 'postgres-scan.json'
                 docker('image', 'save', '--output', pg_archive, postgres)
