@@ -308,6 +308,7 @@ impl Runtime {
                 tokio::time::timeout(Duration::from_secs(config.timeout_seconds), operation())
                     .await
                     .unwrap_or(Invocation {
+                        diagnostic: None,
                         result: Err(Error::Timeout),
                         usage: None,
                     });
