@@ -40,6 +40,19 @@ def scan_shape(report):
         raise ValueError('scanner_report_missing_or_unsupported')
 
 
+def migration_inventory(directory):
+    """Exact reviewed source inventory, never a hard-coded historical count."""
+    inventory = {}
+    for source in sorted(directory.glob('*.sql')):
+        match = re.fullmatch(r'(\d{4})_[a-z0-9_]+\.sql', source.name)
+        if not match or source.is_symlink() or int(match[1]) in inventory:
+            raise ValueError('invalid_migration_source_inventory')
+        inventory[int(match[1])] = hashlib.sha384(source.read_bytes()).hexdigest()
+    if not inventory or sorted(inventory) != list(range(1, len(inventory) + 1)):
+        raise ValueError('noncontiguous_migration_source_inventory')
+    return inventory
+
+
 def vulnerability_gate(report):
     scan_shape(report)
     high = sum(v.get('Severity') in ('HIGH', 'CRITICAL')
@@ -82,6 +95,18 @@ def contains_canary(path):
     return False
 
 
+def safe_ci_diagnostic(text, private_values=()):
+    """Bound failure evidence; never output container environment/inspect config."""
+    text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
+    for value in sorted(set(private_values), key=len, reverse=True):
+        if value and len(value) >= 16:
+            text = text.replace(value, '[redacted]')
+    text = re.sub(r'(?i)(?:postgres(?:ql)?|https?)://[^\s/@]+:[^\s/@]+@', '[redacted-url]@', text)
+    text = re.sub(r'\bsk-[A-Za-z0-9_-]{20,}', '[redacted-key]', text)
+    text = ''.join(c for c in text if c in '\n\t' or ord(c) >= 32)
+    return '\n'.join(text.splitlines()[-40:])[-12000:]
+
+
 def request(port, path, authorization=None):
     headers = {'Authorization': authorization} if authorization else {}
     try:
@@ -107,17 +132,20 @@ def validate(service, trivy):
     database = 'supa-db-' + suffix
     application = 'supa-app-' + suffix
     owned_containers = []
+    private_values = []
     made_network = False
     build_log = work / 'build.log'
 
     def docker(*args, check=True):
         result = subprocess.run(['docker', *map(str, args)], capture_output=True, text=True, timeout=180)
         if check and result.returncode:
+            print(json.dumps({'stage': 'docker_operation_failed', 'operation': args[0],
+                              'diagnostic': safe_ci_diagnostic(result.stderr, private_values)}), flush=True)
             raise RuntimeError('docker_validation_operation_failed_' + args[0])
         return result
 
     def sql(query):
-        return docker('exec', database, 'psql', '-XqAt', '-U', 'postgres', '-d', 'supa_ci_test',
+        return docker('exec', database, 'psql', '-XqAt', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'supa_ci_test',
                       '-v', 'ON_ERROR_STOP=1', '-c', query).stdout.strip()
 
     try:
@@ -128,12 +156,17 @@ def validate(service, trivy):
                                     str(context / f'deployment/{service}.Dockerfile'), str(context)],
                                    stdout=log, stderr=subprocess.STDOUT, timeout=3000)
         if build.returncode:
+            print(json.dumps({'stage': 'image_build_failed', 'service': service,
+                              'diagnostic': safe_ci_diagnostic(build_log.read_text(errors='replace'))}), flush=True)
             raise RuntimeError('image_build_failed_see_disposable_runner_build_log')
         built = json.loads(metadata.read_text())
         digest = built.get('containerimage.digest')
         if not digest or not re.fullmatch(r'sha256:[0-9a-f]{64}', digest):
             raise RuntimeError('buildkit_manifest_digest_missing')
         config = json.loads(docker('image', 'inspect', image).stdout)[0]
+        print(json.dumps({'stage': 'image_built', 'service': service,
+                          'manifest_digest': digest, 'config_image_id': config['Id'],
+                          'runtime_validated': False, 'scan_passed': False}), flush=True)
         assert config['Config']['User'] not in ('', '0', 'root', '0:0')
         archive = work / 'image.tar'
         docker('image', 'save', '--output', archive, image)
@@ -148,6 +181,16 @@ def validate(service, trivy):
             raise RuntimeError('container_scanner_failed_closed')
         image_report = json.loads(scanner_result.read_text())
         scan_shape(image_report)
+        print(json.dumps({'stage': 'image_scanned', 'service': service,
+                          'manifest_digest': digest,
+                          'high_critical': sum(v.get('Severity') in ('HIGH', 'CRITICAL')
+                              for r in image_report['Results'] for v in r.get('Vulnerabilities') or []),
+                          'high_critical_findings': [
+                              {k:v.get(k) for k in ('VulnerabilityID','PkgName','Severity','InstalledVersion','FixedVersion')}
+                              for r in image_report['Results'] for v in r.get('Vulnerabilities') or []
+                              if v.get('Severity') in ('HIGH','CRITICAL')],
+                          'secret_findings': sum(len(r.get('Secrets') or []) for r in image_report['Results']),
+                          'runtime_validated': False}), flush=True)
         dependency_report = {'Results': []}
         if service == 'api':
             manifests = work / 'manifests'
@@ -174,21 +217,26 @@ def validate(service, trivy):
             listener.bind(('127.0.0.1', 0))
             port = listener.getsockname()[1]
         env = {'SUPA_PRIVATE_STAGING': 'true', 'SUPA_PROVIDER': 'offline', 'SUPA_ALLOW_OPENAI': 'false',
+               'SUPA_ALLOW_ANTHROPIC': 'false', 'SUPA_CONTROLLED_WORK': 'false',
                'SUPA_CONTROLLED_INFERENCE': 'false', 'SUPA_API_SCHEDULER_ENABLED': 'false',
                'SUPA_WALLET_ENABLED': 'false', 'SUPA_API_TOKEN': public,
                'SUPA_OPERATOR_CREDENTIALS': json.dumps([credential])}
-        visitor_password = secrets.token_hex(24)
+        visitor_password, operator_password = secrets.token_hex(24), secrets.token_hex(24)
+        private_values.extend([password,public,operator,visitor_password,operator_password])
         if service != 'frontend':
             postgres = 'ghcr.io/railwayapp-templates/postgres-ssl:18'
             docker('pull', postgres)
             pg_env = work / 'postgres.env'
-            pg_env.write_text('POSTGRES_DB=supa_ci_test\nPOSTGRES_PASSWORD=' + password + '\n')
+            # PGPASSWORD is inherited by exec probes; never put it in argv/logs.
+            pg_env.write_text('POSTGRES_DB=supa_ci_test\nPOSTGRES_PASSWORD=' + password + '\nPGPASSWORD=' + password + '\n')
             pg_env.chmod(0o600)
             # Fresh anonymous volume, removed with this owned test container only.
             owned_containers.append(database)
             docker('run', '--detach', '--name', database, '--network', network, '--env-file', pg_env, postgres)
             for _ in range(120):
-                if docker('exec', database, 'pg_isready', '-U', 'postgres', '-d', 'supa_ci_test', check=False).returncode == 0:
+                # The initdb bootstrap server is socket-only. Wait for the final
+                # TCP listener, not pg_isready's unauthenticated socket response.
+                if docker('exec', database, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'supa_ci_test', check=False).returncode == 0:
                     break
                 time.sleep(1)
             assert sql('SHOW server_version_num').startswith('18')
@@ -212,7 +260,7 @@ def validate(service, trivy):
                        SUPA_BACKEND_URL='http://unavailable-ci-backend:8080',
                        SUPA_STAGING_USERNAME='ci-visitor', SUPA_STAGING_PASSWORD=visitor_password,
                        SUPA_WEB_OPERATORS=json.dumps([{'username': 'ci-operator',
-                                                      'password': secrets.token_hex(24), 'api_token': operator}]))
+                                                      'password': operator_password, 'api_token': operator}]))
         app_env = work / 'application.env'
         app_env.write_text(''.join(f'{key}={value}\n' for key, value in env.items()))
         app_env.chmod(0o600)
@@ -224,7 +272,14 @@ def validate(service, trivy):
             if request(port, health) == 200:
                 break
             time.sleep(1)
-        assert request(port, health) == 200
+        health_status = request(port, health)
+        if health_status != 200:
+            logs = docker('logs', '--tail', '40', application, check=False)
+            print(json.dumps({'stage': 'application_health_failed', 'service': service,
+                              'http_status': health_status,
+                              'diagnostic': safe_ci_diagnostic(logs.stdout + logs.stderr,
+                                  [password, public, operator, visitor_password, operator_password])}), flush=True)
+            raise RuntimeError('application_health_failed')
         assert docker('exec', application, 'id', '-u').stdout.strip() != '0'
         if service == 'frontend':
             assert request(port, '/') == 401
@@ -240,7 +295,12 @@ def validate(service, trivy):
             assert sql('SELECT count(*) FROM worker_health WHERE enabled') == '0'
             assert sql('SELECT count(*) FROM cycles') == '0'
         if service != 'frontend':
-            assert sql('SELECT count(*) FROM _sqlx_migrations WHERE success') == '11'
+            actual = json.loads(sql("SELECT json_agg(json_build_object('version',version,"
+                                    "'checksum',encode(checksum,'hex'),'success',success) ORDER BY version) "
+                                    'FROM _sqlx_migrations'))
+            expected = migration_inventory(ROOT / 'migrations')
+            assert len(actual) == len(expected)
+            assert {row['version']: row['checksum'] for row in actual if row['success']} == expected
             docker('restart', database)
         docker('restart', application)
         for _ in range(120):
