@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "fixture_id": "supplied-synthesis",
+  "model": "gpt-6-luna",
+  "max_requests": 1,
+  "max_input_tokens": 24192,
+  "max_output_tokens": 1024,
+  "max_cost_microusd": 4000,
+  "budget_limit_microusd": 5000,
+  "use_memory": false,
+  "api_origin": "http://127.0.0.1:55682",
+  "agent_id": "82c254ff-4659-4404-94c4-c497565567e6",
+  "job_id": "7bf3067c-ea30-4557-8c70-c06aeb1c429b",
+  "input_sha256": "613e8933d52bf52f46091fb9b67ab05562393145bd5c60e0204c8a61d21fd35e",
+  "project_id": "proj_npsyg93Ofk7ivKheGa8IDw5q",
+  "budget_id": "3248e1c5-b306-4806-825a-f9b0a79d8f22",
+  "note": "Milestone 10C fresh proposal after structured-work compatibility validation. Separate unpaid disposable job and independent budget; no paid consent or historical allowance reuse.",
+  "preflight": {
+    "version": 1,
+    "test_owner_id": "acede749-746b-4541-b178-0085434dcd39",
+    "service_id": "d428373b-f718-41ce-8420-0f6b298d5927",
+    "request_id": "41316d3e-40b8-4b7d-8605-83db7aab36b8",
+    "accounting_namespace": "79c1d3b9-6ed4-4587-a818-af3242de4aba",
+    "task_input": "{\"material\":\"Document A: Replication reduces downtime but copies accidental deletion.\\nDocument B: Offline snapshots preserve earlier state but need a tested restore.\\nNeither document contains measured recovery times.\",\"objective\":\"Compare the supplied recovery strategies\",\"requirements\":[]}",
+    "database": {
+      "name": "supa_m10a_8c6356653dc2_test",
+      "data_directory": "/tmp/supa-m10a-pg-8c6356653dc2/data",
+      "socket_directory": "/tmp/supa-m10a-pg-8c6356653dc2/s",
+      "port": 55681,
+      "system_identifier": "7703596362529484555"
+    },
+    "authorization_state": "proposal_only",
+    "memory_policy": "none",
+    "approved_tools": [
+      "inspect_input",
+      "extract_evidence",
+      "check_requirements"
+    ],
+    "job_expires_at": "2026-11-03T15:28:20.554261Z"
+  },
+  "provider": "openai",
+  "implementation": {
+    "provider_source_sha256": "ccb2a4d665ef82ec92ca1928153468e5e9a3b3223f66736b20737e9bc3a1ebb5",
+    "validator_source_sha256": "e0f151d0e48cd6336dbf1de6576b225ba99d4e5b33064d45a382817423cd22ce"
+  }
+}
