@@ -5,6 +5,7 @@ mod epoch;
 mod intelligence;
 mod operational;
 mod operator_status;
+mod work_review;
 pub use access::Role;
 pub use epoch::ApplicationEpoch;
 pub use operational::OperationalContext;
