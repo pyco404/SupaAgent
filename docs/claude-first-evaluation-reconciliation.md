@@ -8,7 +8,7 @@ Investigated **2026-11-02**, Africa/Lagos. Database inspection completed at appr
 
 ## Verified records and timing
 
-The already-running disposable database was queried with `default_transaction_read_only=on`, a five-second statement timeout and the exact private socket/database binding. No cluster was started or restarted. Database identity/system identifier matched the reviewed fixture. Its full saved session equals the original runner journal byte-for-byte after JSON decoding.
+The already-running disposable database was queried with `default_transaction_read_only=on`, a five-second statement timeout and the exact private socket/database binding. No cluster was started or restarted. Database identity/system identifier matched the reviewed fixture. Its full saved session matches the original runner journal as decoded JSON; separate file hashes verify that the original evidence files were not modified.
 
 | Evidence | Verified value |
 | --- | --- |
