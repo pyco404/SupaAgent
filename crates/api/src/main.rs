@@ -151,7 +151,11 @@ async fn run() -> Result<()> {
             .await
             .map_err(|_| Error::Invalid);
     }
-    store.migrate().await?;
+    if private_staging {
+        store.verify_runtime_schema().await?;
+    } else {
+        store.migrate().await?;
+    }
     store.recover().await?;
     let runtime = Runtime::new(store.clone(), reasoner);
     let mut state = AppState::new(store.clone(), runtime, token)?;
