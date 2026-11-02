@@ -198,8 +198,10 @@ def validate(service, trivy):
         if not digest or not re.fullmatch(r'sha256:[0-9a-f]{64}', digest):
             raise RuntimeError('buildkit_manifest_digest_missing')
         config = json.loads(docker('image', 'inspect', image).stdout)[0]
+        assert config['Os'] == 'linux' and config['Architecture'] == 'amd64'
         print(json.dumps({'stage': 'image_built', 'service': service,
                           'manifest_digest': digest, 'config_image_id': config['Id'],
+                          'architecture': config['Architecture'],
                           'runtime_validated': False, 'scan_passed': False}), flush=True)
         assert config['Config']['User'] not in ('', '0', 'root', '0:0')
         archive = work / 'image.tar'
@@ -263,8 +265,11 @@ def validate(service, trivy):
         if service != 'frontend':
             postgres = 'ghcr.io/railwayapp-templates/postgres-ssl:18'
             docker('pull', postgres)
-            postgres_digest = json.loads(docker('image', 'inspect', postgres).stdout)[0]['RepoDigests']
-            print(json.dumps({'stage': 'postgres_image_pulled', 'repo_digests': postgres_digest}), flush=True)
+            pg_config = json.loads(docker('image', 'inspect', postgres).stdout)[0]
+            assert pg_config['Os'] == 'linux' and pg_config['Architecture'] == config['Architecture']
+            postgres_digest = pg_config['RepoDigests']
+            print(json.dumps({'stage': 'postgres_image_pulled', 'repo_digests': postgres_digest,
+                              'architecture': pg_config['Architecture']}), flush=True)
             pg_env = work / 'postgres.env'
             # PGPASSWORD is inherited by exec probes; never put it in argv/logs.
             pg_env.write_text('POSTGRES_DB=supa_ci_test\nPGDATA=/var/lib/postgresql/data/pgdata\nPOSTGRES_PASSWORD=' + password + '\nPGPASSWORD=' + password + '\n')
