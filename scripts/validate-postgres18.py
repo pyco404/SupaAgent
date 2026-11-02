@@ -111,10 +111,26 @@ def validate(binary, library, evidence, offline=False):
         pg('pg_ctl', '-D', base / 'data', '-l', base / 'server.log', '-w', 'start')
         pg('createdb', '--template=template0', database)
         pg('createdb', '--template=template0', 'supa_pg18_suite_test')
+        bootstrap_env = {**env, 'DATABASE_URL': url(database), 'SUPA_DISPOSABLE_SCHEMA': 'true'}
+        subprocess.run([str(ROOT / 'target/debug/supa-staging-schema')], env=bootstrap_env,
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
+        runtime_password = secrets.token_hex(32)
+        sql("CREATE ROLE supa_pg18_runtime LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE "
+            "NOREPLICATION NOBYPASSRLS PASSWORD '" + runtime_password + "'")
+        sql('REVOKE CREATE ON SCHEMA public FROM PUBLIC; GRANT USAGE ON SCHEMA public TO supa_pg18_runtime; '
+            'GRANT SELECT ON ALL TABLES IN SCHEMA public TO supa_pg18_runtime; '
+            'GRANT INSERT,UPDATE ON worker_health TO supa_pg18_runtime; '
+            'GRANT UPDATE ON live_sessions TO supa_pg18_runtime')
+        runtime_url = url(database).replace(user + '@', 'supa_pg18_runtime:' + runtime_password + '@', 1)
+        for statement in ('CREATE TABLE forbidden_ci(id int)', 'UPDATE _sqlx_migrations SET success=false',
+                          'UPDATE agents SET simulated_balance_microusd=1', 'DELETE FROM epoch_guard.approvals'):
+            denied = pg('psql', '-XqAt', '-v', 'ON_ERROR_STOP=1', '-c',
+                        'SET ROLE supa_pg18_runtime; ' + statement, allow_failure=True)
+            assert denied.returncode != 0 and 'permission denied' in denied.stderr
         service_env = {key: env[key] for key in ('PATH', 'HOME', 'LANG') if key in env}
-        service_env.update(DATABASE_URL=url(database), SUPA_PROVIDER='offline',
+        service_env.update(DATABASE_URL=runtime_url, SUPA_PROVIDER='offline',
                            SUPA_PRIVATE_STAGING='true', SUPA_API_SCHEDULER_ENABLED='false',
-                           SUPA_WORKER_ENABLED='false', SUPA_ALLOW_OPENAI='false',
+                           SUPA_WORKER_ENABLED='false', SUPA_ALLOW_OPENAI='false', SUPA_ALLOW_ANTHROPIC='false',
                            SUPA_CONTROLLED_INFERENCE='false', SUPA_WALLET_ENABLED='false',
                            SUPA_API_TOKEN=secrets.token_hex(32),
                            SUPA_OPERATOR_CREDENTIALS=json.dumps([{
@@ -219,6 +235,7 @@ def validate(binary, library, evidence, offline=False):
                   'concurrent_idempotency_successes': 1, 'critical_indexes_verified': True,
                   'crash_readiness_503_then_200': True, 'api_worker_sigterm_exit_codes': [0, 0],
                   'worker_disabled_no_cycles': True, 'empty_epoch_and_approval_tables': True,
+                  'restricted_runtime_no_schema_or_financial_write': True,
                   'backup_restore_fingerprint': fingerprint, 'functions_triggers_privileges_match': True,
                   'backup_sha256': hashlib.sha256(dump.read_bytes()).hexdigest(), 'backup_mode': '0600',
                   'rust_tests_passed': passed, 'container_image_tested': False,
