@@ -184,6 +184,9 @@ impl OpenAi {
             }
         }
         let mut provider = Self::new(key, model.to_string())?;
+        if let Ok(project) = std::env::var("OPENAI_PROJECT_ID") {
+            provider.bind_project(&project)?;
+        }
         fn number(name: &str) -> Result<i64> {
             std::env::var(name)
                 .map_err(|_| Error::Invalid)?
@@ -213,6 +216,19 @@ impl OpenAi {
             .map_err(|_| Error::Invalid)?;
         provider.policy.validate()?;
         Ok(provider)
+    }
+    fn bind_project(&mut self, project: &str) -> Result<()> {
+        if !project.starts_with("proj_")
+            || project.len() <= 5
+            || project.len() > 120
+            || !project
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+        {
+            return Err(Error::Invalid);
+        }
+        self.project = Some(project.to_owned());
+        Ok(())
     }
     fn new(api_key: String, model: String) -> Result<Self> {
         if !authentication::key_format_valid(&api_key)
@@ -547,10 +563,11 @@ mod wire_tests {
     #[tokio::test]
     #[ignore = "requires local loopback sockets; no real API calls"]
     async fn openai_wire_contract_keeps_credentials_out_of_model_input() {
-        let body=json!({"status":"completed","usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":40},"output_tokens":50},"output":[{"type":"message","content":[{"type":"output_text","text":"{\"actions\":[]}"}]}]}).to_string();
+        let body=json!({"model":"fixture-model","status":"completed","usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":40},"output_tokens":50},"output":[{"type":"message","content":[{"type":"output_text","text":"{\"actions\":[]}"}]}]}).to_string();
         let (endpoint, server) = fixture(200, body).await;
         let mut provider =
             OpenAi::new("sk-fake-wire-secret".into(), "fixture-model".into()).unwrap();
+        provider.bind_project("proj_fixture").unwrap();
         provider.endpoint = Some(endpoint);
         let invocation = provider.plan_metered(&context()).await;
         assert!(invocation.result.unwrap().actions.is_empty());
@@ -559,6 +576,12 @@ mod wire_tests {
         let (headers, body) = request.split_once("\r\n\r\n").unwrap();
         assert!(headers.contains("Bearer sk-fake-wire-secret"));
         assert!(!body.contains("sk-fake-wire-secret"));
+        assert!(
+            headers
+                .to_lowercase()
+                .contains("openai-project: proj_fixture")
+        );
+        assert!(!body.contains("proj_fixture"));
         let v: Value = serde_json::from_str(body).unwrap();
         assert_eq!(v["store"], false);
         assert_eq!(v["service_tier"], "default");
@@ -677,6 +700,29 @@ impl Reasoner for RoutedOpenAi {
 #[cfg(test)]
 mod model_policy_tests {
     use super::*;
+    #[test]
+    fn routine_routing_and_project_binding_stay_explicit() {
+        let mut routine = OpenAi::new("sk-fake".into(), "gpt-6-luna".into()).unwrap();
+        for invalid in [
+            "",
+            "proj_",
+            "workspace_other",
+            "proj_header\nvalue",
+            "proj_a b",
+        ] {
+            assert!(routine.bind_project(invalid).is_err());
+            assert!(routine.project.is_none());
+        }
+        routine.bind_project("proj_fixture").unwrap();
+        assert_eq!(routine.project.as_deref(), Some("proj_fixture"));
+        let routed = RoutedOpenAi {
+            routine,
+            complex: None,
+        };
+        for purpose in ["plan", "draft", "social"] {
+            assert_eq!(routed.policy_for(purpose).model, "gpt-6-luna");
+        }
+    }
     #[test]
     fn routine_model_is_lower_cost_and_unsupported_models_fail_closed() {
         let luna = model_rates("gpt-6-luna").unwrap();
