@@ -37,8 +37,7 @@ test('worker remains disabled and offline; API scheduler and wallets remain disa
   assert.equal(worker.variables.SUPA_WORKER_ENABLED.value, 'false');
   for(const resource of [api,worker]) {
     assert.equal(resource.variables.SUPA_PROVIDER.value, 'offline');
-    assert.equal(resource.variables.DATABASE_URL.type, 'reference');
-    assert.equal(resource.variables.DATABASE_URL.resource, 'database.supa-postgres');
+    assert.equal(resource.variables.DATABASE_URL.type, 'sharedReference');
     assert.equal(resource.variables.SUPA_ALLOW_OPENAI.value, 'false');
     assert.equal(resource.variables.SUPA_CONTROLLED_INFERENCE.value, 'false');
     assert.equal(resource.variables.SUPA_ALLOW_ANTHROPIC.value, 'false');
@@ -46,6 +45,8 @@ test('worker remains disabled and offline; API scheduler and wallets remain disa
     assert.equal(resource.variables.SUPA_WALLET_ENABLED.value, 'false');
   }
   assert.equal(api.variables.SUPA_API_SCHEDULER_ENABLED.value, 'false');
+  assert.deepEqual(api.variables.DATABASE_URL,{type:'sharedReference',name:'SUPA_API_DATABASE_URL'});
+  assert.deepEqual(worker.variables.DATABASE_URL,{type:'sharedReference',name:'SUPA_WORKER_DATABASE_URL'});
   assert.equal(api.variables.SUPA_WALLET_ENABLED.value, 'false');
 });
 test('authoring names and Amsterdam region match the dedicated staging proposal',()=>{
@@ -131,7 +132,7 @@ test('container runtime entrypoints preserve health ports, non-root users and SI
     assert.match(runtime, new RegExp(`^EXPOSE ${port}$`, 'm'));
     assert.equal(resource.variables.PORT.value, port);
     if (resource === frontend) {
-      assert.match(runtime, /exec node node_modules\/next\/dist\/bin\/next start --hostname :: --port/);
+      assert.match(runtime, /exec node node_modules\/next\/dist\/bin\/next start --hostname 0\.0\.0\.0 --port/);
     } else {
       assert.match(runtime, /^ENTRYPOINT \["\/usr\/local\/bin\/supa-(api|runtime)"\]$/m);
     }
