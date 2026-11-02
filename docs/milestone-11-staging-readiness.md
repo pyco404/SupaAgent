@@ -1,6 +1,6 @@
 # Milestone 11 — actual staging validation and approval boundary
 
-2026-11-02. **Not cleared for provisioning or deployment.** Actual remote image builds were exercised; the validation run failed. Local corrections are implemented, tested and committed individually, but need separate GitHub publication approval before they can run remotely. No Railway service, volume, domain, credential or deployment was created.
+2026-11-02. See the corrected-run results at the end of this report for the latest GitHub evidence. **Not cleared for provisioning or deployment.** Actual remote image builds were exercised; the validation run failed. Local corrections are implemented, tested and committed individually, but need separate GitHub publication approval before they can run remotely. No Railway service, volume, domain, credential or deployment was created.
 
 ## Verified target and unchanged infrastructure
 
@@ -139,3 +139,53 @@ Private, ignored evidence is under `artifacts/milestone-11/`: final CI job/run l
 Rollback: before first deployment, discard only the unexecuted local plan. Once approved resources exist, stop application services/disable domains and revoke new runtime credentials while **preserving PostgreSQL volumes and the existing bucket**. Roll application images back only to a known compatible schema version; do not reverse migrations by restoring over live state. For database recovery, restore a verified backup into a separate new database/volume, compare invariants, then request explicit cutback approval. Deleting persistent volumes or the bucket is not an authorized rollback action. Pausing compute does not eliminate storage charges.
 
 All changes use separate Conventional Commits on `main`; no squash, rebase, force-push or history rewrite. Complete history/secrets gates run after the final commit. No new push is authorized or performed by this milestone. **Deployment remains blocked; the immediate approval needed is GitHub synchronization of the corrective validation code, not Railway provisioning.**
+
+
+## Approved synchronization and single corrected CI run
+
+The operator authorized exactly ten existing commits. Fetched `origin/main`, verified the clean `main` tree at `54d1bdcb54654238ac26d31e413684e6d635a820`, and confirmed the remote was an ancestor exactly ten commits behind. All 1,468 main commits passed the one-file audit. The full local pattern/known-secret scan passed without findings, including unpublished blobs. This is a targeted scanner, not proof against every unknown secret format.
+
+Pushed only those commits, without tags or history rewriting. Verified remote HEAD matched the approved SHA and the tree was clean before subsequent local corrections. No generated artifacts, credentials or database files were added.
+
+Dispatched exactly one [corrected validation run, 41513534137](https://github.com/pyco404/SupaAgent/actions/runs/41513534137), at the approved SHA. No reruns, additional dispatches, image publication or Railway operations occurred. All four jobs finished with failure.
+
+| Job | Actual result | HIGH / CRITICAL image findings | Secret findings |
+| --- | --- | --- | --- |
+| Frontend | Image built/loaded; exclusion-canary checks passed; Next.js 16.4.3 reported ready in 129 ms. Published-loopback `/healthz` never returned HTTP; configured non-root user checked. Full runtime UID/auth/restart/SIGTERM checks were not reached. | 38 / 1 | 0 |
+| API | Image built/loaded/scanned; configured non-root user and canary checks passed. Disposable Railway PostgreSQL container exited before the TCP SQL version probe. API application startup/migrations/auth/recovery were not reached. | 32 / 1 | 0 |
+| Worker | Image built/loaded/scanned; configured non-root user and canary checks passed. Same PostgreSQL-container exit. Worker application health/default-disabled/no-cycle/restart/shutdown assertions were not reached. | 32 / 1 | 0 |
+| PostgreSQL 18 | Pinned packages downloaded and checksums verified. Early loader check identified missing `liburing.so.2`. Compilation, thirteen-migration compatibility, accounting/concurrency/crash/restore tests were skipped. | Not scanned by this job | Not applicable |
+
+The frontend started as a real container, but reported readiness does not establish reachable HTTP health. Its network/binding failure remains undiagnosed. For API/worker, the log proves the database container stopped, not why it stopped; startup logs were not retained in this run. Their application runtimes were not successfully demonstrated. The workflow cleanup removed owned disposable containers/volumes. No PostgreSQL image digest was emitted before the failing probe; none is claimed.
+
+### Actual BuildKit image digests
+
+These are digests from successful local loads on ephemeral CI runners, not published registry images:
+
+- frontend: `sha256:902d0b4b1e53af60d885768416d575852812766ff61137aee8a2ca1ba5fbef8d`
+- api: `sha256:60eb0afbb452a5f60967393e54c695211dbde2d71df8ad17e7f0be48088140bb`
+- worker: `sha256:d7be50fe504099baa19830fc8a551566a1fa954387433c6e374950e2fac8c05c`
+
+### Vulnerability evidence and limitations
+
+Counts are package/advisory occurrences from the actual application-image scans, not unique CVE counts or exploitability conclusions. All three images report CRITICAL `CVE-2023-45853` in `zlib1g`, with no fixed version listed. The strict HIGH/CRITICAL gate remains unchanged; no advisories were suppressed. Runtime failures occurred before the final combined policy/reporting step, so these image scan counts do not certify dependency/IaC/PostgreSQL scans as clean. The Rust executable scans reported no language-specific metadata; separate Cargo manifest analysis began in the API job but its full findings were not emitted before the runtime failure.
+
+Frontend additionally reports fix-available HIGH findings for `brace-expansion` 5.0.9 and `undici` 6.28.0. Their exact layer/dependency provenance needs inspection before choosing a remediation; an earlier local npm audit with zero findings is not evidence against these container scan results. The 33 shared base-image occurrences list no fixed versions.
+
+Unique HIGH/CRITICAL advisory IDs reported per image:
+
+- frontend: `CVE-2023-45853`, `CVE-2025-69720`, `CVE-2026-102276`, `CVE-2026-102278`, `CVE-2026-109383`, `CVE-2026-109869`, `CVE-2026-16742`, `CVE-2026-19534`, `CVE-2026-41992`, `CVE-2026-53613`, `CVE-2026-53615`, `CVE-2026-54369`, `CVE-2026-78410`, `CVE-2026-87018`, `CVE-2026-9538`.
+- api: `CVE-2023-45853`, `CVE-2025-69720`, `CVE-2026-16742`, `CVE-2026-41992`, `CVE-2026-53613`, `CVE-2026-53615`, `CVE-2026-54369`, `CVE-2026-78410`, `CVE-2026-9538`.
+- worker: `CVE-2023-45853`, `CVE-2025-69720`, `CVE-2026-16742`, `CVE-2026-41992`, `CVE-2026-53613`, `CVE-2026-53615`, `CVE-2026-54369`, `CVE-2026-78410`, `CVE-2026-9538`.
+
+### Local follow-up, not pushed or remotely executed
+
+- `1cc6437`: install the missing `liburing2` runtime package on the disposable Ubuntu runner. This addresses the identified loader dependency but is not yet a successful PostgreSQL 18 test.
+- `6dfb21b`: fail early when the owned database container exits, retain bounded credential-scrubbed startup logs, and emit the pulled PostgreSQL digest before startup probes.
+- `f934e67`: mocked regression coverage for running/TCP readiness, early exit, no SQL probe after exit and diagnostic redaction.
+
+Eleven offline CI/security tests and fifteen secret-scanner self-tests pass. No application source, frontend design, financial policy or primary database was changed. Native/container builds were not repeated locally with approximately 600 MiB free. Raw run/job logs and parsed image checkpoints remain private and ignored under `artifacts/milestone-11-corrected/`; they were not committed or uploaded.
+
+Remaining blockers: unreachable frontend health; unexplained PostgreSQL container startup exit; incomplete PostgreSQL 18 migration/recovery certification; HIGH/CRITICAL image findings; previously documented restricted-runtime automatic-migration privilege dependency, staging launch-flow parity, and pending independent backup key/recovery arrangements. No deployment-readiness claim is made. The primary stayed stopped; no database/accounting operations were performed, preserving both historical holds by non-intervention. Worker execution and paid providers remain disabled in the prepared configuration, with no new runtime-default claim from the failed container tests.
+
+A fresh approval is required to push the local follow-up commits and run another validation. Railway provisioning/deployment remains a separate approval boundary.
