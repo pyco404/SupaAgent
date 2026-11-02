@@ -46,12 +46,14 @@ impl ControlledProvider for Mock {
         }
         if self.mode == 5 {
             return Invocation {
+                diagnostic: None,
                 usage: None,
                 result: Err(Error::ProviderHttp(429)),
             };
         }
         if self.mode == 1 {
             return Invocation {
+                diagnostic: None,
                 usage: None,
                 result: Err(Error::ProviderTransport),
             };
@@ -63,6 +65,7 @@ impl ControlledProvider for Mock {
             cache_write_tokens: 0,
         };
         Invocation {
+            diagnostic: None,
             usage: Some(usage),
             result: Ok(LiveProposal {
                 summary: "Review the supplied memories before acting.".into(),
