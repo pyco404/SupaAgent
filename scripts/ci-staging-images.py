@@ -55,8 +55,8 @@ def copy_context(source, destination):
         paths.extend([f'crates/{crate}/Cargo.toml', f'crates/{crate}/src'])
     paths.extend(['web/' + path for path in ('package.json', 'package-lock.json', 'next.config.ts',
                  'next-env.d.ts', 'tsconfig.json', 'postcss.config.mjs', 'src', 'public')])
-    paths.extend(['reference-web/' + path for path in ('index.html', 'style.css', 'app.js',
-                 'scene.js', 'wheel.js', 'platform.js', 'backend.mjs', 'backend.d.mts', 'public')])
+    paths.extend(['reference-web/' + path for path in ('index.html', 'not-found.html', 'style.css', 'app.js',
+                 'scene.js', 'wheel.js', 'platform.js', 'backend.mjs', 'launch.mjs', 'backend.d.mts', 'public')])
     for relative in paths:
         src, dst = source / relative, destination / relative
         if src.is_symlink() or (src.is_dir() and any(p.is_symlink() for p in src.rglob('*'))):
