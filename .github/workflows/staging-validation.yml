@@ -68,7 +68,7 @@ jobs:
           # Runtime libraries only, on this disposable runner. Never installs a
           # PostgreSQL server package or creates a system cluster.
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libldap2 libxml2 libxslt1.1 libicu74
+          sudo apt-get install -y --no-install-recommends libldap2 libxml2 libxslt1.1 libicu74 liburing2
           python3 - <<'PY'
           import hashlib, os, pathlib, subprocess, urllib.request
           base = pathlib.Path(os.environ['RUNNER_TEMP']) / 'supa-pg18'
