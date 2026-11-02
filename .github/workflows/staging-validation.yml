@@ -102,7 +102,7 @@ jobs:
           rustup toolchain install 1.93.0 --profile minimal --no-self-update
           rustup default 1.93.0
       - name: Build native test services
-        run: cargo build --locked -p supa-api --bin supa-api -p supa-runtime --bin supa-runtime
+        run: cargo build --locked -p supa-api --bin supa-api --bin supa-staging-schema -p supa-runtime --bin supa-runtime
       - name: Validate migrations, concurrency, accounting, recovery and restore on PostgreSQL 18
         run: |
           set -euo pipefail
