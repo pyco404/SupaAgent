@@ -156,3 +156,8 @@ body:before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 @media(hover:hover){.agent-trigger:not(:disabled):hover{border-color:var(--green)}.agent-option:hover{background:#141816}}
 
 .buffer{padding-inline:8px}
+
+/* Launch controls inherit the existing terminal form language. */
+.launch-panel input:not([type=checkbox]){display:block;min-height:44px;width:100%;min-width:0;max-width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;caret-color:var(--ink);color-scheme:dark}
+.launch-panel input:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+.launch-panel :disabled{opacity:.6}
