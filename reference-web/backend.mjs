@@ -1,3 +1,4 @@
+import {launch} from './launch.mjs';
 /** Server-only adapter. Reuses the operator console's Zod contracts and auth rules. */
 import { readFile, stat } from 'node:fs/promises';
 import { parseEnv } from 'node:util';
@@ -53,6 +54,7 @@ function scrub(value) {
   return value;
 }
 export async function readResource(path, headers, fetcher = fetch) {
+  if(path==='/api/launch')return launch(path,headers,undefined,fetcher);
   const request = new Request('http://127.0.0.1'+path, { headers });
   if (!localRequest(request)) return fail('local_access_only',403);
   if (path.includes('?')) return fail('query_not_permitted',400);
@@ -86,6 +88,7 @@ export { operatorAuthorized, localRequest };
 
 /** Closed offline mutations only: rehearsal or revision-checked lifecycle authorization. */
 export async function runAutonomy(path, headers, body, fetcher=fetch) {
+  if(path==='/api/launch')return launch(path,headers,body,fetcher);
   if(isEconomicPath(path))return runEconomic(path,headers,body,fetcher);
   if(/^\/api\/agents\/[0-9a-f-]{36}\/(?:live-work|live(?:\/[0-9a-f-]{36}\/approval)?)$/i.test(path))return runLive(path,headers,body,fetcher);
   const request=new Request('http://127.0.0.1'+path,{headers});
