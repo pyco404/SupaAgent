@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import urllib.error
 from unittest.mock import patch
 import uuid
 spec=importlib.util.spec_from_file_location('work_eval',Path(__file__).with_name('live-work-evaluation.py'));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
@@ -46,6 +47,21 @@ class Readiness(unittest.TestCase):
         p=self.plan();p['preflight']={'request_id':str(uuid.uuid4())};approval=m.inspect(p)[0]['scope_sha256']
         with patch.object(m.subprocess,'run',return_value=m.subprocess.CompletedProcess([],1,'','')),patch.object(m.urllib.request,'build_opener',side_effect=AssertionError('HTTP forbidden')):
             with self.assertRaisesRegex(ValueError,'frozen_disposable_target_not_execution_ready'):m.run(p,approval,p['model'],4000)
+    def test_job_read_failure_never_posts_or_creates_a_request_journal(self):
+        p=self.plan();approval=m.inspect(p)[0]['scope_sha256'];calls=[]
+        class Opener:
+            def open(self,req,timeout):
+                self_test.assertIsNone(req.data, 'No generation POST is permitted after a failed job read')
+                calls.append(req.full_url)
+                if req.full_url.endswith('/health'):result={'epoch':None}
+                elif req.full_url.endswith('/jobs/'+p['job_id']):raise urllib.error.HTTPError(req.full_url,503,'fixture job read failed',{},None)
+                else:result={'enabled':True,'project_id':p['project_id'],'policy':{'model':p['model'],'budget_id':p['budget_id'],'budget_limit_microusd':5000,'input_token_bound':24192,'max_output_tokens':1024}}
+                return io.BytesIO(json.dumps(result).encode())
+        self_test=self
+        with tempfile.TemporaryDirectory(prefix='supa-job-read-failure-') as tmp,patch.object(m,'ROOT',Path(tmp)),patch.dict(m.os.environ,{'SUPA_WORK_OPERATOR_TOKEN':'fixture-owner-token-'*3}),patch.object(m.urllib.request,'build_opener',return_value=Opener()):
+            with self.assertRaises(urllib.error.HTTPError):m.run(p,approval,p['model'],4000)
+            self.assertEqual(list(Path(tmp).rglob('*.jsonl')),[])
+        self.assertEqual(len(calls),3)
     def test_frozen_nonce_survives_local_journal_loss(self):
         p=self.plan();case=m.inspect(p)[1];source=json.dumps({k:case[k] for k in ['objective','material','requirements']});p['input_sha256']=hashlib.sha256(source.encode()).hexdigest();nonce=str(uuid.uuid4());p['preflight']={'request_id':nonce};approval=m.inspect(p)[0]['scope_sha256'];posted=[]
         class Opener:
