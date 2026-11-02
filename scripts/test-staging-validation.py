@@ -65,6 +65,10 @@ class StagingSecurity(unittest.TestCase):
             self.assertFalse((context / 'web/node_modules').exists())
             self.assertEqual((context / 'web/.env.local').read_bytes(), images.CANARY)
             self.assertTrue((context / '.dockerignore').is_file())
+            for relative in ['reference-web/not-found.html', 'reference-web/launch.mjs']:
+                self.assertTrue((context / relative).is_file())
+                self.assertIn('!'+relative, (context / '.dockerignore').read_text())
+                self.assertIn(relative, (ROOT / 'deployment/frontend.Dockerfile').read_text())
 
     def test_layer_stream_canary_detection_handles_chunk_boundaries(self):
         with tempfile.TemporaryDirectory() as temp:
