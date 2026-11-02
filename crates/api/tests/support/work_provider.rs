@@ -24,6 +24,7 @@ impl ControlledProvider for MockWorkProvider {
     }
     async fn reason(&self, _: &str, _: &[Memory]) -> Invocation<LiveProposal> {
         Invocation {
+            diagnostic: None,
             result: Err(Error::Denied),
             usage: None,
         }
@@ -33,6 +34,7 @@ impl ControlledProvider for MockWorkProvider {
         tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         if self.mode == 3 {
             return Invocation {
+                diagnostic: None,
                 result: Err(Error::ProviderTransport),
                 usage: None,
             };
@@ -143,6 +145,7 @@ impl ControlledProvider for MockWorkProvider {
             })
         };
         Invocation {
+            diagnostic: None,
             result: Ok(report),
             usage,
         }
