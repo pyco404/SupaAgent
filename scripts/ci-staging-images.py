@@ -62,6 +62,22 @@ def vulnerability_gate(report):
         raise ValueError(f'vulnerability_gate_failed_high_critical_{high}_secrets_{leaked}')
 
 
+def scan_evidence(report):
+    """Only public advisory metadata; never emit matched secret text."""
+    scan_shape(report)
+    return {'findings': [
+        {'target': result.get('Target'), **{key: item.get(key) for key in
+         ('VulnerabilityID', 'PkgName', 'Severity', 'InstalledVersion', 'FixedVersion')}}
+        for result in report['Results'] for item in result.get('Vulnerabilities') or []],
+        'secret_findings': sum(len(result.get('Secrets') or []) for result in report['Results'])}
+
+
+def clean_shutdown(service, exit_code):
+    # Next.js may report conventional SIGTERM (128+15) after graceful shutdown.
+    # Docker's timeout/SIGKILL (137), crashes and all nonzero Rust exits still fail.
+    return exit_code in ((0, 143) if service == 'frontend' else (0,))
+
+
 def copy_context(source, destination):
     paths = ['Cargo.toml', 'Cargo.lock', 'migrations', '.dockerignore', 'deployment']
     for crate in ('domain', 'persistence', 'providers', 'capabilities', 'runtime', 'api'):
@@ -126,7 +142,9 @@ def wait_for_database(docker, database, private_values):
 def request(port, path, authorization=None):
     headers = {'Authorization': authorization} if authorization else {}
     try:
-        with urllib.request.urlopen(urllib.request.Request(f'http://127.0.0.1:{port}{path}', headers=headers), timeout=8) as result:
+        # Never send local health/auth probes through runner proxy configuration.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(urllib.request.Request(f'http://127.0.0.1:{port}{path}', headers=headers), timeout=8) as result:
             return result.status
     except urllib.error.HTTPError as error:
         return error.code
@@ -202,7 +220,7 @@ def validate(service, trivy):
                           'high_critical': sum(v.get('Severity') in ('HIGH', 'CRITICAL')
                               for r in image_report['Results'] for v in r.get('Vulnerabilities') or []),
                           'high_critical_findings': [
-                              {k:v.get(k) for k in ('VulnerabilityID','PkgName','Severity','InstalledVersion','FixedVersion')}
+                              {'Target': r.get('Target'), **{k:v.get(k) for k in ('VulnerabilityID','PkgName','Severity','InstalledVersion','FixedVersion')}}
                               for r in image_report['Results'] for v in r.get('Vulnerabilities') or []
                               if v.get('Severity') in ('HIGH','CRITICAL')],
                           'secret_findings': sum(len(r.get('Secrets') or []) for r in image_report['Results']),
@@ -211,7 +229,8 @@ def validate(service, trivy):
         if service == 'api':
             manifests = work / 'manifests'
             for relative in ('Cargo.lock', 'Cargo.toml', 'web/package-lock.json', 'web/package.json',
-                             '.railway/package-lock.json', '.railway/package.json'):
+                             '.railway/package-lock.json', '.railway/package.json',
+                             *[str(p.relative_to(ROOT)) for p in (ROOT / 'crates').glob('*/Cargo.toml')]):
                 target = manifests / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(ROOT / relative, target)
@@ -223,6 +242,7 @@ def validate(service, trivy):
                 raise RuntimeError('dependency_scanner_failed_closed')
             dependency_report = json.loads(deps.read_text())
             scan_shape(dependency_report)
+            print(json.dumps({'stage': 'dependencies_scanned', **scan_evidence(dependency_report)}), flush=True)
         # Do runtime checks even when advisories exist, but never mark the job passed.
         docker('network', 'create', '--internal', network)
         made_network = True
@@ -236,7 +256,8 @@ def validate(service, trivy):
                'SUPA_ALLOW_ANTHROPIC': 'false', 'SUPA_CONTROLLED_WORK': 'false',
                'SUPA_CONTROLLED_INFERENCE': 'false', 'SUPA_API_SCHEDULER_ENABLED': 'false',
                'SUPA_WALLET_ENABLED': 'false', 'SUPA_API_TOKEN': public,
-               'SUPA_OPERATOR_CREDENTIALS': json.dumps([credential])}
+               'SUPA_OPERATOR_CREDENTIALS': json.dumps([credential]),
+               'SUPA_OPERATOR_SESSION_DEADLINES': json.dumps({credential['id']: int(time.time()) + 1800})}
         visitor_password, operator_password = secrets.token_hex(24), secrets.token_hex(24)
         private_values.extend([password,public,operator,visitor_password,operator_password])
         if service != 'frontend':
@@ -246,11 +267,12 @@ def validate(service, trivy):
             print(json.dumps({'stage': 'postgres_image_pulled', 'repo_digests': postgres_digest}), flush=True)
             pg_env = work / 'postgres.env'
             # PGPASSWORD is inherited by exec probes; never put it in argv/logs.
-            pg_env.write_text('POSTGRES_DB=supa_ci_test\nPOSTGRES_PASSWORD=' + password + '\nPGPASSWORD=' + password + '\n')
+            pg_env.write_text('POSTGRES_DB=supa_ci_test\nPGDATA=/var/lib/postgresql/data/pgdata\nPOSTGRES_PASSWORD=' + password + '\nPGPASSWORD=' + password + '\n')
             pg_env.chmod(0o600)
             # Fresh anonymous volume, removed with this owned test container only.
             owned_containers.append(database)
-            docker('run', '--detach', '--name', database, '--network', network, '--env-file', pg_env, postgres)
+            docker('run', '--detach', '--name', database, '--network', network,
+                   '--mount', 'type=volume,destination=/var/lib/postgresql/data', '--env-file', pg_env, postgres)
             # The initdb bootstrap server is socket-only. Wait for the final
             # TCP listener and diagnose an exited container before SQL probes.
             wait_for_database(docker, database, private_values)
@@ -265,9 +287,35 @@ def validate(service, trivy):
                     raise RuntimeError('postgres_image_scanner_failed_closed')
                 pg_report = json.loads(pg_scan.read_text())
                 scan_shape(pg_report)
+                print(json.dumps({'stage': 'postgres_scanned', **scan_evidence(pg_report)}), flush=True)
                 dependency_report.setdefault('Results', []).extend(pg_report['Results'])
             authority = 'postgres:' + urllib.parse.quote(password, safe='') + '@' + database + ':5432'
-            env['DATABASE_URL'] = urllib.parse.urlunsplit(('postgresql', authority, '/supa_ci_test', '', ''))
+            admin_url = urllib.parse.urlunsplit(('postgresql', authority, '/supa_ci_test', '', ''))
+            migration_env = work / 'migration.env'
+            migration_env.write_text('SUPA_DISPOSABLE_SCHEMA=true\nDATABASE_URL=' + admin_url + '\n')
+            migration_env.chmod(0o600)
+            # One explicit administrator bootstrap; ordinary application startup never migrates.
+            docker('run', '--rm', '--network', network, '--env-file', migration_env,
+                   '--entrypoint', '/usr/local/bin/supa-staging-schema', image)
+            runtime_password = secrets.token_hex(32)
+            private_values.append(runtime_password)
+            sql("CREATE ROLE supa_ci_runtime LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE "
+                "NOREPLICATION NOBYPASSRLS PASSWORD '" + runtime_password + "'")
+            sql('REVOKE CREATE ON SCHEMA public FROM PUBLIC; '
+                'GRANT USAGE ON SCHEMA public TO supa_ci_runtime; '
+                'GRANT SELECT ON ALL TABLES IN SCHEMA public TO supa_ci_runtime; '
+                'GRANT INSERT,UPDATE ON worker_health TO supa_ci_runtime; '
+                'GRANT UPDATE ON live_sessions TO supa_ci_runtime')
+            for forbidden in ('CREATE TABLE public.forbidden_ci(id int)',
+                              'UPDATE _sqlx_migrations SET success=false',
+                              'UPDATE agents SET simulated_balance_microusd=1',
+                              'DELETE FROM epoch_guard.approvals'):
+                denied = docker('exec', database, 'psql', '-XqAt', '-h', '127.0.0.1',
+                                '-U', 'postgres', '-d', 'supa_ci_test', '-v', 'ON_ERROR_STOP=1',
+                                '-c', 'SET ROLE supa_ci_runtime; ' + forbidden, check=False)
+                assert denied.returncode != 0 and 'permission denied' in denied.stderr
+            runtime_authority = 'supa_ci_runtime:' + runtime_password + '@' + database + ':5432'
+            env['DATABASE_URL'] = urllib.parse.urlunsplit(('postgresql', runtime_authority, '/supa_ci_test', '', ''))
         else:
             postgres_digest = []
             env.update(SUPA_SITE_MODE='staging', SUPA_SITE_ORIGIN=f'http://127.0.0.1:{port}',
@@ -293,6 +341,12 @@ def validate(service, trivy):
                               'http_status': health_status,
                               'diagnostic': safe_ci_diagnostic(logs.stdout + logs.stderr,
                                   [password, public, operator, visitor_password, operator_password])}), flush=True)
+            if service == 'frontend':
+                probe = docker('exec', application, 'node', '-e',
+                    "require('http').get('http://127.0.0.1:3000/healthz',r=>{console.log(JSON.stringify({internal_http_status:r.statusCode}));r.resume()}).on('error',e=>{console.log(JSON.stringify({internal_error:e.code}));process.exitCode=1})",
+                    check=False)
+                print(json.dumps({'stage': 'frontend_internal_probe',
+                                  'diagnostic': safe_ci_diagnostic(probe.stdout + probe.stderr)}), flush=True)
             raise RuntimeError('application_health_failed')
         assert docker('exec', application, 'id', '-u').stdout.strip() != '0'
         if service == 'frontend':
@@ -303,6 +357,7 @@ def validate(service, trivy):
         elif service == 'api':
             assert request(port, '/agents') == 401
             assert request(port, '/agents', 'Bearer ' + public) == 200
+            assert request(port, '/agents', 'Bearer invalid-test-token') == 401
         else:
             defaults = dict(entry.split('=', 1) for entry in config['Config']['Env'])
             assert defaults.get('SUPA_WORKER_ENABLED') == 'false'
@@ -325,7 +380,8 @@ def validate(service, trivy):
         if service == 'worker':
             assert sql('SELECT count(*) FROM cycles') == '0'
         docker('stop', '--time', '20', application)
-        assert docker('inspect', '--format', '{{.State.ExitCode}}', application).stdout.strip() == '0'
+        exit_code = int(docker('inspect', '--format', '{{.State.ExitCode}}', application).stdout.strip())
+        assert clean_shutdown(service, exit_code)
         image_report.setdefault('Results', []).extend(dependency_report.get('Results', []))
         findings = [{'id': v.get('VulnerabilityID'), 'package': v.get('PkgName'),
                      'severity': v.get('Severity'), 'installed': v.get('InstalledVersion'),
@@ -341,7 +397,9 @@ def validate(service, trivy):
         report = {'vulnerability_severity_counts': counts, 'other_advisory_ids': other_ids,
                   'high_critical_findings': findings, 'service': service, 'manifest_digest': digest, 'config_image_id': config['Id'],
                   'postgres_repo_digests': postgres_digest, 'non_root': True, 'health_start_and_restart': True,
-                  'sigterm_exit_code': 0, 'excluded_context_canary_absent': True,
+                  'sigterm_exit_code': exit_code, 'excluded_context_canary_absent': True,
+                  'restricted_runtime_credentials': service != 'frontend',
+                  'runtime_schema_create_and_financial_update_denied': service != 'frontend',
                   'worker_disabled': service == 'worker', 'registry_pushes': 0, 'deployments': 0}
         print(json.dumps(report), flush=True)
         summary = os.environ.get('GITHUB_STEP_SUMMARY')
