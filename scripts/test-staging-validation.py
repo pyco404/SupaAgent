@@ -120,6 +120,30 @@ class StagingSecurity(unittest.TestCase):
             with self.subTest(version=version), self.assertRaises(ValueError):
                 postgres.version18(version)
 
+    def test_database_readiness_requires_running_tcp_listener_and_scrubs_exit_logs(self):
+        import subprocess
+        import io
+        from contextlib import redirect_stdout
+        from unittest.mock import Mock
+        ok = subprocess.CompletedProcess([], 0, 'true\n', '')
+        failed = subprocess.CompletedProcess([], 1, '', '')
+        ready = subprocess.CompletedProcess([], 0, '', '')
+        docker = Mock(side_effect=[ok, failed, ok, ready])
+        with patch.object(images.time, 'sleep') as sleep:
+            images.wait_for_database(docker, 'owned-ci-database', [])
+        sleep.assert_called_once_with(1)
+        self.assertIn('-h', docker.call_args.args)
+        self.assertIn('127.0.0.1', docker.call_args.args)
+        private = 'synthetic-secret-for-redaction'
+        docker = Mock(side_effect=[subprocess.CompletedProcess([], 0, 'false\n', ''),
+                                   subprocess.CompletedProcess([], 0, 'startup failed ' + private, '')])
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaisesRegex(RuntimeError, 'database_startup_failed'):
+            images.wait_for_database(docker, 'owned-ci-database', [private])
+        self.assertNotIn(private, output.getvalue())
+        self.assertIn('startup failed', json.loads(output.getvalue())['diagnostic'])
+        self.assertFalse(any(call.args[0] == 'exec' for call in docker.call_args_list))
+
     def test_postgres_loader_failure_preserves_only_safe_library_names(self):
         import subprocess
         import io
