@@ -188,15 +188,18 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO {role};''', database)
         if process and process.poll() is None:
             process.terminate()
             process.wait(timeout=20)
-        for db in reversed(created):
-            sql('DROP DATABASE '+db)
-        if role_created:
-            sql('DROP ROLE '+role)
-        if cluster_started:
-            pg('pg_ctl', '-D', str(out/'data'), '-m', 'fast', '-w', 'stop')
-            assert not (out/'data/postmaster.pid').exists()
-            shutil.rmtree(out/'data')
-            (out/'s').rmdir()
+        try:
+            for db in reversed(created):
+                sql('DROP DATABASE '+db)
+            if role_created:
+                sql('DROP ROLE '+role)
+        finally:
+            # Failed role/database cleanup must not leave the new cluster running.
+            if cluster_started:
+                pg('pg_ctl', '-D', str(out/'data'), '-m', 'fast', '-w', 'stop')
+                assert not (out/'data/postmaster.pid').exists()
+                shutil.rmtree(out/'data')
+                (out/'s').rmdir()
 
 
 if __name__ == '__main__':
