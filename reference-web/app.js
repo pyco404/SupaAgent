@@ -85,6 +85,7 @@ async function boot(){
 }
 // Read-only polling pauses while hidden, typing or interacting. It never starts a cycle.
 async function refreshLive(){
+  if($('.buffer').contains(document.activeElement)&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))return;
   if(liveBusy||$('.buffer').querySelector('[data-economic-action-pending=true]')||document.hidden||document.body.dataset.view!=='projects'||$('.buffer').getAttribute('aria-busy')==='true'||!$('.command').hidden||!$('#agent-options').hidden||$('.projects').classList.contains('drawer-open'))return;
   liveBusy=true;
   try{
@@ -180,7 +181,7 @@ async function select(index,background=false){
   }
   const rows=await sectionView(item.id,state,agentId);
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
-  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='economy')?'bounded economic controls':rows.some(row=>row.kind==='autonomy')?'offline controls':'read-only'}`;
+  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='economy')?'bounded economic controls':rows.some(row=>['autonomy','schedule','launch'].includes(row.kind))?'offline controls':'read-only'}`;
   const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
   if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
   viewFingerprint=fingerprint;if(background)cancelTyping();
@@ -192,6 +193,7 @@ async function select(index,background=false){
     else if(row.kind==='economy')buffer.append(economyPanel(row.view,row.agentId));
     else if(row.kind==='livework')buffer.append(liveWorkPanel(row.view,row.agentId));
     else if(row.kind==='live')buffer.append(livePanel(row.view,row.role,row.agentId));
+    else if(row.kind==='launch')buffer.append(launchPanel(row.policy));
     else if(row.kind==='schedule')buffer.append(schedulePanel(row.status,row.goals,row.role));
     else if(row.kind==='link'){const p=line('');const a=node('a','',row.text);a.href=row.href;a.target='_blank';a.rel='noopener noreferrer';p.append(a);}
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
@@ -375,6 +377,28 @@ function livePanel(view,role,id){
     panel.append(entry);
   }
   panel.append(feedback,reload);return panel;
+}
+function launchPanel(policy){
+  const panel=node('details','calculation autonomy-panel launch-panel');panel.open=true;panel.append(node('summary','','Create a test agent'));
+  panel.append(node('p','terminal-notice','Disposable development / offline reasoning only. Simulated budget; no payment, paid model or external action. Creating an identity does not start it.'));
+  const form=node('form','autonomy-form'),fields={};
+  for(const [key,label,value]of [['name','Agent name',''],['personality','Personality / voice','Curious, witty and careful. Admit uncertainty and use only verified evidence.'],['goal','Goal','']]){
+    const wrap=node('label','',label),input=node(key==='name'?'input':'textarea');input.name=key;input.id='launch-'+key;input.required=true;input.minLength=3;input.maxLength=key==='name'?80:500;input.value=value;if(key!=='name')input.rows=3;wrap.append(input);form.append(wrap);fields[key]=input;
+  }
+  const budgetLabel=node('label','','Simulated operating budget / microUSD'),budget=node('input');budget.name='simulated_budget_microusd';budget.type='number';budget.min='3300';budget.max='1000000';budget.step='1';budget.value='10000';budget.required=true;budgetLabel.append(budget);form.append(budgetLabel);
+  const label=node('label','autonomy-consent'),consent=node('input');consent.type='checkbox';consent.name='launch-consent';consent.required=true;label.append(consent,document.createTextNode('Create this test identity, save this goal and assign only the simulated seed above. I will separately authorize a finite offline session.'));
+  const submit=node('button','','Create authorized test agent');submit.type='submit';const feedback=node('p','terminal-notice');feedback.setAttribute('role','status');
+  form.append(label,submit);panel.append(form,feedback);form.addEventListener('input',event=>{if(event.target!==consent)consent.checked=false;});
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();event.stopPropagation();if(submit.disabled||!form.reportValidity()||!consent.checked)return;
+    const input={request_id:crypto.randomUUID(),name:fields.name.value.trim(),personality:fields.personality.value.trim(),goal:fields.goal.value.trim(),simulated_budget_microusd:Number(budget.value),authorize_offline:true};
+    form.dataset.economicActionPending='true';for(const element of form.elements)element.disabled=true;feedback.textContent='Saving the inactive identity, goal and simulated budget…';
+    try{const response=await fetch('/api/launch',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Supa-Action':'offline-launch'},body:JSON.stringify(input),signal:AbortSignal.timeout(30000)}),result=await response.json();
+      if(!response.ok||result.paid_requests!==0||result.mode!=='offline')throw Object.assign(Error(),{result});
+      agentId=result.agent_id;await reload();wheel.select(2);await select(2);$('.announcement').textContent='Test agent saved, inactive. Open Agent lifecycle and bounded scheduling to authorize its first session.';
+    }catch(error){feedback.textContent=`Launch not confirmed. ${error.result?.agent_id?'Inspect saved agent '+error.result.agent_id+'. ':''}Reload saved records before another request. No automatic retry. Request ${input.request_id}.`;}
+    finally{form.dataset.economicActionPending='false';}
+  });return panel;
 }
 function schedulePanel(view,goals,role){
   const details=node('details','calculation autonomy-panel schedule-panel');details.append(node('summary','','Agent lifecycle and bounded scheduling'));
