@@ -195,7 +195,11 @@ async fn timeout_is_single_attempt_and_oversized_input_never_dispatches() {
         .build()
         .unwrap();
     let result = p.work(&input()).await;
-    assert!(matches!(result.result, Err(Error::ProviderTransport)));
+    assert!(matches!(result.result, Err(Error::Timeout)));
+    assert_eq!(
+        result.diagnostic.as_ref().unwrap().failure,
+        Some(ProviderFailure::Timeout)
+    );
     assert!(result.usage.is_none());
     server.await.unwrap();
     assert_eq!(calls.load(Ordering::SeqCst), 1);
@@ -295,5 +299,270 @@ async fn social_transports_share_personality_evidence_and_rejection_contract() {
         assert_eq!(input["personality"], config["personality"]);
         assert_eq!(input["memories"][0]["id"], json!(context.memories[0].id));
         assert!(claude_body.get("tools").is_none());
+    }
+}
+
+async fn diagnostic_fixture(
+    status: u16,
+    body: String,
+    truncated: bool,
+    stall: bool,
+) -> (String, tokio::task::JoinHandle<Value>) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut bytes = vec![];
+        let request = loop {
+            let mut chunk = [0u8; 4096];
+            let n = socket.read(&mut chunk).await.unwrap();
+            assert!(n > 0);
+            bytes.extend_from_slice(&chunk[..n]);
+            assert!(bytes.len() < 32768);
+            let text = String::from_utf8_lossy(&bytes);
+            if let Some((head, data)) = text.split_once("\r\n\r\n") {
+                let size = head
+                    .lines()
+                    .find_map(|line| {
+                        line.to_lowercase()
+                            .strip_prefix("content-length: ")
+                            .map(str::to_owned)
+                    })
+                    .and_then(|v| v.parse::<usize>().ok())
+                    .unwrap_or(0);
+                if data.len() >= size {
+                    break if size == 0 {
+                        Value::Null
+                    } else {
+                        serde_json::from_str(data).unwrap()
+                    };
+                }
+            }
+        };
+        let length = body.len() + if truncated || stall { 100 } else { 0 };
+        let headers = format!(
+            "HTTP/1.1 {status} Test\r\nContent-Length: {length}\r\nContent-Type: application/json\r\nRequest-Id: req_ABC123\r\nConnection: close\r\n\r\n"
+        );
+        socket.write_all(headers.as_bytes()).await.unwrap();
+        socket.write_all(body.as_bytes()).await.unwrap();
+        if stall {
+            tokio::time::sleep(Duration::from_millis(120)).await;
+        }
+        request
+    });
+    (format!("http://{address}"), server)
+}
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls Anthropic"]
+async fn error_diagnostics_preserve_status_id_and_safe_type_without_secret_prose() {
+    let response = json!({"type":"error","request_id":"req_BODY123","error":{"type":"invalid_request_error","message":"private prompt and sk-ant-fixture-secret-only"}});
+    let (url, server) = diagnostic_fixture(400, response.to_string(), false, false).await;
+    let mut p = provider();
+    p.endpoint = Some(url);
+    let result = p.work(&input()).await;
+    assert!(matches!(result.result, Err(Error::ProviderHttp(400))));
+    assert!(result.usage.is_none());
+    let d = result.diagnostic.unwrap();
+    assert_eq!(d.http_status, Some(400));
+    assert_eq!(d.request_id.as_deref(), Some("req_ABC123"));
+    assert_eq!(d.error_type.as_deref(), Some("invalid_request_error"));
+    assert_eq!(d.failure, Some(ProviderFailure::HttpStatus));
+    assert!(d.response_complete);
+    d.validate().unwrap();
+    let safe = serde_json::to_string(&d).unwrap();
+    assert!(!safe.contains("sk-ant"));
+    assert!(!safe.contains("private prompt"));
+    server.await.unwrap();
+    let (url, server) = crate::wire_tests::fixture(429, response.to_string()).await;
+    p.endpoint = Some(url);
+    let result = p.work(&input()).await;
+    assert_eq!(
+        result.diagnostic.unwrap().request_id.as_deref(),
+        Some("req_BODY123")
+    );
+    server.await.unwrap();
+}
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls Anthropic"]
+async fn response_failures_keep_metadata_and_reported_counts_without_guessing_prices() {
+    for mode in 0..5 {
+        let mut response = envelope(report());
+        response["id"] = json!("msg_ABC123");
+        match mode {
+            1 => response["content"][0]["text"] = json!("invalid structured JSON"),
+            2 => response["model"] = json!("claude-unverified"),
+            3 => {
+                response["usage"]["cache_creation"] =
+                    json!({"ephemeral_1h_input_tokens":10,"ephemeral_5m_input_tokens":0})
+            }
+            4 => response["stop_reason"] = json!("refusal"),
+            _ => {}
+        }
+        let (url, server) = diagnostic_fixture(200, response.to_string(), false, false).await;
+        let mut p = provider();
+        p.endpoint = Some(url);
+        let result = p.work(&input()).await;
+        assert_eq!(result.result.is_ok(), mode == 0);
+        assert_eq!(result.usage.is_some(), matches!(mode, 0 | 1 | 4));
+        let d = result.diagnostic.unwrap();
+        assert_eq!(d.http_status, Some(200));
+        assert_eq!(d.message_id.as_deref(), Some("msg_ABC123"));
+        assert_eq!(d.request_id.as_deref(), Some("req_ABC123"));
+        assert_eq!(d.reported_usage.unwrap().input_tokens, Some(100));
+        server.await.unwrap();
+    }
+    let (url, server) =
+        diagnostic_fixture(200, "not JSON and private prompt".into(), false, false).await;
+    let mut p = provider();
+    p.endpoint = Some(url);
+    let result = p.work(&input()).await;
+    let d = result.diagnostic.unwrap();
+    assert_eq!(d.failure, Some(ProviderFailure::MalformedJson));
+    assert_eq!(d.stage, ProviderStage::ResponseParse);
+    assert!(result.usage.is_none());
+    server.await.unwrap();
+}
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls Anthropic"]
+async fn interrupted_or_stalled_bodies_retain_headers_and_never_retry() {
+    for stall in [false, true] {
+        let (url, server) =
+            diagnostic_fixture(200, "{\"type\":\"message\",".into(), true, stall).await;
+        let mut p = provider();
+        p.endpoint = Some(url);
+        if stall {
+            p.client = reqwest::Client::builder()
+                .read_timeout(Duration::from_millis(30))
+                .timeout(Duration::from_millis(80))
+                .retry(reqwest::retry::never())
+                .no_proxy()
+                .build()
+                .unwrap();
+        }
+        let result = p.work(&input()).await;
+        assert!(result.result.is_err());
+        assert!(result.usage.is_none());
+        let d = result.diagnostic.unwrap();
+        assert_eq!(d.http_status, Some(200));
+        assert_eq!(d.request_id.as_deref(), Some("req_ABC123"));
+        assert_eq!(d.stage, ProviderStage::ResponseBody);
+        assert!(!d.response_complete);
+        assert_eq!(
+            d.failure,
+            Some(if stall {
+                ProviderFailure::Timeout
+            } else {
+                ProviderFailure::InterruptedResponse
+            })
+        );
+        server.await.unwrap();
+    }
+}
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls Anthropic"]
+async fn connection_failure_and_oversized_response_are_distinguishable() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    drop(listener);
+    let mut p = provider();
+    p.endpoint = Some(format!("http://{address}"));
+    let result = p.work(&input()).await;
+    assert_eq!(
+        result.diagnostic.unwrap().failure,
+        Some(ProviderFailure::Connection)
+    );
+    let (url, server) = diagnostic_fixture(200, "x".repeat(128001), false, false).await;
+    p.endpoint = Some(url);
+    let result = p.work(&input()).await;
+    let d = result.diagnostic.unwrap();
+    assert_eq!(d.failure, Some(ProviderFailure::ResponseTooLarge));
+    assert_eq!(d.request_id.as_deref(), Some("req_ABC123"));
+    server.await.unwrap();
+}
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls Anthropic"]
+async fn nullable_zero_cost_metadata_and_sonnet_thinking_contract() {
+    let mut response = envelope(report());
+    response["usage"]["cache_creation_input_tokens"] = json!(0);
+    response["usage"]["cache_creation"] = Value::Null;
+    response["usage"]["server_tool_use"] = Value::Null;
+    let (url, server) = diagnostic_fixture(200, response.to_string(), false, false).await;
+    let mut p = provider();
+    p.endpoint = Some(url);
+    assert!(p.work(&input()).await.result.is_ok());
+    server.await.unwrap();
+    response["model"] = json!("claude-sonnet-5-5");
+    response["content"].as_array_mut().unwrap().insert(
+        0,
+        json!({"type":"thinking","thinking":"private hidden reasoning must never be retained"}),
+    );
+    let (url, server) = diagnostic_fixture(200, response.to_string(), false, false).await;
+    let mut p = Anthropic::new(
+        "sk-ant-fixture-secret-only".into(),
+        "wrkspc_fixture".into(),
+        "claude-sonnet-5-5".into(),
+        uuid::Uuid::new_v4(),
+        100000,
+        1024,
+    )
+    .unwrap();
+    p.endpoint = Some(url);
+    let result = p.work(&input()).await;
+    assert!(result.result.is_ok());
+    assert!(
+        !serde_json::to_string(&result.diagnostic)
+            .unwrap()
+            .contains("private hidden reasoning")
+    );
+    let request = server.await.unwrap();
+    assert_eq!(request["thinking"]["type"], "between_tools");
+    assert_eq!(request["output_config"]["effort"], "low");
+}
+
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls Anthropic"]
+async fn wire_schema_avoids_documented_400_but_application_constraints_stay_strict() {
+    for invalid_line in [false, true] {
+        let mut output = report();
+        if invalid_line {
+            output["findings"][0]["evidence"][0]["line"] = json!(0);
+        }
+        let (url, server) =
+            diagnostic_fixture(200, envelope(output).to_string(), false, false).await;
+        let mut p = provider();
+        p.endpoint = Some(url);
+        let result = p.work(&input()).await;
+        assert_eq!(result.result.is_ok(), !invalid_line);
+        assert!(result.usage.is_some());
+        let request = server.await.unwrap();
+        let schema = &request["output_config"]["format"]["schema"];
+        assert!(schema["properties"]["findings"].get("maxItems").is_none());
+        assert!(schema["properties"]["findings"]["items"]["properties"]["evidence"]["items"]["properties"]["line"].get("minimum").is_none());
+        assert_eq!(schema["additionalProperties"], false);
+    }
+}
+
+#[tokio::test]
+#[ignore = "local mock HTTP only; never calls Anthropic"]
+async fn metadata_failures_keep_parse_and_model_mismatch_stages() {
+    for (body, failure) in [
+        ("not JSON".to_owned(), ProviderFailure::MalformedJson),
+        (
+            json!({"type":"model","id":"claude-unverified"}).to_string(),
+            ProviderFailure::ModelMismatch,
+        ),
+    ] {
+        let (url, server) = diagnostic_fixture(200, body, false, false).await;
+        let mut p = provider();
+        p.endpoint = Some(url);
+        let result = p.verify_observed().await;
+        assert!(result.result.is_err());
+        let d = result.diagnostic.unwrap();
+        assert_eq!(d.failure, Some(failure));
+        assert_eq!(d.operation, ProviderOperation::Metadata);
+        assert_eq!(d.request_id.as_deref(), Some("req_ABC123"));
+        assert!(d.response_headers_at.is_some());
+        server.await.unwrap();
     }
 }
