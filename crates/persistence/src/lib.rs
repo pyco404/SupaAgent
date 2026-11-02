@@ -62,6 +62,41 @@ impl Store {
             .await
             .map_err(|_| Error::Database)
     }
+    /// Staging processes verify an administratively prepared schema without DDL.
+    /// Never repair mismatches or accept a runtime login with migration authority.
+    pub async fn verify_runtime_schema(&self) -> Result<()> {
+        let privileged: bool = sqlx::query_scalar(
+            "SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolbypassrls
+             OR has_schema_privilege(current_user,'public','CREATE')
+             OR has_table_privilege(current_user,'public._sqlx_migrations','INSERT,UPDATE,DELETE,TRUNCATE')
+             FROM pg_roles WHERE rolname=current_user",
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(db)?;
+        if privileged {
+            return Err(Error::Denied);
+        }
+        let rows = sqlx::query(
+            "SELECT version,checksum,success FROM public._sqlx_migrations ORDER BY version",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db)?;
+        let migrations = sqlx::migrate!("../../migrations");
+        if rows.len() != migrations.iter().count() {
+            return Err(Error::Database);
+        }
+        for (row, expected) in rows.iter().zip(migrations.iter()) {
+            if row.try_get::<i64, _>("version").map_err(db)? != expected.version
+                || row.try_get::<Vec<u8>, _>("checksum").map_err(db)? != expected.checksum.as_ref()
+                || !row.try_get::<bool, _>("success").map_err(db)?
+            {
+                return Err(Error::Database);
+            }
+        }
+        Ok(())
+    }
     pub fn pool(&self) -> &PgPool {
         &self.pool
     }
