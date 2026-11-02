@@ -10,9 +10,7 @@ impl OpenAi {
         Invocation {
             diagnostic: raw.diagnostic,
             usage: raw.usage,
-            result: raw
-                .result
-                .and_then(|v| serde_json::from_value(v).map_err(|_| Error::Provider)),
+            result: raw.result.and_then(WorkProposal::decode_output),
         }
     }
 }
@@ -83,8 +81,21 @@ mod tests {
             provider.endpoint = Some(endpoint);
             let invocation = provider.work_request(&input).await;
             assert_eq!(invocation.usage.unwrap().output_tokens, 50);
+            assert_eq!(
+                invocation
+                    .diagnostic
+                    .as_ref()
+                    .unwrap()
+                    .request_id
+                    .as_deref(),
+                Some("req_SYNTHETIC123")
+            );
             if invalid {
-                assert!(invocation.result.is_err());
+                let error = invocation.result.unwrap_err();
+                assert_eq!(
+                    WorkRejection::from_error(&error).code,
+                    WorkRejectionCode::SchemaMismatch
+                );
             } else {
                 invocation.result.unwrap().validate(&input).unwrap();
             }
@@ -101,5 +112,44 @@ mod tests {
             assert!(body.get("tools").is_none());
             assert!(body.to_string().len() < 16000);
         }
+    }
+    #[tokio::test]
+    #[ignore = "requires local mock HTTP sockets; never calls a provider"]
+    async fn malformed_work_json_retains_usage_and_correlation_without_response_text() {
+        let input = LiveWorkInput {
+            request: WorkRequest {
+                objective: "Review supplied facts".into(),
+                material: "Storage uses replicas.".into(),
+                requirements: vec![],
+                require_external_research: false,
+            },
+            kind: ServiceKind::Summary,
+            approved_tools: vec![
+                "inspect_input".into(),
+                "extract_evidence".into(),
+                "check_requirements".into(),
+            ],
+            memories: vec![],
+            deterministic_findings: Value::Null,
+        };
+        let body=json!({"model":"gpt-6-luna","status":"completed","usage":{"input_tokens":100,"output_tokens":50},"output":[{"type":"message","content":[{"type":"output_text","text":"not json: private customer content"}]}]}).to_string();
+        let (endpoint, server) = crate::wire_tests::fixture(200, body).await;
+        let mut provider = OpenAi::new("sk-fake-controlled".into(), "gpt-6-luna".into()).unwrap();
+        provider.project = Some("proj_fixture".into());
+        provider.endpoint = Some(endpoint);
+        let result = provider.work_request(&input).await;
+        assert_eq!(result.usage.unwrap().input_tokens, 100);
+        assert_eq!(
+            result.diagnostic.unwrap().request_id.as_deref(),
+            Some("req_SYNTHETIC123")
+        );
+        let error = result.result.unwrap_err();
+        assert_eq!(
+            WorkRejection::from_error(&error).code,
+            WorkRejectionCode::InvalidJson
+        );
+        assert!(!format!("{error:?}").contains("private customer content"));
+        let request = server.await.unwrap();
+        assert!(request.starts_with("POST "));
     }
 }
