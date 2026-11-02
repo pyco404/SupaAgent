@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { createRailwayContext, project, validateGraph, RAILWAY_GRAPH_VERSION } from 'railway/iac';
 import program from './railway.ts';
-import { preflight } from './preflight.mjs';
+import { preflight, targetPreflight } from './preflight.mjs';
 
 const definition = await program(createRailwayContext({ command:'plan', environment:'staging' }), project);
 const resources = definition.resources;
 const api = resources.find(r=>r.name === 'supa-api');
 const worker = resources.find(r=>r.name === 'supa-worker');
-const frontend = resources.find(r=>r.name === 'supa-frontend');
+const frontend = resources.find(r=>r.name === 'supa-web');
 
 test('official SDK validates four unique staging resources with a fresh PostgreSQL helper', () => {
   assert.equal(resources.length, 4);
@@ -38,12 +38,22 @@ test('worker remains disabled and offline; API scheduler and wallets remain disa
   for(const resource of [api,worker]) {
     assert.equal(resource.variables.SUPA_PROVIDER.value, 'offline');
     assert.equal(resource.variables.DATABASE_URL.type, 'reference');
-    assert.equal(resource.variables.DATABASE_URL.resource, 'database.supa-staging-postgres');
+    assert.equal(resource.variables.DATABASE_URL.resource, 'database.supa-postgres');
     assert.equal(resource.variables.SUPA_ALLOW_OPENAI.value, 'false');
     assert.equal(resource.variables.SUPA_CONTROLLED_INFERENCE.value, 'false');
+    assert.equal(resource.variables.SUPA_ALLOW_ANTHROPIC.value, 'false');
+    assert.equal(resource.variables.SUPA_CONTROLLED_WORK.value, 'false');
+    assert.equal(resource.variables.SUPA_WALLET_ENABLED.value, 'false');
   }
   assert.equal(api.variables.SUPA_API_SCHEDULER_ENABLED.value, 'false');
   assert.equal(api.variables.SUPA_WALLET_ENABLED.value, 'false');
+});
+test('authoring names and Amsterdam region match the dedicated staging proposal',()=>{
+  assert.equal(definition.name,'Supa Agent');
+  assert.deepEqual(resources.map(r=>r.name).sort(),['supa-api','supa-postgres','supa-web','supa-worker']);
+  for(const resource of [api,worker,frontend])assert.equal(resource.deploy.region,'europe-west4-drams3a');
+  assert.deepEqual(resources.find(r=>r.type==='database').deploy.multiRegionConfig,{'europe-west4-drams3a':{numReplicas:1}});
+  assert.deepEqual(api.variables.SUPA_OPERATOR_SESSION_DEADLINES,{type:'sharedReference',name:'SUPA_OPERATOR_SESSION_DEADLINES'});
 });
 test('credentials and exact origin are references, never embedded or read from local evaluation files', () => {
   for(const name of ['SUPA_SITE_ORIGIN','SUPA_STAGING_USERNAME','SUPA_STAGING_PASSWORD','SUPA_WEB_OPERATORS','SUPA_API_TOKEN']) {
@@ -67,11 +77,11 @@ test('non-staging environments fail before defining any resource', async () => {
 test('local preflight fails clearly without secrets and never outputs provided sensitive values', () => {
   const missing=preflight({});
   assert.equal(missing.ready,false);
-  assert.equal(missing.failures.length,6);
+  assert.equal(missing.failures.length,7);
   assert.equal(missing.network_requests,0);
   const credential={id:'712b9168-7abd-49ce-8301-bfe1d2babd31',role:'viewer',token:'o'.repeat(32)};
   const account={username:'operator',password:'p'.repeat(24),api_token:credential.token};
-  const fixtures={SUPA_SITE_ORIGIN:'https://staging.example.test',SUPA_STAGING_USERNAME:'viewer',SUPA_STAGING_PASSWORD:'v'.repeat(24),SUPA_API_TOKEN:'t'.repeat(32),SUPA_OPERATOR_CREDENTIALS:JSON.stringify([credential]),SUPA_WEB_OPERATORS:JSON.stringify([account])};
+  const fixtures={SUPA_SITE_ORIGIN:'https://staging.example.test',SUPA_STAGING_USERNAME:'viewer',SUPA_STAGING_PASSWORD:'v'.repeat(24),SUPA_API_TOKEN:'t'.repeat(32),SUPA_OPERATOR_CREDENTIALS:JSON.stringify([credential]),SUPA_WEB_OPERATORS:JSON.stringify([account]),SUPA_OPERATOR_SESSION_DEADLINES:JSON.stringify({[credential.id]:Math.floor(Date.now()/1000)+3600})};
   assert.equal(preflight(fixtures).ready,true);
   for(const extra of [
     {SUPA_WEB_USERNAME:'legacy'},
@@ -83,12 +93,26 @@ test('local preflight fails clearly without secrets and never outputs provided s
     {SUPA_WEB_OPERATORS:JSON.stringify([{...account,username:fixtures.SUPA_STAGING_USERNAME}])},
     {SUPA_WEB_OPERATORS:JSON.stringify([{...account,password:fixtures.SUPA_STAGING_PASSWORD}])},
     {SUPA_WEB_OPERATORS:'[]'}, {SUPA_OPERATOR_CREDENTIALS:'null'},
+    {SUPA_OPERATOR_SESSION_DEADLINES:'{}'},
+    {SUPA_OPERATOR_SESSION_DEADLINES:JSON.stringify({[credential.id]:0})},
+    {SUPA_OPERATOR_SESSION_DEADLINES:JSON.stringify({[credential.id]:Math.floor(Date.now()/1000)+86401})},
   ]) assert.equal(preflight({...fixtures,...extra}).ready,false);
   assert.equal(preflight({...fixtures,SUPA_API_TOKEN:'t'.repeat(257)}).ready,false);
   const rejected=preflight({...fixtures,SUPA_SITE_ORIGIN:'http://bad.example.test'});
   assert.equal(rejected.ready,false);
   assert.ok(!JSON.stringify(rejected).includes(fixtures.SUPA_API_TOKEN));
   assert.ok(!JSON.stringify(rejected).includes(fixtures.SUPA_STAGING_PASSWORD));
+});
+
+test('offline target review rejects another workspace, environment, resources or bucket',()=>{
+ const environment='ff0b2092-e42b-4a89-ae25-441ab95d92d8';
+ const node={id:environment,name:'staging',canAccess:true,deletedAt:null,serviceInstances:{edges:[]},volumeInstances:{edges:[]}};
+ const inventory={id:'99648d2a-69a1-4d8c-98d0-7f2a26543c9c',name:'Supa Agent',workspaceId:'e319f68a-9897-49ed-b119-743f1f846aa0',services:{edges:[]},environments:{edges:[{node}]}};
+ const bucket={id:'76923b39-b3a7-4390-8a0b-783d8a8113e9',name:'supa-agent-backups',environmentId:environment,region:'ams',objects:0,storageBytes:0};
+ assert.equal(targetPreflight(inventory,bucket).ready,true);
+ assert.equal(targetPreflight(inventory,bucket).deployment_authorized,false);
+ for(const change of [{id:'different'},{workspaceId:'different'},{services:{edges:[{node:{name:'unexpected'}}]}},{environments:{edges:[]}}])assert.equal(targetPreflight({...inventory,...change},bucket).ready,false);
+ for(const change of [{id:'different'},{region:'iad'},{objects:1},{storageBytes:1},{environmentId:'production'}])assert.equal(targetPreflight(inventory,{...bucket,...change}).ready,false);
 });
 
 test('database major and persistent mount match the reviewed recovery target', () => {
