@@ -122,23 +122,43 @@ pub struct LiveWorkInput {
 }
 impl WorkProposal {
     pub fn validate(&self, input: &LiveWorkInput) -> Result<()> {
-        clean_text(&self.interpretation, 600)?;
-        clean_text(&self.summary, 1000)?;
+        self.validate_fields(input).map_err(|error| {
+            WorkRejection::attach(error, &serde_json::to_value(self).unwrap_or(Value::Null))
+        })
+    }
+    fn validate_fields(&self, input: &LiveWorkInput) -> Result<()> {
+        use WorkRejectionCode as Code;
+        use WorkValidationStage as Stage;
+        let fail = |stage, code, path: &str| WorkRejection::error(stage, code, path);
+        let text = |value: &str, max, path: &str| {
+            clean_text(value, max).map_err(|_| fail(Stage::Domain, Code::InvalidText, path))
+        };
+        text(&self.interpretation, 600, "/interpretation")?;
+        text(&self.summary, 1000, "/summary")?;
         if !matches!(
             self.status.as_str(),
             "supported" | "incomplete" | "abstained"
-        ) || self.tools.len() != input.approved_tools.len()
+        ) {
+            return Err(fail(Stage::Completeness, Code::InvalidStatus, "/status"));
+        }
+        if self.tools.len() != input.approved_tools.len()
             || self.tools.iter().collect::<BTreeSet<_>>().len() != self.tools.len()
-            || self
-                .tools
-                .iter()
-                .any(|tool| !input.approved_tools.contains(tool))
-            || self.findings.len() > 6
-            || self.totals.len() > 8
-            || self.proposed_steps.len() > 4
-            || self.missing_information.len() > 8
-            || self.memory_ids.len() > 2
-            || self.memory_ids.iter().collect::<BTreeSet<_>>().len() != self.memory_ids.len()
+            || self.tools.iter().any(|t| !input.approved_tools.contains(t))
+        {
+            return Err(fail(Stage::Tools, Code::UnauthorizedTool, "/tools"));
+        }
+        for (path, size, max) in [
+            ("/findings", self.findings.len(), 6),
+            ("/totals", self.totals.len(), 8),
+            ("/proposed_steps", self.proposed_steps.len(), 4),
+            ("/missing_information", self.missing_information.len(), 8),
+            ("/memory_ids", self.memory_ids.len(), 2),
+        ] {
+            if size > max {
+                return Err(fail(Stage::Domain, Code::BoundsExceeded, path));
+            }
+        }
+        if self.memory_ids.iter().collect::<BTreeSet<_>>().len() != self.memory_ids.len()
             || self.memory_ids.iter().any(|id| {
                 !input
                     .memories
@@ -146,56 +166,111 @@ impl WorkProposal {
                     .any(|m| m.id == *id && m.kind == MemoryKind::VerifiedObservation)
             })
         {
-            return Err(Error::Denied);
+            return Err(fail(
+                Stage::Evidence,
+                Code::InvalidMemoryReference,
+                "/memory_ids",
+            ));
         }
-        let baseline = analyze_work(&input.request, input.kind)?;
+        let baseline = analyze_work(&input.request, input.kind)
+            .map_err(|_| fail(Stage::Domain, Code::OtherDomainFailure, "/"))?;
         if (input.request.require_external_research && self.status != "abstained")
             || (baseline["status"] != "completed" && self.status == "supported")
-            || (self.status == "supported" && self.findings.is_empty())
-            || (self.status == "incomplete" && self.missing_information.is_empty())
         {
-            return Err(Error::Invalid);
+            return Err(fail(Stage::Completeness, Code::IncompleteWork, "/status"));
         }
-        for text in self.proposed_steps.iter().chain(&self.missing_information) {
-            clean_text(text, 300)?;
+        if self.status == "supported" && self.findings.is_empty() {
+            return Err(fail(Stage::Evidence, Code::MissingEvidence, "/findings"));
         }
-        for finding in &self.findings {
-            clean_text(&finding.observation, 300)?;
-            clean_text(&finding.interpretation, 600)?;
-            if finding.evidence.is_empty() || finding.evidence.len() > 3 {
-                return Err(Error::Invalid);
+        if self.status == "incomplete" && self.missing_information.is_empty() {
+            return Err(fail(
+                Stage::Completeness,
+                Code::IncompleteWork,
+                "/missing_information",
+            ));
+        }
+        for (name, values) in [
+            ("proposed_steps", &self.proposed_steps),
+            ("missing_information", &self.missing_information),
+        ] {
+            for (i, value) in values.iter().enumerate() {
+                text(value, 300, &format!("/{name}/{i}"))?;
             }
-            let mut supports_observation = false;
-            for citation in &finding.evidence {
-                clean_text(&citation.quote, 300)?;
+        }
+        for (i, finding) in self.findings.iter().enumerate() {
+            let path = format!("/findings/{i}");
+            text(&finding.observation, 300, &format!("{path}/observation"))?;
+            text(
+                &finding.interpretation,
+                600,
+                &format!("{path}/interpretation"),
+            )?;
+            if finding.evidence.is_empty() {
+                return Err(fail(
+                    Stage::Evidence,
+                    Code::MissingEvidence,
+                    &format!("{path}/evidence"),
+                ));
+            }
+            if finding.evidence.len() > 3 {
+                return Err(fail(
+                    Stage::Evidence,
+                    Code::BoundsExceeded,
+                    &format!("{path}/evidence"),
+                ));
+            }
+            let mut supports = false;
+            for (j, citation) in finding.evidence.iter().enumerate() {
+                let path = format!("{path}/evidence/{j}");
+                text(&citation.quote, 300, &format!("{path}/quote"))?;
                 let source = if citation.source == "material" {
                     &input.request.material
                 } else {
-                    let memory = input
+                    &input
                         .memories
                         .iter()
                         .find(|m| {
                             m.id.to_string() == citation.source && self.memory_ids.contains(&m.id)
                         })
-                        .ok_or(Error::Denied)?;
-                    &memory.lesson
+                        .ok_or_else(|| {
+                            fail(
+                                Stage::Evidence,
+                                Code::InvalidCitation,
+                                &format!("{path}/source"),
+                            )
+                        })?
+                        .lesson
                 };
-                if citation.line == 0
-                    || !source
-                        .lines()
-                        .nth(citation.line - 1)
-                        .is_some_and(|line| line.contains(&citation.quote))
-                {
-                    return Err(Error::Invalid);
+                if citation.line == 0 || source.lines().nth(citation.line - 1).is_none() {
+                    return Err(fail(
+                        Stage::Evidence,
+                        Code::InvalidCitation,
+                        &format!("{path}/line"),
+                    ));
                 }
-                supports_observation |= citation.quote.contains(&finding.observation);
+                if !source
+                    .lines()
+                    .nth(citation.line - 1)
+                    .is_some_and(|line| line.contains(&citation.quote))
+                {
+                    return Err(fail(
+                        Stage::Evidence,
+                        Code::InvalidCitation,
+                        &format!("{path}/quote"),
+                    ));
+                }
+                supports |= citation.quote.contains(&finding.observation);
             }
-            if !supports_observation {
-                return Err(Error::Invalid);
+            if !supports {
+                return Err(fail(
+                    Stage::Evidence,
+                    Code::UnsupportedClaim,
+                    &format!("{path}/observation"),
+                ));
             }
         }
         let mut fields = BTreeSet::new();
-        for total in &self.totals {
+        for (i, total) in self.totals.iter().enumerate() {
             if !fields.insert(&total.field)
                 || !baseline["findings"]["totals"]
                     .as_array()
@@ -207,12 +282,17 @@ impl WorkProposal {
                         })
                     })
             {
-                return Err(Error::Invalid);
+                return Err(fail(
+                    Stage::Evidence,
+                    Code::InvalidTotal,
+                    &format!("/totals/{i}"),
+                ));
             }
         }
         Ok(())
     }
 }
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LiveWorkRecord {
     pub provider_evidence: String,
