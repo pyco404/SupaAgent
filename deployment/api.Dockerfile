@@ -15,12 +15,13 @@ COPY crates/runtime/src crates/runtime/src
 COPY crates/api/Cargo.toml crates/api/Cargo.toml
 COPY crates/api/src crates/api/src
 COPY migrations migrations
-RUN cargo build --release --locked -p supa-api --bin supa-api
+RUN cargo build --release --locked -p supa-api --bin supa-api --bin supa-staging-schema
 
-FROM debian:bookworm-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home supa
+FROM debian:trixie-slim AS runtime
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home supa
 ENV SUPA_PRIVATE_STAGING=true SUPA_BIND=[::]:8080 PORT=8080 SUPA_PROVIDER=offline SUPA_API_SCHEDULER_ENABLED=false SUPA_WALLET_ENABLED=false
 COPY --from=build /app/target/release/supa-api /usr/local/bin/supa-api
+COPY --from=build /app/target/release/supa-staging-schema /usr/local/bin/supa-staging-schema
 USER 10001
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/supa-api"]
