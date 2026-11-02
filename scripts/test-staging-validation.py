@@ -23,6 +23,37 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_scan_evidence_never_serializes_matched_secret_material(self):
+        report = {'SchemaVersion': 2, 'Results': [{'Target': 'public-package-metadata',
+            'Vulnerabilities': [{'VulnerabilityID': 'CVE-fixture', 'PkgName': 'example',
+                                 'Severity': 'HIGH', 'InstalledVersion': '1', 'FixedVersion': '2'}],
+            'Secrets': [{'Match': 'private-fixture-value-do-not-log', 'Code': 'sensitive-source'}]}]}
+        evidence = images.scan_evidence(report)
+        self.assertEqual(evidence['secret_findings'], 1)
+        self.assertEqual(evidence['findings'][0]['FixedVersion'], '2')
+        self.assertNotIn('private-fixture', json.dumps(evidence))
+        self.assertNotIn('sensitive-source', json.dumps(evidence))
+
+    def test_only_frontend_can_exit_with_conventional_sigterm_status(self):
+        for service in images.SERVICES:
+            self.assertTrue(images.clean_shutdown(service, 0))
+            self.assertEqual(images.clean_shutdown(service, 143), service == 'frontend')
+            for failure in (1, 127, 137, 139):
+                self.assertFalse(images.clean_shutdown(service, failure))
+
+    def test_loopback_auth_probes_never_use_environment_proxy(self):
+        from unittest.mock import Mock
+        response = Mock()
+        response.__enter__ = Mock(return_value=Mock(status=200))
+        response.__exit__ = Mock(return_value=False)
+        opener = Mock()
+        opener.open.return_value = response
+        with patch.object(images.urllib.request, 'ProxyHandler') as proxy, \
+             patch.object(images.urllib.request, 'build_opener', return_value=opener):
+            self.assertEqual(images.request(3000, '/healthz'), 200)
+        proxy.assert_called_once_with({})
+        self.assertEqual(opener.open.call_args.args[0].full_url, 'http://127.0.0.1:3000/healthz')
+
     def test_local_fork_pr_and_wrong_branch_fail_before_docker_or_network(self):
         approved = {'GITHUB_ACTIONS': 'true', 'GITHUB_REPOSITORY': 'pyco404/SupaAgent',
                     'GITHUB_REF': 'refs/heads/main', 'RUNNER_ENVIRONMENT': 'github-hosted',
