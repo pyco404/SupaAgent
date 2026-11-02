@@ -103,6 +103,8 @@ async fn archived_budget_cannot_be_recreated_reserved_or_refunded() {
     sqlx::query("INSERT INTO inference_calls(id,agent_id,cycle_id,purpose,attempt,policy,budget_id,reserved_microusd,accounted_microusd,status) VALUES($1,$2,$3,'plan',0,$4,$5,4048,4048,'reserved')")
         .bind(call).bind(agent.id).bind(cycle).bind(json!(policy)).bind(archived).execute(store.pool()).await.unwrap();
     let session = LiveSession {
+        provider_diagnostics: vec![],
+        technical_failure_code: None,
         provider_scope: None,
         work: None,
         id: consent.request_id,
@@ -135,6 +137,16 @@ async fn archived_budget_cannot_be_recreated_reserved_or_refunded() {
     assert!(matches!(
         store
             .finish_inference(agent.id, call, None, Some(&Error::ProviderHttp(429)))
+            .await,
+        Err(Error::LiveBudget)
+    ));
+    assert!(matches!(
+        store
+            .record_live_diagnostic(
+                agent.id,
+                session.id,
+                &ProviderDiagnostic::deadline(ProviderOperation::Generation)
+            )
             .await,
         Err(Error::LiveBudget)
     ));
