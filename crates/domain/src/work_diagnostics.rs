@@ -275,6 +275,23 @@ impl WorkProposal {
                     }
                 }
             }
+            // Only compare against known schema names. Never retain serde's
+            // free-form error message or an unexpected customer-supplied key.
+            for key in [
+                "source",
+                "line",
+                "quote",
+                "observation",
+                "interpretation",
+                "evidence",
+                "field",
+                "value",
+            ] {
+                if e.inner().to_string() == format!("missing field `{key}`") {
+                    path = format!("{}/{key}", path.trim_end_matches('/'));
+                    break;
+                }
+            }
             WorkRejection::attach(
                 WorkRejection::error(
                     WorkValidationStage::Schema,
