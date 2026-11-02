@@ -30,15 +30,7 @@ impl OpenAi {
         let model = std::env::var("OPENAI_MODEL").map_err(|_| Error::Invalid)?;
         let mut provider = Self::from_env_model(&model)?;
         let project = std::env::var("OPENAI_PROJECT_ID").map_err(|_| Error::Invalid)?;
-        if !project.starts_with("proj_")
-            || project.len() > 120
-            || !project
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-        {
-            return Err(Error::Invalid);
-        }
-        provider.project = Some(project);
+        provider.bind_project(&project)?;
         Ok(provider)
     }
 }
