@@ -22,12 +22,14 @@
 !web/public/**
 !reference-web/
 !reference-web/index.html
+!reference-web/not-found.html
 !reference-web/style.css
 !reference-web/app.js
 !reference-web/scene.js
 !reference-web/wheel.js
 !reference-web/platform.js
 !reference-web/backend.mjs
+!reference-web/launch.mjs
 !reference-web/backend.d.mts
 !reference-web/public/
 !reference-web/public/**
