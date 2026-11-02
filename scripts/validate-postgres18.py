@@ -35,7 +35,13 @@ def library_environment(binary, library):
     if library:
         env['LD_LIBRARY_PATH'] = str(library.resolve(strict=True))
     result = subprocess.run([str(binary / 'postgres'), '--version'], env=env,
-                            capture_output=True, text=True, check=True)
+                            capture_output=True, text=True)
+    if result.returncode:
+        # Preserve loader diagnostics without printing arbitrary stderr or paths.
+        missing = re.findall(r'error while loading shared libraries: ([A-Za-z0-9._+-]+)', result.stderr)
+        print(json.dumps({'stage': 'postgres_binary_version', 'exit_code': result.returncode,
+                          'missing_shared_libraries': sorted(set(missing))}), flush=True)
+        raise RuntimeError('postgres18_binary_startup_failed')
     version18(result.stdout)
     return env, result.stdout.strip()
 
@@ -124,7 +130,10 @@ def validate(binary, library, evidence, offline=False):
         checksums = json.loads(sql("SELECT json_agg(json_build_object('version',version,"
                                    "'checksum',encode(checksum,'hex'),'success',success) ORDER BY version) "
                                    'FROM _sqlx_migrations'))
-        assert [item['version'] for item in checksums] == list(range(1, 12))
+        sources = sorted((ROOT / 'migrations').glob('[0-9][0-9][0-9][0-9]_*.sql'))
+        versions = [int(source.name.split('_', 1)[0]) for source in sources]
+        assert versions == list(range(1, len(sources) + 1)), 'invalid_migration_source_inventory'
+        assert [item['version'] for item in checksums] == versions
         for item in checksums:
             source = next((ROOT / 'migrations').glob(f"{item['version']:04d}_*.sql"))
             assert item['success'] and hashlib.sha384(source.read_bytes()).hexdigest() == item['checksum']
