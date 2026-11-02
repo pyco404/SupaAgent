@@ -28,12 +28,31 @@ pub struct Context {
     pub wallet_treasury: Option<TreasurySummary>,
 }
 pub struct Invocation<T> {
+    pub diagnostic: Option<ProviderDiagnostic>,
     pub result: Result<T>,
     pub usage: Option<TokenUsage>,
 }
 impl<T> Invocation<T> {
+    pub(crate) fn map<U>(self, f: impl FnOnce(T) -> Result<U>) -> Invocation<U> {
+        let result = self.result.and_then(f);
+        let mut diagnostic = self.diagnostic;
+        if result.is_err()
+            && let Some(d) = diagnostic.as_mut()
+            && d.failure.is_none()
+        {
+            d.observe_now();
+            d.stage = ProviderStage::OutputValidation;
+            d.failure = Some(ProviderFailure::InvalidOutput);
+        }
+        Invocation {
+            result,
+            usage: self.usage,
+            diagnostic,
+        }
+    }
     fn unmetered(result: Result<T>) -> Self {
         Self {
+            diagnostic: None,
             result,
             usage: None,
         }
@@ -262,7 +281,11 @@ impl OpenAi {
                     }
                     Ok(v)
                 });
-                Invocation { result, usage }
+                Invocation {
+                    diagnostic: None,
+                    result,
+                    usage,
+                }
             }
         }
     }
@@ -341,6 +364,7 @@ impl Reasoner for OpenAi {
             Ok(p)
         });
         Invocation {
+            diagnostic: None,
             result,
             usage: raw.usage,
         }
@@ -360,6 +384,7 @@ impl Reasoner for OpenAi {
             Ok(d)
         });
         Invocation {
+            diagnostic: None,
             result,
             usage: raw.usage,
         }
