@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:24-bookworm-slim AS build
+FROM node:24-trixie-slim AS build
 ENV NEXT_TELEMETRY_DISABLED=1 SUPA_SITE_MODE=staging
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
@@ -11,7 +11,9 @@ COPY reference-web/index.html reference-web/not-found.html reference-web/style.c
 COPY reference-web/public /app/reference-web/public
 RUN npm run build && npm prune --omit=dev
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:24-trixie-slim AS runtime
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/local/lib/node_modules/npm /opt/yarn-* /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 SUPA_SITE_MODE=staging PORT=3000
 WORKDIR /app/web
 COPY --from=build --chown=node:node /app/web/package.json ./package.json
@@ -24,4 +26,4 @@ COPY --from=build --chown=node:node /app/web/src/lib ./src/lib
 COPY --from=build --chown=node:node /app/reference-web /app/reference-web
 USER node
 EXPOSE 3000
-CMD ["sh", "-c", "exec node node_modules/next/dist/bin/next start --hostname :: --port \"$PORT\""]
+CMD ["sh", "-c", "exec node node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port \"$PORT\""]
