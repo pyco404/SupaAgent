@@ -514,13 +514,44 @@ impl supa_providers::controlled::ControlledProvider for MockClaudeWork {
     async fn verify(&self) -> Result<()> {
         Ok(())
     }
+    async fn verify_observed(&self) -> supa_providers::Invocation<()> {
+        let mut d = ProviderDiagnostic::new(ProviderOperation::Metadata, ProviderStage::Completed);
+        d.http_status = Some(200);
+        d.request_id = Some("req_METADATA123".into());
+        d.dispatch_intended = true;
+        d.response_complete = true;
+        supa_providers::Invocation {
+            result: Ok(()),
+            usage: None,
+            diagnostic: Some(d),
+        }
+    }
     async fn reason(&self, _: &str, _: &[Memory]) -> supa_providers::Invocation<LiveProposal> {
         supa_providers::Invocation {
+            diagnostic: None,
             result: Err(Error::Denied),
             usage: None,
         }
     }
     async fn work(&self, input: &LiveWorkInput) -> supa_providers::Invocation<WorkProposal> {
+        if self.0.mode == 9 {
+            self.0.calls.fetch_add(1, Ordering::SeqCst);
+            let mut d = ProviderDiagnostic::new(
+                ProviderOperation::Generation,
+                ProviderStage::ResponseHeaders,
+            );
+            d.http_status = Some(429);
+            d.request_id = Some("req_GENERATION123".into());
+            d.failure = Some(ProviderFailure::HttpStatus);
+            d.error_type = Some("rate_limit_error".into());
+            d.dispatch_intended = true;
+            d.response_complete = true;
+            return supa_providers::Invocation {
+                result: Err(Error::ProviderHttp(429)),
+                usage: None,
+                diagnostic: Some(d),
+            };
+        }
         supa_providers::controlled::ControlledProvider::work(&self.0, input).await
     }
 }
@@ -594,4 +625,151 @@ async fn claude_work_accounting_is_audited_and_budget_cannot_switch_models() {
     assert_eq!(saved.state, JobState::Created);
     assert_eq!(saved.received_atoms, 0);
     assert_eq!(saved.earned_atoms, 0);
+}
+
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL supa_m10_test; synthetic provider only"]
+async fn uncertain_diagnostics_survive_reconnect_and_preserve_replay_fences() {
+    let (store, agent, actor, policy) = setup().await;
+    let cases: Value = serde_json::from_str(include_str!(
+        "../../../config/work-evaluation-fixtures.json"
+    ))
+    .unwrap();
+    let j = job(&store, agent, actor, &cases["cases"][0]).await;
+    let provider = Arc::new(MockClaudeWork(
+        support::MockWorkProvider {
+            policy: policy.clone(),
+            calls: AtomicUsize::new(0),
+            mode: 9,
+        },
+        "wrkspc_synthetic_fixture",
+    ));
+    let runtime = ControlledInference {
+        store: store.clone(),
+        provider: provider.clone(),
+    };
+    let c = consent(&store, &j, actor, &policy, false).await;
+    let session = runtime.run_work(agent, actor, c.clone()).await.unwrap();
+    assert_eq!(session.status, "unknown");
+    assert_eq!(
+        session.failure_code.as_deref(),
+        Some("provider_charge_requires_review")
+    );
+    assert_eq!(
+        session.technical_failure_code.as_deref(),
+        Some("provider_http_429")
+    );
+    assert_eq!(session.provider_diagnostics.len(), 2);
+    let d = &session.provider_diagnostics[1];
+    assert_eq!(d.http_status, Some(429));
+    assert_eq!(d.request_id.as_deref(), Some("req_GENERATION123"));
+    let cost = policy.reservation().unwrap();
+    assert_eq!(session.accounted_microusd, cost);
+    let url = sqlx::ConnectOptions::to_url_lossy(&*store.pool().connect_options()).to_string();
+    let reconnected = Store::connect(&url).await.unwrap();
+    reconnected.recover_live_sessions().await.unwrap();
+    let saved = reconnected.live_sessions(agent).await.unwrap().remove(0);
+    assert_eq!(
+        serde_json::to_value(&saved).unwrap(),
+        serde_json::to_value(&session).unwrap()
+    );
+    assert!(runtime.run_work(agent, actor, c).await.is_err());
+    let fresh = consent(&store, &j, actor, &policy, false).await;
+    assert!(runtime.run_work(agent, actor, fresh).await.is_err());
+    assert_eq!(provider.0.calls.load(Ordering::SeqCst), 1);
+    assert!(
+        reconnected
+            .record_live_diagnostic(agent, saved.id, d)
+            .await
+            .is_err()
+    );
+    let committed: i64 =
+        sqlx::query_scalar("SELECT committed_microusd FROM live_budgets WHERE id=$1")
+            .bind(policy.budget_id)
+            .fetch_one(store.pool())
+            .await
+            .unwrap();
+    assert_eq!(committed, cost);
+    let mut old = serde_json::to_value(&saved).unwrap();
+    old.as_object_mut().unwrap().remove("provider_diagnostics");
+    old.as_object_mut()
+        .unwrap()
+        .remove("technical_failure_code");
+    let old: LiveSession = serde_json::from_value(old).unwrap();
+    assert!(old.provider_diagnostics.is_empty());
+    assert!(old.technical_failure_code.is_none());
+}
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL supa_m10_test; synthetic provider only"]
+async fn interrupted_reserved_diagnostics_survive_recovery_without_refund_or_replay() {
+    let (store, agent, actor, policy) = setup().await;
+    let cases: Value = serde_json::from_str(include_str!(
+        "../../../config/work-evaluation-fixtures.json"
+    ))
+    .unwrap();
+    let j = job(&store, agent, actor, &cases["cases"][0]).await;
+    let c = consent(&store, &j, actor, &policy, false).await;
+    let (session, _) = store
+        .reserve_live_work_session_scoped(
+            agent,
+            actor,
+            &c,
+            &policy,
+            ("anthropic", "wrkspc_synthetic_fixture"),
+        )
+        .await
+        .unwrap();
+    store
+        .live_request_stage(agent, session.id, false)
+        .await
+        .unwrap();
+    store
+        .live_request_stage(agent, session.id, true)
+        .await
+        .unwrap();
+    let mut d = ProviderDiagnostic::new(ProviderOperation::Generation, ProviderStage::ResponseBody);
+    d.http_status = Some(200);
+    d.request_id = Some("req_INTERRUPTED123".into());
+    d.dispatch_intended = true;
+    store
+        .record_live_diagnostic(agent, session.id, &d)
+        .await
+        .unwrap();
+    sqlx::query(
+        "UPDATE live_sessions SET lease_until=clock_timestamp()-interval '1 second' WHERE id=$1",
+    )
+    .bind(session.id)
+    .execute(store.pool())
+    .await
+    .unwrap();
+    store.recover_live_sessions().await.unwrap();
+    let saved = store.live_sessions(agent).await.unwrap().remove(0);
+    assert_eq!(saved.status, "unknown");
+    assert_eq!(saved.provider_diagnostics[0].request_id, d.request_id);
+    assert_eq!(saved.accounted_microusd, session.reserved_microusd);
+    assert!(
+        store
+            .reserve_live_work_session_scoped(
+                agent,
+                actor,
+                &c,
+                &policy,
+                ("anthropic", "wrkspc_synthetic_fixture")
+            )
+            .await
+            .is_err()
+    );
+    let fresh = consent(&store, &j, actor, &policy, false).await;
+    assert!(
+        store
+            .reserve_live_work_session_scoped(
+                agent,
+                actor,
+                &fresh,
+                &policy,
+                ("anthropic", "wrkspc_synthetic_fixture")
+            )
+            .await
+            .is_err()
+    );
 }
