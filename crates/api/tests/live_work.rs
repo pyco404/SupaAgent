@@ -1063,3 +1063,199 @@ async fn rejected_work_diagnostics_are_private_precise_bounded_and_restart_safe(
     assert_eq!(session.status, "failed");
     assert_eq!(session.accounted_microusd, 35);
 }
+
+struct StructureFixtureProvider {
+    policy: InferencePolicy,
+    output: Value,
+    calls: AtomicUsize,
+}
+#[async_trait::async_trait]
+impl supa_providers::controlled::ControlledProvider for StructureFixtureProvider {
+    fn policy(&self) -> InferencePolicy {
+        self.policy.clone()
+    }
+    fn project(&self) -> &str {
+        "proj_structure_fixture_only"
+    }
+    async fn verify(&self) -> Result<()> {
+        Ok(())
+    }
+    async fn reason(&self, _: &str, _: &[Memory]) -> supa_providers::Invocation<LiveProposal> {
+        supa_providers::Invocation {
+            result: Err(Error::Denied),
+            usage: None,
+            diagnostic: None,
+        }
+    }
+    async fn work(&self, _: &LiveWorkInput) -> supa_providers::Invocation<WorkProposal> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        supa_providers::Invocation {
+            result: WorkProposal::decode_output(self.output.clone()),
+            usage: Some(TokenUsage {
+                input_tokens: 100,
+                output_tokens: 50,
+                cached_input_tokens: 0,
+                cache_write_tokens: 0,
+            }),
+            diagnostic: None,
+        }
+    }
+}
+#[tokio::test]
+#[ignore = "isolated PostgreSQL supa_m10_test only; supplied fixture outputs, no provider calls"]
+async fn structured_work_fixture_jobs_cover_creation_evaluation_review_and_terminal_closure() {
+    let (store, agent, actor, policy) = setup().await;
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../../../config/work-structure-fixtures.json")).unwrap();
+    let mut accepted = 0;
+    let mut rejected = 0;
+    for case in fixtures["cases"].as_array().unwrap() {
+        let mut request_input = fixtures["request"].clone();
+        if let Some(patch) = case["request_patch"].as_object() {
+            for (key, value) in patch {
+                request_input[key] = value.clone();
+            }
+        }
+        let mut output = fixtures["proposal"].clone();
+        for (path, value) in case["patch"].as_object().unwrap() {
+            *output.pointer_mut(path).unwrap() = value.clone();
+        }
+        if let Some(path) = case["remove"].as_str() {
+            let (parent, key) = path.rsplit_once('/').unwrap();
+            output
+                .pointer_mut(parent)
+                .unwrap()
+                .as_object_mut()
+                .unwrap()
+                .remove(key);
+        }
+        let service = Uuid::new_v4();
+        store
+            .offer_service(
+                agent,
+                actor,
+                service,
+                ServiceSpec {
+                    name: case["id"].as_str().unwrap().into(),
+                    kind: ServiceKind::ResearchReport,
+                    price_atoms: 5000,
+                    estimated_inference_atoms: 1000,
+                    estimated_infrastructure_atoms: 100,
+                    max_input_bytes: 8000,
+                    max_attempts: 2,
+                },
+            )
+            .await
+            .unwrap();
+        let provider = Arc::new(StructureFixtureProvider {
+            policy: policy.clone(),
+            output,
+            calls: AtomicUsize::new(0),
+        });
+        let app = router(
+            AppState::new(
+                store.clone(),
+                Runtime::new(store.clone(), Arc::new(Offline)),
+                "structure-fixture-service-credential-00".into(),
+            )
+            .unwrap()
+            .with_credentials(vec![OperatorCredential {
+                id: actor,
+                role: Role::Owner,
+                token: OWNER.into(),
+            }])
+            .unwrap()
+            .with_controlled_inference(ControlledInference {
+                store: store.clone(),
+                provider: provider.clone(),
+            })
+            .with_live_work_evaluation(),
+        );
+        let (status,value)=request(&app,"/jobs",OWNER,Some(json!({"request_id":Uuid::new_v4(),"service_id":service,"network":"simulated","input":request_input.to_string(),"valid_for_seconds":3600}))).await;
+        assert_eq!(status, StatusCode::OK, "{}: {value}", case["id"]);
+        let j: EconomicJob = serde_json::from_value(value).unwrap();
+        assert_eq!(j.state, JobState::Created);
+        assert_eq!(j.earned_atoms, 0);
+        let path = format!("/agents/{agent}/live-work");
+        let auth = consent(&store, &j, actor, &policy, false).await;
+        let (status, result) = request(&app, &path, OWNER, Some(json!(auth))).await;
+        assert_eq!(status, StatusCode::OK, "{}: {result}", case["id"]);
+        assert_eq!(result["status"], case["expected"], "{}", case["id"]);
+        assert_eq!(result["generation_requests"], 1);
+        assert_eq!(result["accounted_microusd"], 35);
+        if case["expected"] == "awaiting_approval" {
+            accepted += 1;
+            assert!(result["work"]["report"].is_object());
+            assert_eq!(result["work"]["tool_results"]["earned_revenue_atoms"], 0);
+            if case["id"] == "valid-multiple-supported-claims" {
+                assert_eq!(
+                    result["work"]["report"]["findings"]
+                        .as_array()
+                        .unwrap()
+                        .len(),
+                    3
+                );
+                assert_eq!(
+                    result["work"]["tool_results"]["quality_checks"]["exact_citations_checked"],
+                    3
+                );
+            }
+        } else {
+            rejected += 1;
+            assert_eq!(result["failure_code"], case["code"]);
+            assert!(result["work"]["report"].is_null());
+            let diagnostic_path = format!("{path}/diagnostics/{}", auth.consent.request_id);
+            let (status, diagnostic) = request(&app, &diagnostic_path, OWNER, None).await;
+            assert_eq!(status, StatusCode::OK);
+            assert_eq!(diagnostic["rejection"]["field_path"], case["path"]);
+            assert!(diagnostic.to_string().len() <= 8192);
+            assert!(!diagnostic.to_string().contains("Authorization: Bearer"));
+            assert!(
+                !diagnostic
+                    .to_string()
+                    .contains(request_input["material"].as_str().unwrap())
+            );
+        }
+        let (status, _) = request(&app, &path, OWNER, Some(json!(auth))).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+        let job_path = format!("/jobs/{}", j.id);
+        let (status, saved) = request(&app, &job_path, OWNER, None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(saved["job"]["state"], "created");
+        assert_eq!(saved["job"]["earned_atoms"], 0);
+        assert_eq!(saved["job"]["received_atoms"], 0);
+        // Close this unpaid disposable fixture through its normal customer command.
+        // Evaluation success is never silently promoted to commercial delivery.
+        let (status,closed)=request(&app,&format!("{job_path}/commands"),OWNER,Some(json!({"request_id":Uuid::new_v4(),"expected_revision":0,"operation":"cancel","authorize":true}))).await;
+        assert_eq!(status, StatusCode::OK, "{closed}");
+        assert_eq!(closed["state"], "cancelled");
+        assert_eq!(closed["earned_atoms"], 0);
+    }
+    assert_eq!((accepted, rejected), (4, 25));
+    assert_eq!(store.get(agent).await.unwrap().lifecycle, Lifecycle::Paused);
+    let entries: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM economic_entries WHERE agent_id=$1")
+            .bind(agent)
+            .fetch_one(store.pool())
+            .await
+            .unwrap();
+    assert_eq!(entries, 0);
+    let spent: i64 = sqlx::query_scalar("SELECT committed_microusd FROM live_budgets WHERE id=$1")
+        .bind(policy.budget_id)
+        .fetch_one(store.pool())
+        .await
+        .unwrap();
+    assert_eq!(spent, 29 * 35);
+    let url = sqlx::ConnectOptions::to_url_lossy(&*store.pool().connect_options()).to_string();
+    let reopened = Store::connect(&url).await.unwrap();
+    reopened.recover_live_sessions().await.unwrap();
+    let sessions = reopened.live_sessions(agent).await.unwrap();
+    assert_eq!(sessions.len(), 20); // Bounded history projection; DB retains all 29 sessions.
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM live_sessions WHERE agent_id=$1")
+        .bind(agent)
+        .fetch_one(reopened.pool())
+        .await
+        .unwrap();
+    assert_eq!(count, 29);
+}
