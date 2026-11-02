@@ -68,6 +68,10 @@ impl LiveProposal {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveSession {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub provider_diagnostics: Vec<ProviderDiagnostic>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub technical_failure_code: Option<String>,
     /// Server-configured account scope; verification is tracked separately.
     #[serde(default)]
     pub provider_scope: Option<String>,
