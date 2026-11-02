@@ -23,7 +23,7 @@ impl ControlledProvider for Fixture {
     }
     async fn reason(&self, _: &str, memory: &[Memory]) -> Invocation<LiveProposal> {
         tokio::time::sleep(Duration::from_millis(100)).await;
-        Invocation{usage:Some(TokenUsage{input_tokens:120,output_tokens:60,cached_input_tokens:0,cache_write_tokens:0}),result:Ok(LiveProposal{summary:"MOCK PROVIDER: inspect the supplied hypothesis before taking further action. This is not a GPT intelligence result.".into(),memory_ids:memory.iter().map(|m|m.id).collect(),actions:vec![ProposedAction{tool:"read_memory".into(),event_ids:vec![],lesson:None,evaluation:None}]})}
+        Invocation{diagnostic:None,usage:Some(TokenUsage{input_tokens:120,output_tokens:60,cached_input_tokens:0,cache_write_tokens:0}),result:Ok(LiveProposal{summary:"MOCK PROVIDER: inspect the supplied hypothesis before taking further action. This is not a GPT intelligence result.".into(),memory_ids:memory.iter().map(|m|m.id).collect(),actions:vec![ProposedAction{tool:"read_memory".into(),event_ids:vec![],lesson:None,evaluation:None}]})}
     }
 }
 #[tokio::main]
