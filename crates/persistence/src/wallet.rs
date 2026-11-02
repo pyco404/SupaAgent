@@ -7,6 +7,9 @@ fn from<T: serde::de::DeserializeOwned>(v: Value) -> Result<T> {
 }
 async fn identity(tx: &mut Tx<'_>, agent: Uuid) -> Result<WalletIdentity> {
     let row=sqlx::query("SELECT id,agent_id,network,address,owner_id,origin FROM wallet_identities WHERE agent_id=$1 FOR UPDATE").bind(agent).fetch_optional(&mut **tx).await.map_err(db)?.ok_or(Error::NotFound)?;
+    decode_identity(row)
+}
+fn decode_identity(row: sqlx::postgres::PgRow) -> Result<WalletIdentity> {
     Ok(WalletIdentity {
         id: row.get(0),
         agent_id: row.get(1),
@@ -97,10 +100,15 @@ async fn summary(tx: &mut Tx<'_>, w: &WalletIdentity) -> Result<TreasurySummary>
 }
 impl Store {
     pub async fn wallet(&self, agent: Uuid) -> Result<WalletIdentity> {
-        let mut tx = self.pool.begin().await.map_err(db)?;
-        let w = identity(&mut tx, agent).await?;
-        tx.commit().await.map_err(db)?;
-        Ok(w)
+        // A single-statement identity read needs SELECT only. Financial mutations
+        // retain identity() and its row lock inside their existing transaction.
+        let row = sqlx::query("SELECT id,agent_id,network,address,owner_id,origin FROM wallet_identities WHERE agent_id=$1")
+            .bind(agent)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db)?
+            .ok_or(Error::NotFound)?;
+        decode_identity(row)
     }
     pub async fn register_wallet(&self, w: &WalletIdentity, actor: Uuid) -> Result<()> {
         validate_solana_address(&w.address)?;
