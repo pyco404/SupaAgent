@@ -22,6 +22,8 @@ DATA = Path('/tmp/supa-m10a-pg-a13db38ce0a5/data')
 SOCKET = DATA.parent / 's'
 DATABASE = 'supa_m10a_a13db38ce0a5_test'
 ROLE = 'supa_openai_eval'
+SYSTEM_IDENTIFIER = '7703509812952711377'
+JOB_ID = '5cdfe440-dc36-4f94-8fc3-93b766ea31c5'
 PG = '/usr/lib/postgresql/16/bin/'
 OUT = ROOT / 'artifacts/openai-final-readiness'
 PRIVATE = OUT / 'runtime.json'
@@ -50,6 +52,7 @@ def frozen():
     report, _ = work.inspect(plan)
     require(report['ready'] and report['scope_sha256'] == SCOPE, 'frozen_scope_changed')
     require(plan['preflight']['database']['name'] == DATABASE and plan['preflight']['database']['data_directory'] == str(DATA), 'wrong_disposable_target')
+    require(plan['job_id'] == JOB_ID and plan['preflight']['database']['system_identifier'] == SYSTEM_IDENTIFIER, 'wrong_disposable_job_or_cluster')
     return plan
 
 
@@ -86,7 +89,8 @@ def pg(command, *args):
     return result.stdout.strip()
 
 
-def sql(query, database=DATABASE):
+def sql(query, database=None):
+    database = DATABASE if database is None else database
     env = {**BASE_ENV, 'PGHOST': str(SOCKET), 'PGPORT': '55681', 'PGUSER': 'pikoo', 'PGDATABASE': database, 'PGPASSFILE': '/dev/null', 'PGSERVICEFILE': '/dev/null', 'PGOPTIONS': '-c statement_timeout=5000 -c log_statement=none -c log_min_error_statement=panic'}
     result = subprocess.run([PG + 'psql', '-XqAt', '--no-password', '-v', 'ON_ERROR_STOP=1'], input=query, env=env, capture_output=True, text=True, timeout=10)
     require(result.returncode == 0, 'disposable_sql_failed_no_details')
@@ -153,13 +157,13 @@ def start(paid=False):
         require(checked.returncode == 0, 'disposable_scope_or_expiration_failed')
         require(json.loads(checked.stdout)['scope_sha256'] == SCOPE, 'scope_digest_mismatch')
         # Read-only target identity before role setup; no primary connection is ever constructed.
-        require(json.loads(sql("SELECT json_build_array(current_database(),current_setting('data_directory'),system_identifier::text) FROM pg_control_system()")) == [DATABASE, str(DATA), '7703509812952711377'], 'cluster_identity_mismatch')
-        remaining = float(sql("SELECT extract(epoch FROM (expires_at-clock_timestamp())) FROM economic_jobs WHERE id='5cdfe440-dc36-4f94-8fc3-93b766ea31c5'"))
+        require(json.loads(sql("SELECT json_build_array(current_database(),current_setting('data_directory'),system_identifier::text) FROM pg_control_system()")) == [DATABASE, str(DATA), SYSTEM_IDENTIFIER], 'cluster_identity_mismatch')
+        remaining = float(sql(f"SELECT extract(epoch FROM (expires_at-clock_timestamp())) FROM economic_jobs WHERE id='{JOB_ID}'"))
         require(remaining > 300, 'job_expired_or_insufficient_validity_no_renewal')
         deadline = int(time.time()) + min(3500, int(remaining) - 30)
         valid_until = datetime.fromtimestamp(deadline, timezone.utc).isoformat()
         password = secrets.token_hex(32)
-        exists = sql("SELECT count(*) FROM pg_roles WHERE rolname='supa_openai_eval'") == '1'
+        exists = sql(f"SELECT count(*) FROM pg_roles WHERE rolname='{ROLE}'") == '1'
         operation = 'ALTER' if exists else 'CREATE'
         sql(f"BEGIN; {operation} ROLE {ROLE} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '{password}' VALID UNTIL '{valid_until}'; GRANT CONNECT ON DATABASE {DATABASE} TO {ROLE}; GRANT pg_read_all_settings TO {ROLE}; GRANT EXECUTE ON FUNCTION pg_control_system() TO {ROLE}; GRANT USAGE ON SCHEMA public TO {ROLE}; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {ROLE}; GRANT UPDATE(id) ON agents,economic_jobs TO {ROLE}; GRANT UPDATE(committed_microusd) ON live_budgets TO {ROLE}; GRANT INSERT,UPDATE ON live_sessions TO {ROLE}; GRANT INSERT ON live_session_audit TO {ROLE}; GRANT USAGE ON SEQUENCE live_session_audit_id_seq TO {ROLE}; COMMIT;")
         # Only this database accepts this disposable credential; peer admin remains local.
