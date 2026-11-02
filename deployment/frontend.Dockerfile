@@ -7,7 +7,7 @@ RUN npm ci
 COPY web/next.config.ts web/next-env.d.ts web/tsconfig.json web/postcss.config.mjs ./
 COPY web/src ./src
 COPY web/public ./public
-COPY reference-web/index.html reference-web/not-found.html reference-web/style.css reference-web/app.js reference-web/scene.js reference-web/wheel.js reference-web/platform.js reference-web/backend.mjs reference-web/backend.d.mts /app/reference-web/
+COPY reference-web/index.html reference-web/not-found.html reference-web/style.css reference-web/app.js reference-web/scene.js reference-web/wheel.js reference-web/platform.js reference-web/backend.mjs reference-web/launch.mjs reference-web/backend.d.mts /app/reference-web/
 COPY reference-web/public /app/reference-web/public
 RUN npm run build && npm prune --omit=dev
 
