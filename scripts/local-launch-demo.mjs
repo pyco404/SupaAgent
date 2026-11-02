@@ -2,20 +2,25 @@
 /** Disposable local services only. Never imports dotenv, retained evaluations or primary state. */
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdir,readFile,writeFile,open,stat,access} from 'node:fs/promises';
+import {mkdir,readFile,writeFile,open,lstat,access} from 'node:fs/promises';
 import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 const root=resolve(import.meta.dirname,'..'),out=resolve(root,'artifacts/local-launch'),file=resolve(out,'runtime.json'),pg='/usr/lib/postgresql/16/bin/';
 const env={PATH:process.env.PATH,HOME:process.env.HOME,LANG:'C.UTF-8'},command=process.argv[2]??'status';
 const hex=()=>randomBytes(32).toString('hex');
 const digest=data=>createHash('sha256').update(data).digest('hex');
 async function save(c){await writeFile(file,JSON.stringify(c,null,2)+'\n',{mode:0o600});}
 function sql(c,query,db='postgres'){return execFileSync(pg+'psql',['-XqAt','--no-password','-v','ON_ERROR_STOP=1'],{env:{...env,PGHOST:c.socket,PGPORT:'55690',PGUSER:'pikoo',PGDATABASE:db,PGPASSFILE:'/dev/null',PGSERVICEFILE:'/dev/null',PGOPTIONS:'-c log_statement=none -c log_min_error_statement=panic'},input:query,stdio:['pipe','pipe','pipe'],encoding:'utf8'}).trim();}
-async function load(){const s=await stat(file);if(s.uid!==process.getuid()||(s.mode&0o077))throw Error();const c=JSON.parse(await readFile(file,'utf8'));if(c.purpose!=='disposable_local_agent_launch'||!/^supa_launch_[a-f0-9]{12}_test$/.test(c.database)||!c.base.startsWith('/tmp/supa-launch-')||c.socket!==c.base+'/socket')throw Error();return c;}
+async function load(){const s=await lstat(file);if(!s.isFile()||s.isSymbolicLink()||s.uid!==process.getuid()||(s.mode&0o077))throw Error();const c=JSON.parse(await readFile(file,'utf8'));if(c.purpose!=='disposable_local_agent_launch'||!/^supa_launch_[a-f0-9]{12}_test$/.test(c.database)||!/^\/tmp\/supa-launch-[a-f0-9]{12}$/.test(c.base)||c.backend_origin!=='http://127.0.0.1:8080'||c.socket!==c.base+'/socket')throw Error();return c;}
 async function halted(pid,marker){if(!pid)return;let line;try{line=await readFile(`/proc/${pid}/cmdline`,'utf8');}catch{return;}if(!line.includes(marker))throw Error('process_identity_mismatch');process.kill(pid,'SIGTERM');for(let i=0;i<100;i++){try{process.kill(pid,0);}catch{return;}await new Promise(r=>setTimeout(r,100));}throw Error('graceful_shutdown_timeout');}
-async function start(c){
- if(c.expires_at<=Date.now())throw Error('demo_scope_expired_no_automatic_renewal');
+export function assertFresh(c,now=Date.now()){if(!Number.isSafeInteger(c.expires_at)||c.expires_at-now<=30000)throw Error('demo_scope_expired_or_insufficient_no_automatic_renewal');}
+async function preflightStart(c){
+ assertFresh(c);
  if(sql(c,'SHOW data_directory')!==c.base+'/data'||sql(c,'SHOW listen_addresses')!==''||sql(c,'SELECT system_identifier::text FROM pg_control_system()')!==c.system_identifier)throw Error('wrong_disposable_cluster');
  if(digest(await readFile(c.binary))!==c.binary_sha256)throw Error('reviewed_binary_changed');
+ }
+async function start(c){
+ await preflightStart(c);
  const log=await open(resolve(out,'services.log'),'a',0o600);
  const credentials=c.accounts.map(({id,role,token})=>({id,role,token}));
  const common={...env,DATABASE_URL:`postgresql://supa_launch_app@localhost/${c.database}?host=${c.socket}&port=55690`,PGPASSWORD:c.database_password,SUPA_API_TOKEN:c.service_token,SUPA_PROVIDER:'offline',SUPA_ALLOW_OPENAI:'false',SUPA_ALLOW_ANTHROPIC:'false',SUPA_CONTROLLED_INFERENCE:'false',SUPA_CONTROLLED_WORK:'false',SUPA_WORKER_ENABLED:'false',SUPA_WALLET_ENABLED:'false',SUPA_SITE_ENV_FILE:'',SUPA_BACKEND_URL:c.backend_origin};
@@ -41,10 +46,14 @@ async function main(){
   c.system_identifier=sql(c,'SELECT system_identifier::text FROM pg_control_system()');await save(c);await start(c);
  }else{
   const c=await load();
-  if(command==='restart'){await halted(c.web_pid,'server.mjs');await halted(c.api_pid,c.binary);await start(c);}
+  if(command==='restart'){await preflightStart(c);await halted(c.web_pid,'server.mjs');await halted(c.api_pid,c.binary);await start(c);}
   else if(command==='stop'){await halted(c.web_pid,'server.mjs');await halted(c.api_pid,c.binary);c.web_pid=null;c.api_pid=null;await save(c);}
   else if(command!=='status')throw Error('expected_init_restart_stop_status');
  }
- const c=await load();console.log(JSON.stringify({site:'http://127.0.0.1:3200',mode:'disposable_offline',database:c.database,expires_at:new Date(c.expires_at).toISOString(),authentication_file:'artifacts/local-launch/runtime.json',paid_inference:false,primary_touched:false}));
+ const c=await load();console.log(JSON.stringify({...await runtimeStatus(c),site:'http://127.0.0.1:3200',mode:'disposable_offline',database:c.database,expires_at:new Date(c.expires_at).toISOString(),authentication_file:'artifacts/local-launch/runtime.json',paid_inference:false,primary_touched:false}));
 }
-main().catch(error=>{console.error('local_launch_demo_failed_closed: '+(error.message?.match(/^[a-z_]+$/)?error.message:'inspect_private_service_log'));process.exitCode=1;});
+export async function runtimeStatus(c,fetcher=fetch){
+ const ready=async(url,pid)=>{if(!pid)return 'stopped';try{const r=await fetcher(url,{signal:AbortSignal.timeout(1500)});return r.ok?'ready':'unavailable';}catch{return 'unavailable';}};
+ return {api:await ready(c.backend_origin+'/ready',c.api_pid),frontend:await ready('http://127.0.0.1:3200/healthz',c.web_pid),authorization:c.expires_at>Date.now()?'valid':'expired'};
+}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{console.error('local_launch_demo_failed_closed: '+(error.message?.match(/^[a-z_]+$/)?error.message:'inspect_private_service_log'));process.exitCode=1;});
