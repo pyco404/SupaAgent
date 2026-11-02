@@ -118,7 +118,11 @@ async fn run() -> Result<()> {
         {
             return Err(Error::Denied);
         }
-        store.migrate().await?;
+        if private {
+            store.verify_runtime_schema().await?;
+        } else {
+            store.migrate().await?;
+        }
     }
     store.ping().await?;
     let listener = tokio::net::TcpListener::bind(bind)
