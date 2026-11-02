@@ -47,6 +47,28 @@ class StagingSecurity(unittest.TestCase):
         with self.assertRaises(ValueError):
             images.vulnerability_gate({'SchemaVersion': 2, 'Results': [{'Secrets': [{'Severity': 'LOW'}]}]})
 
+    def test_exact_migration_inventory_checks_content_and_rejects_gaps_duplicates(self):
+        import hashlib
+        current = images.migration_inventory(ROOT / 'migrations')
+        self.assertEqual(len(current), 13)
+        self.assertEqual(current[13], hashlib.sha384((ROOT / 'migrations/0013_work_evaluation_reviews.sql').read_bytes()).hexdigest())
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            for contents in [{}, {'0002_gap.sql': 'SELECT 1;'},
+                             {'0001_a.sql': 'SELECT 1;', '0001_b.sql': 'SELECT 2;'}]:
+                for source in directory.iterdir():
+                    source.unlink()
+                for name, text in contents.items():
+                    (directory / name).write_text(text)
+                with self.assertRaises(ValueError):
+                    images.migration_inventory(directory)
+            for source in directory.iterdir():
+                source.unlink()
+            (directory / '0001_test.sql').write_text('SELECT 1;')
+            before = images.migration_inventory(directory)
+            (directory / '0001_test.sql').write_text('SELECT 2;')
+            self.assertNotEqual(before, images.migration_inventory(directory))
+
     def test_missing_or_changed_scanner_schema_never_passes(self):
         for report in [None, {}, {'SchemaVersion': 1, 'Results': []}, {'SchemaVersion': 2},
                        {'SchemaVersion': 2, 'Results': None}]:
@@ -78,11 +100,40 @@ class StagingSecurity(unittest.TestCase):
             layer.write_bytes(b'ordinary image bytes')
             self.assertFalse(images.contains_canary(layer))
 
+    def test_failure_diagnostics_are_bounded_and_redact_ci_credentials(self):
+        private = 'synthetic-private-value-1234567890'
+        from urllib.parse import urlunsplit
+        fixture_url = urlunsplit(('postgresql', 'user:secret@database', '/example', '', ''))
+        text = '\x1b[31merror\x1b[0m ' + private + ' ' + fixture_url + ' '
+        text += 'sk-' + 'x' * 32
+        safe = images.safe_ci_diagnostic(text, [private])
+        self.assertNotIn(private, safe)
+        self.assertNotIn('user:secret', safe)
+        self.assertNotIn('sk-', safe)
+        self.assertNotIn('\x1b', safe)
+        self.assertIn('error', safe)
+        self.assertLessEqual(len(images.safe_ci_diagnostic('x' * 50000)), 12000)
+
     def test_postgres_major_mismatch_is_rejected(self):
         postgres.version18('postgres (PostgreSQL) 18.3 (Ubuntu)')
         for version in ['postgres (PostgreSQL) 16.11', 'postgres (PostgreSQL) 19.0', '']:
             with self.subTest(version=version), self.assertRaises(ValueError):
                 postgres.version18(version)
+
+    def test_postgres_loader_failure_preserves_only_safe_library_names(self):
+        import subprocess
+        import io
+        from contextlib import redirect_stdout
+        failed = subprocess.CompletedProcess([], 127, '', '/private/path/postgres: error while loading shared libraries: libldap.so.2: cannot open shared object file; sensitive extra text')
+        output = io.StringIO()
+        with patch.object(postgres.subprocess, 'run', return_value=failed), redirect_stdout(output):
+            with self.assertRaisesRegex(RuntimeError, 'postgres18_binary_startup_failed'):
+                postgres.library_environment(Path('/tmp'), None)
+        report = json.loads(output.getvalue())
+        self.assertEqual(report['missing_shared_libraries'], ['libldap.so.2'])
+        self.assertEqual(report['exit_code'], 127)
+        self.assertNotIn('private', output.getvalue())
+        self.assertNotIn('sensitive', output.getvalue())
 
     def test_workflow_has_no_automatic_triggers_secret_access_or_publish_steps(self):
         text = (ROOT / '.github/workflows/staging-validation.yml').read_text()
