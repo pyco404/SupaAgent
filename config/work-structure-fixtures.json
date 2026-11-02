@@ -1,0 +1,349 @@
+{
+  "version": 1,
+  "purpose": "Network-free synthetic schema/validator fixtures, not commercial work or paid authorization.",
+  "kind": "research_report",
+  "request": {
+    "objective": "Compare the supplied recovery strategies",
+    "material": "Document A: Replication reduces downtime but copies accidental deletion.\nDocument B: Offline snapshots preserve earlier state but need a tested restore.\nNeither document contains measured recovery times.",
+    "requirements": [],
+    "require_external_research": false
+  },
+  "proposal": {
+    "interpretation": "Compare only the supplied recovery statements.",
+    "summary": "Replication reduces downtime but repeats deletion; snapshots retain earlier state and require a tested restore. No measured recovery times are supplied.",
+    "status": "supported",
+    "tools": [
+      "inspect_input",
+      "extract_evidence",
+      "check_requirements"
+    ],
+    "findings": [
+      {
+        "observation": "Document A: Replication reduces downtime but copies accidental deletion.",
+        "interpretation": "A supplied statement, not independently verified.",
+        "evidence": [
+          {
+            "source": "material",
+            "line": 1,
+            "quote": "Document A: Replication reduces downtime but copies accidental deletion."
+          }
+        ]
+      },
+      {
+        "observation": "Document B: Offline snapshots preserve earlier state but need a tested restore.",
+        "interpretation": "A supplied statement, not independently verified.",
+        "evidence": [
+          {
+            "source": "material",
+            "line": 2,
+            "quote": "Document B: Offline snapshots preserve earlier state but need a tested restore."
+          }
+        ]
+      },
+      {
+        "observation": "Neither document contains measured recovery times.",
+        "interpretation": "A supplied statement, not independently verified.",
+        "evidence": [
+          {
+            "source": "material",
+            "line": 3,
+            "quote": "Neither document contains measured recovery times."
+          }
+        ]
+      }
+    ],
+    "totals": [],
+    "proposed_steps": [],
+    "missing_information": [],
+    "memory_ids": []
+  },
+  "cases": [
+    {
+      "id": "valid-multiple-supported-claims",
+      "patch": {},
+      "expected": "awaiting_approval"
+    },
+    {
+      "id": "valid-abstention",
+      "patch": {
+        "/status": "abstained",
+        "/findings": [],
+        "/missing_information": [
+          "Independent retrieval is unavailable."
+        ]
+      },
+      "expected": "awaiting_approval",
+      "request_patch": {
+        "require_external_research": true
+      }
+    },
+    {
+      "id": "valid-incomplete",
+      "patch": {
+        "/status": "incomplete",
+        "/missing_information": [
+          "Measured latency is not supplied."
+        ]
+      },
+      "expected": "awaiting_approval",
+      "request_patch": {
+        "requirements": [
+          "measured latency"
+        ]
+      }
+    },
+    {
+      "id": "offline-source-alias-rejected",
+      "patch": {
+        "/findings/0/evidence/0/source": "supplied_material"
+      },
+      "expected": "failed",
+      "code": "work_invalid_citation",
+      "path": "/findings/0/evidence/0/source"
+    },
+    {
+      "id": "unknown-source-rejected",
+      "patch": {
+        "/findings/0/evidence/0/source": "unprovided-document"
+      },
+      "expected": "failed",
+      "code": "work_invalid_citation",
+      "path": "/findings/0/evidence/0/source"
+    },
+    {
+      "id": "zero-line-rejected",
+      "patch": {
+        "/findings/0/evidence/0/line": 0
+      },
+      "expected": "failed",
+      "code": "work_invalid_citation",
+      "path": "/findings/0/evidence/0/line"
+    },
+    {
+      "id": "wrong-source-line-rejected",
+      "patch": {
+        "/findings/0/evidence/0/line": 2
+      },
+      "expected": "failed",
+      "code": "work_invalid_citation",
+      "path": "/findings/0/evidence/0/quote"
+    },
+    {
+      "id": "unsupported-observation-rejected",
+      "patch": {
+        "/findings/0/observation": "Guaranteed recovery in one minute."
+      },
+      "expected": "failed",
+      "code": "work_unsupported_claim",
+      "path": "/findings/0/observation"
+    },
+    {
+      "id": "unauthorized-tool-rejected",
+      "patch": {
+        "/tools/1": "transfer"
+      },
+      "expected": "failed",
+      "code": "work_unauthorized_tool",
+      "path": "/tools"
+    },
+    {
+      "id": "missing-tool-rejected",
+      "patch": {
+        "/tools": [
+          "inspect_input",
+          "check_requirements"
+        ]
+      },
+      "expected": "failed",
+      "code": "work_unauthorized_tool",
+      "path": "/tools"
+    },
+    {
+      "id": "duplicate-tool-rejected",
+      "patch": {
+        "/tools": [
+          "inspect_input",
+          "inspect_input",
+          "check_requirements"
+        ]
+      },
+      "expected": "failed",
+      "code": "work_unauthorized_tool",
+      "path": "/tools"
+    },
+    {
+      "id": "wrong-status-enum-rejected",
+      "patch": {
+        "/status": "completed"
+      },
+      "expected": "failed",
+      "code": "work_invalid_status",
+      "path": "/status"
+    },
+    {
+      "id": "null-summary-rejected",
+      "patch": {
+        "/summary": null
+      },
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/summary"
+    },
+    {
+      "id": "missing-summary-rejected",
+      "patch": {},
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/summary",
+      "remove": "/summary"
+    },
+    {
+      "id": "missing-nested-quote-rejected",
+      "patch": {},
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/findings/0/evidence/0/quote",
+      "remove": "/findings/0/evidence/0/quote"
+    },
+    {
+      "id": "missing-evidence-rejected",
+      "patch": {
+        "/findings/0/evidence": []
+      },
+      "expected": "failed",
+      "code": "work_missing_evidence",
+      "path": "/findings/0/evidence"
+    },
+    {
+      "id": "unsupported-total-rejected",
+      "patch": {
+        "/totals": [
+          {
+            "field": "revenue",
+            "value": 100
+          }
+        ]
+      },
+      "expected": "failed",
+      "code": "work_invalid_total",
+      "path": "/totals/0"
+    },
+    {
+      "id": "unretrieved-memory-rejected",
+      "patch": {
+        "/memory_ids": [
+          "11111111-1111-4111-8111-111111111111"
+        ]
+      },
+      "expected": "failed",
+      "code": "work_invalid_memory_reference",
+      "path": "/memory_ids"
+    },
+    {
+      "id": "malformed-memory-uuid-rejected",
+      "patch": {
+        "/memory_ids": [
+          "not-a-uuid"
+        ]
+      },
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/memory_ids/0"
+    },
+    {
+      "id": "credential-marker-rejected",
+      "patch": {
+        "/summary": "Authorization: Bearer [synthetic fixture only]"
+      },
+      "expected": "failed",
+      "code": "work_invalid_text",
+      "path": "/summary"
+    },
+    {
+      "id": "empty-summary-rejected",
+      "patch": {
+        "/summary": "   "
+      },
+      "expected": "failed",
+      "code": "work_invalid_text",
+      "path": "/summary"
+    },
+    {
+      "id": "multibyte-over-limit-rejected",
+      "patch": {
+        "/summary": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "expected": "failed",
+      "code": "work_invalid_text",
+      "path": "/summary"
+    },
+    {
+      "id": "valid-multibyte-byte-boundary",
+      "patch": {
+        "/summary": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+      },
+      "expected": "awaiting_approval"
+    },
+    {
+      "id": "negative-line-schema-rejected",
+      "patch": {
+        "/findings/0/evidence/0/line": -1
+      },
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/findings/0/evidence/0/line"
+    },
+    {
+      "id": "tool-object-schema-rejected",
+      "patch": {
+        "/tools/0": {
+          "name": "inspect_input"
+        }
+      },
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/tools/0"
+    },
+    {
+      "id": "fractional-total-schema-rejected",
+      "patch": {
+        "/totals": [
+          {
+            "field": "expenses",
+            "value": 0.5
+          }
+        ]
+      },
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/totals/0/value"
+    },
+    {
+      "id": "null-findings-rejected",
+      "patch": {
+        "/findings": null
+      },
+      "expected": "failed",
+      "code": "work_schema_mismatch",
+      "path": "/findings"
+    },
+    {
+      "id": "supported-without-findings-rejected",
+      "patch": {
+        "/findings": []
+      },
+      "expected": "failed",
+      "code": "work_missing_evidence",
+      "path": "/findings"
+    },
+    {
+      "id": "incomplete-without-missing-information-rejected",
+      "patch": {
+        "/status": "incomplete"
+      },
+      "expected": "failed",
+      "code": "work_incomplete",
+      "path": "/missing_information"
+    }
+  ]
+}
