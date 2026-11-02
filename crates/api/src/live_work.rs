@@ -1,7 +1,24 @@
 //! Owner-only evaluation endpoint. Environment enablement alone cannot authorize a request.
 use super::*;
 pub(super) fn routes() -> Router<AppState> {
-    Router::new().route("/agents/{id}/live-work", get(list).post(run))
+    Router::new()
+        .route("/agents/{id}/live-work", get(list).post(run))
+        .route(
+            "/agents/{id}/live-work/diagnostics/{request}",
+            get(diagnostic),
+        )
+}
+async fn diagnostic(
+    State(s): State<AppState>,
+    Extension(actor): Extension<Principal>,
+    Path((id, request)): Path<(Uuid, Uuid)>,
+) -> std::result::Result<impl IntoResponse, ApiError> {
+    owner(&s, &actor, id).await?;
+    let diagnostic = s.store.work_diagnostic(id, actor.id, request).await?;
+    Ok((
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
+        Json(json!(diagnostic)),
+    ))
 }
 impl AppState {
     pub fn with_live_work_evaluation(mut self) -> Self {
