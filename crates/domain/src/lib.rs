@@ -2,6 +2,8 @@ mod provider_diagnostics;
 pub use provider_diagnostics::*;
 mod live_work;
 pub use live_work::*;
+mod work_diagnostics;
+pub use work_diagnostics::*;
 mod work;
 pub use work::*;
 mod economy;
@@ -47,6 +49,8 @@ pub enum Error {
     SocialRepetition,
     #[error("invalid_input")]
     Invalid,
+    #[error("{0}")]
+    WorkRejected(Box<WorkRejection>),
     #[error("permission_denied")]
     Denied,
     #[error("provider_failed")]
