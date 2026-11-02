@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "fixture_id": "supplied-synthesis",
+  "model": "gpt-6-luna",
+  "max_requests": 1,
+  "max_input_tokens": 24192,
+  "max_output_tokens": 1024,
+  "max_cost_microusd": 4000,
+  "budget_limit_microusd": 5000,
+  "use_memory": false,
+  "api_origin": "http://127.0.0.1:55682",
+  "agent_id": "d4849ce9-5cef-4b76-9390-64ef6d83a99d",
+  "job_id": "5cdfe440-dc36-4f94-8fc3-93b766ea31c5",
+  "input_sha256": "613e8933d52bf52f46091fb9b67ab05562393145bd5c60e0204c8a61d21fd35e",
+  "project_id": "proj_npsyg93Ofk7ivKheGa8IDw5q",
+  "budget_id": "6ec8370e-fcd8-4675-84dd-1b754f6664c2",
+  "note": "Fresh independent OpenAI evaluation proposal. Not a renewal, paid consent or persistent activation. Operator reports $5.99 credit and automatic recharge disabled; project limits not independently verified.",
+  "preflight": {
+    "version": 1,
+    "test_owner_id": "f84eeab5-ee3c-46c5-b04c-71303bff9044",
+    "service_id": "34fb1db1-ed5f-46d8-a7fe-926d73b24d97",
+    "request_id": "5b667b4e-757d-4aec-8c58-490e0ef23eb7",
+    "accounting_namespace": "db294fb9-d225-4e50-8836-407c9aa1c309",
+    "task_input": "{\"material\":\"Document A: Replication reduces downtime but copies accidental deletion.\\nDocument B: Offline snapshots preserve earlier state but need a tested restore.\\nNeither document contains measured recovery times.\",\"objective\":\"Compare the supplied recovery strategies\",\"requirements\":[]}",
+    "database": {
+      "name": "supa_m10a_a13db38ce0a5_test",
+      "data_directory": "/tmp/supa-m10a-pg-a13db38ce0a5/data",
+      "socket_directory": "/tmp/supa-m10a-pg-a13db38ce0a5/s",
+      "port": 55681,
+      "system_identifier": "7703509812952711377"
+    },
+    "authorization_state": "proposal_only",
+    "memory_policy": "none",
+    "approved_tools": [
+      "inspect_input",
+      "extract_evidence",
+      "check_requirements"
+    ],
+    "job_expires_at": "2026-11-03T09:52:29.570357Z"
+  },
+  "provider": "openai"
+}
