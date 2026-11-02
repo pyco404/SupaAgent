@@ -215,7 +215,13 @@ impl Anthropic {
                     _ => return Err(Error::Provider),
                 }
             }
-            serde_json::from_str(text.ok_or(Error::Provider)?).map_err(|_| Error::Provider)
+            serde_json::from_str(text.ok_or(Error::Provider)?).map_err(|_| {
+                WorkRejection::error(
+                    WorkValidationStage::StructuredOutput,
+                    WorkRejectionCode::InvalidJson,
+                    "/",
+                )
+            })
         })();
         if let Some(d) = diagnostic.as_mut() {
             d.observe_now();
@@ -370,7 +376,7 @@ impl ControlledProvider for Anthropic {
         };
         let raw = self.request(instructions, payload, schema).await;
         raw.map(|v| {
-            let report: WorkProposal = serde_json::from_value(v).map_err(|_| Error::Provider)?;
+            let report = WorkProposal::decode_output(v)?;
             report.validate(input)?;
             Ok(report)
         })
