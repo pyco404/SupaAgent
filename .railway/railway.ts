@@ -12,7 +12,6 @@ export default defineRailway((ctx) => {
   const source = github("pyco404/SupaAgent", { branch: "main", rootDirectory: "/" });
   const deploy = { restartPolicyType: "ON_FAILURE" as const, restartPolicyMaxRetries: 3, region };
   const backend = {
-    DATABASE_URL: db.env.DATABASE_URL,
     SUPA_PRIVATE_STAGING: "true",
     SUPA_PROVIDER: "offline",
     SUPA_ALLOW_OPENAI: "false",
@@ -29,6 +28,8 @@ export default defineRailway((ctx) => {
     domains: [], tcp: [],
     env: {
       ...backend,
+      // Separately provisioned restricted login, never the database helper/admin URL.
+      DATABASE_URL: ctx.shared.SUPA_API_DATABASE_URL,
       PORT: "8080", SUPA_BIND: "[::]:8080",
       SUPA_API_TOKEN: ctx.shared.SUPA_API_TOKEN,
       SUPA_OPERATOR_CREDENTIALS: ctx.shared.SUPA_OPERATOR_CREDENTIALS,
@@ -45,6 +46,7 @@ export default defineRailway((ctx) => {
     domains: [], tcp: [],
     env: {
       ...backend,
+      DATABASE_URL: ctx.shared.SUPA_WORKER_DATABASE_URL,
       PORT: "8081", SUPA_WORKER_BIND: "[::]:8081",
       SUPA_WORKER_ENABLED: "false", SUPA_WORKER_POLL_SECONDS: "5",
     },
