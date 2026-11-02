@@ -773,3 +773,293 @@ async fn interrupted_reserved_diagnostics_survive_recovery_without_refund_or_rep
             .is_err()
     );
 }
+
+// The fixture never constructs a network client. It simulates parse and domain
+// failures while retaining provider usage and a safe HTTP correlation identifier.
+struct RejectedWorkProvider {
+    inner: support::MockWorkProvider,
+    mode: u8,
+}
+#[async_trait::async_trait]
+impl supa_providers::controlled::ControlledProvider for RejectedWorkProvider {
+    fn policy(&self) -> InferencePolicy {
+        self.inner.policy.clone()
+    }
+    fn project(&self) -> &str {
+        "proj_synthetic_diagnostics"
+    }
+    async fn verify(&self) -> Result<()> {
+        Ok(())
+    }
+    async fn reason(&self, _: &str, _: &[Memory]) -> supa_providers::Invocation<LiveProposal> {
+        supa_providers::Invocation {
+            result: Err(Error::Denied),
+            usage: None,
+            diagnostic: None,
+        }
+    }
+    async fn work(&self, input: &LiveWorkInput) -> supa_providers::Invocation<WorkProposal> {
+        let original =
+            supa_providers::controlled::ControlledProvider::work(&self.inner, input).await;
+        let result = original.result.and_then(|mut report| {
+            report.interpretation =
+                "Private customer wording must not enter diagnostic storage".into();
+            match self.mode {
+                0 => report.findings[0].observation = "Unsupported commercial success".into(),
+                1 => report.tools[0] = "transfer".into(),
+                2 => report.findings[0].evidence.clear(),
+                3 => report.findings[0].evidence[0].line = 999,
+                4 => report.summary = ["sk-", "synthetic-sensitive-response"].concat(),
+                5 => {
+                    let mut value = json!(report);
+                    value["summary"] = json!({"private_customer":"do not retain"});
+                    return WorkProposal::decode_output(value);
+                }
+                6 => {
+                    return Err(WorkRejection::error(
+                        WorkValidationStage::StructuredOutput,
+                        WorkRejectionCode::InvalidJson,
+                        "/",
+                    ));
+                }
+                7 => {
+                    report.status = "incomplete".into();
+                    report.missing_information.clear();
+                }
+                _ => unreachable!(),
+            }
+            Ok(report)
+        });
+        let mut diagnostic =
+            ProviderDiagnostic::new(ProviderOperation::Generation, ProviderStage::Completed);
+        diagnostic.http_status = Some(200);
+        diagnostic.request_id = Some("req_SYNTHETICDIAG123".into());
+        diagnostic.dispatch_intended = true;
+        diagnostic.response_complete = true;
+        supa_providers::Invocation {
+            result,
+            usage: original.usage,
+            diagnostic: Some(diagnostic),
+        }
+    }
+}
+#[tokio::test]
+#[ignore = "requires isolated PostgreSQL supa_m10_test; no external provider requests"]
+async fn rejected_work_diagnostics_are_private_precise_bounded_and_restart_safe() {
+    use WorkRejectionCode as C;
+    let (store, agent, actor, policy) = setup().await;
+    let cases: Value = serde_json::from_str(include_str!(
+        "../../../config/work-evaluation-fixtures.json"
+    ))
+    .unwrap();
+    let j = job(&store, agent, actor, &cases["cases"][0]).await;
+    let viewer = Uuid::new_v4();
+    let operator = Uuid::new_v4();
+    let other = Uuid::new_v4();
+    store
+        .grant_access(agent, actor, viewer, Role::Viewer)
+        .await
+        .unwrap();
+    store
+        .grant_access(agent, actor, operator, Role::Operator)
+        .await
+        .unwrap();
+    let expected = [
+        (C::UnsupportedClaim, "/findings/0/observation"),
+        (C::UnauthorizedTool, "/tools"),
+        (C::MissingEvidence, "/findings/0/evidence"),
+        (C::InvalidCitation, "/findings/0/evidence/0/line"),
+        (C::InvalidText, "/summary"),
+        (C::SchemaMismatch, "/summary"),
+        (C::InvalidJson, "/"),
+        (C::IncompleteWork, "/missing_information"),
+    ];
+    let mut first = None;
+    for (mode, (code, field)) in expected.into_iter().enumerate() {
+        let provider = Arc::new(RejectedWorkProvider {
+            inner: support::MockWorkProvider {
+                policy: policy.clone(),
+                calls: AtomicUsize::new(0),
+                mode: 0,
+            },
+            mode: mode as u8,
+        });
+        let runtime = ControlledInference {
+            store: store.clone(),
+            provider: provider.clone(),
+        };
+        let auth = consent(&store, &j, actor, &policy, false).await;
+        let result = runtime.run_work(agent, actor, auth.clone()).await.unwrap();
+        assert_eq!(result.status, "failed");
+        assert_eq!(result.failure_code.as_deref(), Some(code.as_str()));
+        assert_eq!(result.accounted_microusd, 35);
+        assert_eq!(result.usage.unwrap().input_tokens, 100);
+        assert!(result.work.as_ref().unwrap().report.is_none());
+        let record = store
+            .work_diagnostic(agent, actor, result.id)
+            .await
+            .unwrap();
+        record.validate().unwrap();
+        assert_eq!(record.request_id, result.id);
+        assert_eq!(record.evaluation_id, j.id);
+        assert_eq!(record.rejection.code, code);
+        assert_eq!(record.rejection.field_path, field);
+        assert_eq!(record.estimated_cost_microusd, 35);
+        assert_eq!(
+            record.provider_request_id.as_deref(),
+            Some("req_SYNTHETICDIAG123")
+        );
+        assert_eq!(
+            record.expires_at - record.created_at,
+            chrono::Duration::days(7)
+        );
+        let encoded = serde_json::to_string(&record).unwrap();
+        assert!(encoded.len() <= 8192);
+        for secret in [
+            "Private customer wording",
+            "synthetic-sensitive-response",
+            "private_customer",
+            "do not retain",
+            &j.input,
+        ] {
+            assert!(!encoded.contains(secret));
+        }
+        if mode != 6 {
+            assert!(record.rejection.rejected_output.is_some());
+        }
+        assert!(runtime.run_work(agent, actor, auth).await.is_err());
+        assert_eq!(provider.inner.calls.load(Ordering::SeqCst), 1);
+        assert!(
+            store
+                .work_diagnostic(agent, other, result.id)
+                .await
+                .is_err()
+        );
+        let state = AppState::new(
+            store.clone(),
+            Runtime::new(store.clone(), Arc::new(Offline)),
+            "fixture-public-diagnostics-credential-00".into(),
+        )
+        .unwrap()
+        .with_credentials(vec![
+            OperatorCredential {
+                id: actor,
+                role: Role::Owner,
+                token: OWNER.into(),
+            },
+            OperatorCredential {
+                id: other,
+                role: Role::Owner,
+                token: OTHER.into(),
+            },
+            OperatorCredential {
+                id: viewer,
+                role: Role::Viewer,
+                token: "fixture-diagnostics-viewer-credential-00".into(),
+            },
+            OperatorCredential {
+                id: operator,
+                role: Role::Operator,
+                token: "fixture-diagnostics-operator-credential-00".into(),
+            },
+        ])
+        .unwrap();
+        let app = router(state);
+        let path = format!("/agents/{agent}/live-work/diagnostics/{}", result.id);
+        let (status, value) = request(&app, &path, OWNER, None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value["rejection"]["field_path"], field);
+        for token in [
+            OTHER,
+            "fixture-public-diagnostics-credential-00",
+            "fixture-diagnostics-viewer-credential-00",
+            "fixture-diagnostics-operator-credential-00",
+        ] {
+            assert_eq!(
+                request(&app, &path, token, None).await.0,
+                StatusCode::FORBIDDEN
+            );
+        }
+        assert_eq!(
+            request(&app, &path, "invalid", None).await.0,
+            StatusCode::UNAUTHORIZED
+        );
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(&path)
+                    .header("authorization", format!("Bearer {OWNER}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.headers()["cache-control"], "no-store");
+        let standard = store.live_sessions(agent).await.unwrap();
+        let standard = serde_json::to_string(&standard).unwrap();
+        assert!(!standard.contains("work_diagnostic"));
+        assert!(!standard.contains("rejected_output"));
+        assert_eq!(store.get(agent).await.unwrap().lifecycle, Lifecycle::Paused);
+        if first.is_none() {
+            first = Some((result.id, record));
+        }
+    }
+    let (id, record) = first.unwrap();
+    let budget: i64 = sqlx::query_scalar("SELECT committed_microusd FROM live_budgets WHERE id=$1")
+        .bind(policy.budget_id)
+        .fetch_one(store.pool())
+        .await
+        .unwrap();
+    assert_eq!(budget, 280);
+    let url = sqlx::ConnectOptions::to_url_lossy(&*store.pool().connect_options()).to_string();
+    let reopened = Store::connect(&url).await.unwrap();
+    reopened.recover_live_sessions().await.unwrap();
+    assert_eq!(
+        json!(reopened.work_diagnostic(agent, actor, id).await.unwrap()),
+        json!(record)
+    );
+    let saved = reopened.economic_job(j.id, actor).await.unwrap();
+    assert_eq!(saved.state, JobState::Created);
+    assert_eq!(saved.earned_atoms, 0);
+    assert_eq!(saved.received_atoms, 0);
+    // Simulate passage of the retention window only on this new disposable record.
+    sqlx::query("UPDATE live_sessions SET data=jsonb_set(jsonb_set(data,'{work_diagnostic,created_at}',to_jsonb(clock_timestamp()-interval '8 days')),'{work_diagnostic,expires_at}',to_jsonb(clock_timestamp()-interval '1 day')) WHERE id=$1")
+        .bind(id).execute(store.pool()).await.unwrap();
+    assert!(matches!(
+        reopened.work_diagnostic(agent, actor, id).await,
+        Err(Error::NotFound)
+    ));
+    assert!(
+        reopened
+            .purge_work_diagnostics(agent, viewer)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        reopened.purge_work_diagnostics(agent, actor).await.unwrap(),
+        1
+    );
+    let exists: bool =
+        sqlx::query_scalar("SELECT data ? 'work_diagnostic' FROM live_sessions WHERE id=$1")
+            .bind(id)
+            .fetch_one(store.pool())
+            .await
+            .unwrap();
+    assert!(!exists);
+    let after: i64 = sqlx::query_scalar("SELECT committed_microusd FROM live_budgets WHERE id=$1")
+        .bind(policy.budget_id)
+        .fetch_one(store.pool())
+        .await
+        .unwrap();
+    assert_eq!(after, budget);
+    let session = store
+        .live_sessions(agent)
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|s| s.id == id)
+        .unwrap();
+    assert_eq!(session.status, "failed");
+    assert_eq!(session.accounted_microusd, 35);
+}
