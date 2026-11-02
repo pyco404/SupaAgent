@@ -8,6 +8,7 @@ impl OpenAi {
         };
         let raw = self.request(instructions, payload, schema).await;
         Invocation {
+            diagnostic: raw.diagnostic,
             usage: raw.usage,
             result: raw
                 .result
