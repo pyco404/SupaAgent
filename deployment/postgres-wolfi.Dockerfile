@@ -1,12 +1,16 @@
 # syntax=docker/dockerfile:1
 # Candidate security overlay; no registry publication or database deployment.
 FROM golang:1.27.3-trixie@sha256:c65ecfe613b539ac74c62a4c3b2c27e8f8a6076384c8f27e8a3c0f3be17cc385 AS gosu-build
-ADD --checksum=sha256:33d7537d588ea49458b9509bcf4554bdf5ceacc66da71e5caa1058ea3b689c3b https://codeload.github.com/tianon/gosu/tar.gz/6456aaa0f3c854d199d0f037f068eb97515b7513 /tmp/gosu.tar.gz
+# Gosu 1.20: moby/sys/user v0.4.1 fixes CVE-2026-61801. The remaining
+# x/sys Windows advisory stays visible in the unfiltered image scan.
+ADD --checksum=sha256:2b70da8a5480fafedc16bb1fc91b572f064d03df736cbd91a616af2f1b66ab51 https://codeload.github.com/tianon/gosu/tar.gz/29b939aa5bd4dc588af765b8248f6e39150d2565 /tmp/gosu.tar.gz
 WORKDIR /src
 RUN tar -xzf /tmp/gosu.tar.gz --strip-components=1 \
+    && test "$(go list -m github.com/moby/sys/user)" = 'github.com/moby/sys/user v0.4.1' \
+    && test "$(go list -m golang.org/x/sys)" = 'golang.org/x/sys v0.1.0' \
     && go mod download && go mod verify \
     && CGO_ENABLED=0 GOTOOLCHAIN=local go build -mod=readonly -trimpath -ldflags='-s -w' -o /out/gosu . \
-    && /out/gosu --version \
+    && /out/gosu --version | grep -E '^1\.20 \(go1\.27\.3 on linux/' \
     && test "$(/out/gosu nobody id -u)" = 65534
 
 FROM cgr.dev/chainguard/wolfi-base:latest@sha256:629d9acaceda7746cd9293365eb0d8e8fabf74e91830b05470cfbee20b53f447 AS runtime
