@@ -1,12 +1,49 @@
-import { defineRailway, github, postgres, project, service } from "railway/iac";
+import { readFileSync } from "node:fs";
+import { database, defineRailway, github, project, service, type RailwayContext } from "railway/iac";
+
+export const stagingSession = Object.freeze({
+  projectId: "99648d2a-69a1-4d8c-98d0-7f2a26543c9c",
+  environmentId: "ff0b2092-e42b-4a89-ae25-441ab95d92d8",
+  maximumHours: 6,
+  incrementalBudgetUSD: 1,
+  syntheticDataOnly: true,
+  // These are approval/monitoring policies, not Railway TTL or spending controls.
+  deploymentAuthorized: false,
+});
+
+export function reviewedPostgresImage(value: unknown): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("reviewed private PostgreSQL image required");
+  }
+  const record = value as Record<string, unknown>;
+  const reference = record.reference;
+  if (record.approved !== true || record.private !== true ||
+      typeof reference !== "string" ||
+      !/^ghcr\.io\/pyco404\/supa-agent-postgres@sha256:[a-f0-9]{64}$/.test(reference) ||
+      /@sha256:0{64}$/.test(reference) ||
+      typeof record.source_revision !== "string" || !/^[a-f0-9]{40}$/.test(record.source_revision) ||
+      /^0{40}$/.test(record.source_revision) ||
+      typeof record.scan_run_url !== "string" ||
+      !/^https:\/\/github\.com\/pyco404\/SupaAgent\/actions\/runs\/[1-9][0-9]*$/.test(record.scan_run_url) ||
+      record.high_critical_findings !== 0 || record.secret_findings !== 0) {
+    throw new Error("reviewed private PostgreSQL digest and clean scan evidence required");
+  }
+  return reference;
+}
 
 // Authoring only. Evaluation constructs a graph; it makes no network requests.
-export default defineRailway((ctx) => {
+export function stagingDefinition(ctx: RailwayContext, imageApproval: unknown) {
   if (!ctx.isEnvironment("staging")) {
     throw new Error("Supa infrastructure is restricted to the staging environment");
   }
+  if (ctx.projectId !== stagingSession.projectId || ctx.environmentId !== stagingSession.environmentId) {
+    throw new Error("exact existing Supa Agent project and staging environment required");
+  }
   const region = "europe-west4-drams3a";
-  const db = postgres("supa-postgres", { region });
+  const db = database("supa-postgres", "postgres", {
+    image: reviewedPostgresImage(imageApproval),
+    region, output: "DATABASE_URL", defaultMountPath: "/var/lib/postgresql/data",
+  });
   // No generated/custom domains or public TCP proxy, including for PostgreSQL.
   db.networking = { serviceDomains: {}, customDomains: {}, tcpProxies: {} };
   const source = github("pyco404/SupaAgent", { branch: "main", rootDirectory: "/" });
@@ -71,4 +108,8 @@ export default defineRailway((ctx) => {
   // Authoring label only: bind to the existing project/environment IDs before
   // an approved plan. Never apply with an unreviewed delete/resource inventory.
   return project("Supa Agent", { resources: [db, api, worker, frontend] });
-});
+}
+
+export default defineRailway((ctx) => stagingDefinition(ctx, JSON.parse(
+  readFileSync(new URL("../config/railway-staging-image.json", import.meta.url), "utf8"),
+)));
