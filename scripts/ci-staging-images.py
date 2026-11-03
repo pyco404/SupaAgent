@@ -78,14 +78,17 @@ def clean_shutdown(service, exit_code):
     return exit_code in ((0, 143) if service == 'frontend' else (0,))
 
 
-def expect_http(probe, path, expected, stage, authorization=None, diagnostic=None):
+def expect_http(probe, path, expected, stage, authorization=None, diagnostic=None, failures=None):
     status = probe(path, authorization)
     # Never serialize the credential, response body or arbitrary server prose.
     print(json.dumps({'stage': stage, 'path': path, 'http_status': status,
                       'expected_status': expected, 'passed': status == expected,
                       'error_code': (diagnostic or {}).get('error_code')}), flush=True)
     if status != expected:
-        raise AssertionError('http_contract_failed_' + stage)
+        code = 'http_contract_failed_' + stage
+        if failures is None:
+            raise AssertionError(code)
+        failures.append(code)
 
 
 def copy_context(source, destination):
@@ -215,6 +218,7 @@ def validate(service, trivy):
     owned_containers = []
     private_values = []
     made_network = False
+    validation_failures = []
     build_log = work / 'build.log'
 
     def docker(*args, check=True, timeout=180):
@@ -274,6 +278,8 @@ def validate(service, trivy):
                               if v.get('Severity') in ('HIGH','CRITICAL')],
                           'secret_findings': sum(len(r.get('Secrets') or []) for r in image_report['Results']),
                           'runtime_validated': False}), flush=True)
+        print(json.dumps({'stage':'application_scan_report','service':service,
+                          'manifest_digest':digest,**scan_evidence(image_report)}),flush=True)
         dependency_report = {'Results': []}
         if service == 'api':
             manifests = work / 'manifests'
@@ -296,17 +302,19 @@ def validate(service, trivy):
         docker('network', 'create', '--internal', network)
         made_network = True
         password = secrets.token_hex(32)
-        public, operator = secrets.token_hex(32), secrets.token_hex(32)
+        public, operator, expired_token = (secrets.token_hex(32) for _ in range(3))
         credential = {'id': str(uuid.uuid4()), 'role': 'viewer', 'token': operator}
+        expired_credential = {'id': str(uuid.uuid4()), 'role': 'viewer', 'token': expired_token}
         port = SERVICES[service]
         env = {'SUPA_PRIVATE_STAGING': 'true', 'SUPA_PROVIDER': 'offline', 'SUPA_ALLOW_OPENAI': 'false',
                'SUPA_ALLOW_ANTHROPIC': 'false', 'SUPA_CONTROLLED_WORK': 'false',
                'SUPA_CONTROLLED_INFERENCE': 'false', 'SUPA_API_SCHEDULER_ENABLED': 'false',
                'SUPA_WALLET_ENABLED': 'false', 'SUPA_API_TOKEN': public,
-               'SUPA_OPERATOR_CREDENTIALS': json.dumps([credential]),
-               'SUPA_OPERATOR_SESSION_DEADLINES': json.dumps({credential['id']: int(time.time()) + 1800})}
+               'SUPA_OPERATOR_CREDENTIALS': json.dumps([credential, expired_credential]),
+               'SUPA_OPERATOR_SESSION_DEADLINES': json.dumps({credential['id']: int(time.time()) + 1800,
+                                                            expired_credential['id']: 1})}
         visitor_password, operator_password = secrets.token_hex(24), secrets.token_hex(24)
-        private_values.extend([password,public,operator,visitor_password,operator_password])
+        private_values.extend([password,public,operator,expired_token,visitor_password,operator_password])
         if service != 'frontend':
             postgres = 'supa-ci-postgres:' + suffix
             pg_metadata = work / 'postgres-build-metadata.json'
@@ -427,16 +435,19 @@ def validate(service, trivy):
                           'network_internal': True, 'published_ports': 0}), flush=True)
         assert docker('exec', application, 'id', '-u').stdout.strip() != '0'
         if service == 'frontend':
-            assert probe('/') == 401
+            expect_http(probe, '/', 401, 'frontend_missing_auth', failures=validation_failures)
             basic = 'Basic ' + base64.b64encode(('ci-visitor:' + visitor_password).encode()).decode()
-            assert probe('/', basic) == 200
-            assert probe('/operator', basic) == 401
+            expect_http(probe, '/', 200, 'frontend_visitor', basic, failures=validation_failures)
+            expect_http(probe, '/operator', 401, 'frontend_operator_boundary', basic, failures=validation_failures)
         elif service == 'api':
-            expect_http(probe, '/agents', 401, 'api_missing_token', diagnostic=transport_diagnostic)
-            expect_http(probe, '/directory', 200, 'api_public_directory', 'Bearer ' + public, transport_diagnostic)
-            expect_http(probe, '/agents', 403, 'api_service_cannot_impersonate_principal', 'Bearer ' + public, transport_diagnostic)
-            expect_http(probe, '/agents', 200, 'api_named_viewer_agents', 'Bearer ' + operator, transport_diagnostic)
-            expect_http(probe, '/agents', 401, 'api_invalid_token', 'Bearer invalid-test-token', transport_diagnostic)
+            def auth_probe(path,status,stage,token=None):
+                expect_http(probe,path,status,stage,token,transport_diagnostic,validation_failures)
+            auth_probe('/agents',401,'api_missing_token')
+            auth_probe('/directory',200,'api_public_directory','Bearer '+public)
+            auth_probe('/agents',403,'api_service_cannot_impersonate_principal','Bearer '+public)
+            auth_probe('/agents',200,'api_named_viewer_agents','Bearer '+operator)
+            auth_probe('/agents',401,'api_invalid_token','Bearer invalid-test-token')
+            auth_probe('/agents',401,'api_expired_named_viewer','Bearer '+expired_token)
         else:
             defaults = dict(entry.split('=', 1) for entry in config['Config']['Env'])
             assert defaults.get('SUPA_WORKER_ENABLED') == 'false'
@@ -476,6 +487,7 @@ def validate(service, trivy):
                             for v in result.get('Vulnerabilities') or []
                             if v.get('Severity') not in ('HIGH', 'CRITICAL')})
         report = {'vulnerability_severity_counts': counts, 'other_advisory_ids': other_ids,
+                  'authentication_contracts_passed': not validation_failures,
                   'high_critical_findings': findings, 'service': service, 'manifest_digest': digest, 'config_image_id': config['Id'],
                   'postgres_repo_digests': postgres_digest, 'non_root': True, 'health_start_and_restart': True,
                   'postgres_candidate_manifest_digest': postgres_manifest_digest,
@@ -488,7 +500,13 @@ def validate(service, trivy):
         if summary:
             with open(summary, 'a') as output:
                 output.write('\n```json\n' + json.dumps(report, indent=2) + '\n```\n')
-        vulnerability_gate(image_report)
+        try:
+            vulnerability_gate(image_report)
+        except ValueError as error:
+            validation_failures.append(str(error))
+        if validation_failures:
+            print(json.dumps({'stage':'validation_failed','failures':validation_failures}),flush=True)
+            raise RuntimeError('container_validation_failed_see_all_checkpoints')
     finally:
         for name in owned_containers:
             docker('rm', '--force', '--volumes', name, check=False)
