@@ -34,7 +34,14 @@ CVE-2026-39824 remains visible as UNKNOWN: its affected function is in
 is introduced. The focused PostgreSQL scan returned zero HIGH/CRITICAL/MEDIUM/LOW
 findings and one UNKNOWN. A future new artifact still requires fresh scanning.
 
-## Residual security disposition: pending operator acceptance
+## Residual security disposition: limited operator acceptance
+
+The operator explicitly accepted the listed residual findings only for the proposed
+six-hour synthetic-only rehearsal and authorized fresh private PostgreSQL publication.
+That decision grants no production/sensitive-data use, Railway pull credentials,
+provisioning, deployment or persistent agent operation. Findings remain unsuppressed.
+Record actual session times and deployed artifact identities before a rehearsal;
+no session has started. This is not application-owner identity verification or a grant.
 
 The PostgreSQL UNKNOWN is **CVE-2026-39824**, `golang.org/x/sys v0.1.0`, reported
 fixed in v0.44.0. The official Go advisory identifies `x/sys/windows` function
@@ -65,7 +72,7 @@ CVE-2019-1010023, CVE-2019-1010024, CVE-2019-1010025, CVE-2019-9192 and
 CVE-2026-97399. Full package/version/CVE rows remain visible in the CI scan logs.
 No finding or failing gate is removed by this disposition.
 
-Proposed acceptance wording (NOT accepted or applied):
+The accepted boundary is the following narrow rehearsal scope, not deployment consent:
 
 > I accept the listed lower-severity findings and incomplete independent recovery
 > solely for one six-hour, synthetic-data-only rehearsal in the named staging
@@ -108,9 +115,10 @@ recovery keys. No Rust rebuild, container build or full application suite was ru
 ## Private registry publication and digest enrollment
 
 Proposed destination only: private `ghcr.io/pyco404/supa-agent-postgres`.
-The operator has not approved or created this package. Do not create it or test
-credentials as a side effect of validation. Confirm package access, ownership,
-private visibility, storage/transfer charges and publication scope first.
+The operator has now authorized fresh validated publication to this exact private
+package. No package has been created or image published by this preparation.
+Confirm package access, ownership, private visibility and publication scope in the
+separately dispatched publishing job; no Railway operation is included.
 
 Read-only permission review found repository admin/push access and a read-only
 default workflow-token policy, with PR-review approval disabled. These do not prove
@@ -118,7 +126,11 @@ packages:write or read:packages authority. Exact package metadata lookup returne
 HTTP 404; that can mean missing or inaccessible and is not proof of either absence
 or private visibility. No token/header was inspected, no registry login attempted
 and no credential created/retrieved. Package ACL and publisher/puller capability
-remain explicit checks after approval.
+remain explicit checks in the authorized publishing run. Local CLI scope inspection
+returned gist/read:org/repo/workflow and no read:packages or write:packages. Do not
+broaden this credential. The new publisher requests an ephemeral GITHUB_TOKEN with
+packages:write for its single job; declared permission and a scope grant do not prove
+effective publication permission until the validated registry copy succeeds.
 
 The historical CI build digest is
 `sha256:fec85dee966ee525d07c59399f8bff24b017cf8e80fd31382fd35dbf6879d0bc`.
@@ -131,8 +143,10 @@ of its contents. Therefore exact publication of that historical image cannot be
 promised, and the real deployment reference remains unassigned/null.
 
 For an explicitly approved publication, use a separate manual workflow with
-packages:write only for its publishing job, protected environment approval and
-repository-bound GITHUB_TOKEN. Publish the exact locally scanned OCI artifact;
+packages:write only for its publishing job, exact owner/SHA dispatch and a
+repository-bound GITHUB_TOKEN. No protected GitHub environment is created or claimed;
+adding an independent environment reviewer would require its own configuration.
+Publish the exact locally scanned OCI artifact;
 do not rebuild between scan and push. Retain OCI manifest/config digests and
 verify the registry manifest after publication. Local Docker image IDs must not
 be mistaken for a remotely retrievable manifest digest. If rebuilding is needed,
@@ -175,8 +189,64 @@ Minimum publication sequence to approve, not execute now:
 
 Digest-preserving copy semantics are documented in the upstream
 [Skopeo copy manual](https://github.com/containers/skopeo/blob/main/docs/skopeo-copy.1.md).
-No publication workflow with write permissions is installed or dispatched here;
-its exact source and permission changes need review before that approval is used.
+The local `.github/workflows/postgres-publication.yml` now prepares this operation.
+It is not on origin/main and has not run. Source push remains explicitly forbidden
+without separate operator approval; publication authorization does not override it.
+
+## Implemented publication path and source-push boundary
+
+The manual workflow accepts one exact expected main SHA, restricts dispatch to the
+repository owner on the hosted runner and refuses reruns (run attempt must be 1).
+Checkout credentials are not persisted. Only this job requests packages:write;
+the existing validation workflow stays read-only and cannot publish. A requested
+registry push/pull token scope is tested before build, without exposing tokens.
+An existing public package or inconclusive metadata/permission check stops the job.
+A new package uses GitHub's documented private-by-default first publication and
+must pass post-publication private metadata and anonymous-pull denial checks.
+
+The existing API compatibility harness builds PostgreSQL once, scans the saved
+image archive, runs its existing security/runtime/restore checks, and only then
+writes a private candidate record. The record binds source/run/config ID, filesystem
+diff IDs and archive SHA-256. Working state and archive stay in runner-private
+temporary storage; runtime env files are removed, not exported.
+
+`scripts/publish-postgres-image.py` rechecks the record/archive, preserves the
+validated config bytes and verifies every uncompressed filesystem-layer hash while
+creating canonical gzip OCI blobs. This is representation conversion, not a build
+or filesystem change. Its canonical manifest digest is distinct from a Docker
+config/image ID; the exact registry manifest is computed before upload. It uses
+Skopeo --preserve-digests, compares the read-back raw manifest, downloads the
+published config/layers and hashes every blob. It also verifies private package
+metadata and a genuinely anonymous pull attempt. All findings are retained; the
+publication gate allows only the explicitly accepted PostgreSQL UNKNOWN advisory
+at its reviewed package/version/severity. Any new finding requires review and is
+not hidden or suppressed. Anonymous registry access is checked before upload too,
+including when GitHub's package API returns an ambiguous 404.
+There is no build, fallback image, deletion or Railway operation in the publisher.
+
+Registry login uses only the job token over stdin and a 0600 temporary auth file,
+removed on success or failure. Transport errors never emit tokens, headers, raw
+provider prose or tool stderr. HTTP redirects are rejected for authenticated
+metadata requests. Ambiguous copy/verification failures record review-required and
+never retry or claim success; an image may already exist and needs read-only review.
+
+After separate source-push approval, the already-authorized publication can be
+dispatched once (replace the placeholder with the reviewed final main SHA):
+
+```sh
+gh workflow run postgres-publication.yml --repo pyco404/SupaAgent --ref main \
+  -f expected_source_sha=EXACT_APPROVED_MAIN_SHA
+```
+
+The fresh immutable reference cannot be filled until that remote job actually
+succeeds. No local Docker build, package-token retrieval or registry login occurred.
+Network-free synthetic archive/registry tests cover tampering, wrong ownership/
+source/run, failed scans, duplicate/path/symlink archives, changed config/layers,
+public/inaccessible packages, manifest mismatch, credential redaction and ambiguous
+copy recovery. Local validation passed 21 publication tests, the existing 44 CI
+security regressions and 15 secret-scanner self-tests, plus Python/workflow parsing.
+These are mocked evidence, not successful live publication evidence. No full Rust
+suite, Docker image build, registry login or remote publication run was repeated.
 
 Railway GHCR pulls require separately installed read:packages credentials and
 the supported plan. Private registry support requires Pro; recheck the actual
@@ -353,8 +423,9 @@ $0.004048 and $0.003536 are not modified, imported, refunded or settled.
    no implied renewal. Separate volume deletion and persistent-staging/recovery
    approval remain necessary.
 
-All five decisions remain pending. Do not combine them into a blanket authorization.
-The current request authorizes only safe preparation and local one-file commits.
+Decisions 1 and 2 are now explicitly authorized within their limited scope; actual
+publication awaits the separately required source push and a successful manual run.
+Decisions 3, 4 and 5 remain unauthorized. Do not combine them into a blanket approval.
 
 References: [Gosu 1.20](https://github.com/tianon/gosu/releases/tag/1.20),
 [official Go advisory](https://pkg.go.dev/vuln/GO-2026-5024),
