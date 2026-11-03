@@ -141,14 +141,20 @@ def excluded_runtime_paths_absent(path):
 
 
 def nonroot_process_uids(output):
-    """docker top uses host ps; do not require account utilities in the image."""
+    """Docker needs PID to filter host ps output to the container's processes."""
     lines = output.splitlines()
-    if not lines or lines[0].strip() != 'UID':
-        raise ValueError('container_process_uid_inventory_required')
-    uids = [line.strip() for line in lines[1:] if line.strip()]
-    if not uids or any(not uid.isdecimal() or int(uid) == 0 for uid in uids):
+    if not lines or lines[0].split() != ['PID', 'UID']:
+        raise ValueError('container_process_pid_uid_inventory_required')
+    rows = [line.split() for line in lines[1:] if line.strip()]
+    if not rows or any(len(row) != 2 or not all(x.isdecimal() for x in row)
+                       or int(row[0]) <= 0 or int(row[1]) == 0 for row in rows):
         raise ValueError('all_application_processes_must_be_nonroot')
-    return sorted({int(uid) for uid in uids})
+    return sorted({int(row[1]) for row in rows})
+
+
+def inspect_nonroot_processes(docker, container):
+    # Keep PID in the actual command, not just synthetic parser fixtures.
+    return nonroot_process_uids(docker('top', container, '-eo', 'pid,uid').stdout)
 
 
 def runtime_package_inventory(path):
@@ -201,8 +207,8 @@ def node_sqlite_coverage(versions):
             'upstream_fix_present':tuple(map(int,sqlite.split('.'))) >= (3, 54, 0)}
 
 
-def safe_ci_diagnostic(text, private_values=()):
-    """Bound failure evidence; never output container environment/inspect config."""
+def _scrub_ci_diagnostic(text, private_values=()):
+    """Shared redaction before any diagnostic is bounded or split."""
     text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
     for value in sorted(set(private_values), key=len, reverse=True):
         if value and len(value) >= 16:
@@ -210,7 +216,35 @@ def safe_ci_diagnostic(text, private_values=()):
     text = re.sub(r'(?i)(?:postgres(?:ql)?|https?)://[^\s/@]+:[^\s/@]+@', '[redacted-url]@', text)
     text = re.sub(r'\bsk-[A-Za-z0-9_-]{20,}', '[redacted-key]', text)
     text = ''.join(c for c in text if c in '\n\t' or ord(c) >= 32)
+    return text
+
+
+def safe_ci_diagnostic(text, private_values=()):
+    """Bound runtime evidence; never output container environment/inspect config."""
+    text = _scrub_ci_diagnostic(text, private_values)
     return '\n'.join(text.splitlines()[-40:])[-12000:]
+
+
+def emit_build_failure_evidence(text, private_values=()):
+    """Retain the first solver error and its chain, not only the build tail.
+
+    Build commands use public source/packages and no injected build secrets.
+    Redact before chunking; bound total evidence to 2 MiB and flag truncation.
+    No image environment/inspect dump or private runtime logs enter this path.
+    """
+    text = _scrub_ci_diagnostic(text, private_values)
+    limit = 2 * 1024 * 1024
+    encoded = text.encode('utf-8')
+    truncated = len(encoded) > limit
+    if truncated:
+        text = (encoded[:limit // 2].decode('utf-8', errors='ignore')
+                + '\n[build diagnostic middle truncated]\n'
+                + encoded[-limit // 2:].decode('utf-8', errors='ignore'))
+    chunks = [text[i:i + 6000] for i in range(0, len(text), 6000)] or ['']
+    for number, chunk in enumerate(chunks, 1):
+        print(json.dumps({'stage': 'build_failure_evidence', 'chunk': number,
+                          'chunks': len(chunks), 'truncated': truncated,
+                          'diagnostic': chunk}), flush=True)
 
 
 def wait_for_database(docker, database, private_values):
@@ -303,6 +337,8 @@ def validate(service, trivy):
     def docker(*args, check=True, timeout=180):
         result = subprocess.run(['docker', *map(str, args)], capture_output=True, text=True, timeout=timeout)
         if check and result.returncode:
+            if args[0] == 'buildx':
+                emit_build_failure_evidence(result.stdout + '\n' + result.stderr, private_values)
             print(json.dumps({'stage': 'docker_operation_failed', 'operation': args[0],
                               'diagnostic': safe_ci_diagnostic(result.stderr, private_values)}), flush=True)
             raise RuntimeError('docker_validation_operation_failed_' + args[0])
@@ -321,6 +357,7 @@ def validate(service, trivy):
                                     str(context / f'deployment/{service}.Dockerfile'), str(context)],
                                    stdout=log, stderr=subprocess.STDOUT, timeout=3000)
         if build.returncode:
+            emit_build_failure_evidence(build_log.read_text(errors='replace'), private_values)
             print(json.dumps({'stage': 'image_build_failed', 'service': service,
                               'diagnostic': safe_ci_diagnostic(build_log.read_text(errors='replace'))}), flush=True)
             raise RuntimeError('image_build_failed_see_disposable_runner_build_log')
@@ -425,6 +462,20 @@ def validate(service, trivy):
             print(json.dumps({'stage': 'postgres_candidate_built', 'repo_digests': postgres_digest,
                               'candidate_manifest_digest': postgres_manifest_digest,
                               'architecture': pg_config['Architecture']}), flush=True)
+            # Retain every scan severity before runtime checks can fail. Findings
+            # still join the final strict gate; no successful build waives them.
+            pg_archive, pg_scan = work / 'postgres.tar', work / 'postgres-scan.json'
+            docker('image', 'save', '--output', pg_archive, postgres)
+            checked = subprocess.run([str(trivy), 'image', '--input', str(pg_archive), '--scanners',
+                                      'vuln,secret', '--ignorefile', '/dev/null', '--format', 'json',
+                                      '--output', str(pg_scan)], cwd=work, timeout=900)
+            if checked.returncode:
+                raise RuntimeError('postgres_image_scanner_failed_closed')
+            pg_report = json.loads(pg_scan.read_text())
+            scan_shape(pg_report)
+            print(json.dumps({'stage': 'postgres_scanned', 'service':service,
+                              'manifest_digest':postgres_manifest_digest, **scan_evidence(pg_report)}), flush=True)
+            dependency_report.setdefault('Results', []).extend(pg_report['Results'])
             # Self-test the actual privilege-drop binary and dynamic XML linkage.
             gosu_version = docker('run', '--rm', '--network', 'none', '--entrypoint',
                                   '/usr/local/bin/gosu', postgres, '--version').stdout.strip()
@@ -453,8 +504,9 @@ def validate(service, trivy):
             assert tls == 't', 'postgres_tls_connection_required'
             assert docker('exec', database, 'stat', '-c', '%a',
                           '/var/lib/postgresql/data/supa-tls/server.key').stdout.strip() == '600'
-            pg_process_uids = nonroot_process_uids(docker('top', database, '-eo', 'uid').stdout)
-            package_versions = docker('exec', database, 'apk', 'info', '-v', 'libxml2-16', 'openssl-4.0', 'postgresql-18-base').stdout.strip()
+            pg_process_uids = inspect_nonroot_processes(docker, database)
+            package_versions = docker('exec', database, 'apk', 'info', '-v', 'libxml2-16', 'libLLVM-19', 'glibc-2.44',
+                                     'glibc-2.44-locales', 'posix-libc-utils-2.44', 'openssl-4.0', 'postgresql-18-base').stdout.strip()
             xml_coverage = postgres_xml_coverage(package_versions)
             assert xml_coverage['critical_upstream_fix_present'], 'postgres_critical_xml_fix_required'
             print(json.dumps({'stage':'postgres_xml_advisory_coverage','manifest_digest':postgres_manifest_digest,
@@ -466,18 +518,6 @@ def validate(service, trivy):
                               'runtime_package_versions':package_versions,
                               'postgres_process_uids':pg_process_uids,
                               'candidate_dockerfile':POSTGRES_DOCKERFILE}),flush=True)
-            pg_archive, pg_scan = work / 'postgres.tar', work / 'postgres-scan.json'
-            docker('image', 'save', '--output', pg_archive, postgres)
-            checked = subprocess.run([str(trivy), 'image', '--input', str(pg_archive), '--scanners',
-                                      'vuln,secret', '--ignorefile', '/dev/null', '--format', 'json',
-                                      '--output', str(pg_scan)], cwd=work, timeout=900)
-            if checked.returncode:
-                raise RuntimeError('postgres_image_scanner_failed_closed')
-            pg_report = json.loads(pg_scan.read_text())
-            scan_shape(pg_report)
-            print(json.dumps({'stage': 'postgres_scanned', 'service':service,
-                              'manifest_digest':postgres_manifest_digest, **scan_evidence(pg_report)}), flush=True)
-            dependency_report.setdefault('Results', []).extend(pg_report['Results'])
             authority = 'postgres:' + urllib.parse.quote(password, safe='') + '@' + database + ':5432'
             admin_url = urllib.parse.urlunsplit(('postgresql', authority, '/supa_ci_test', '', ''))
             migration_env = work / 'migration.env'
@@ -549,7 +589,7 @@ def validate(service, trivy):
         print(json.dumps({'stage': 'application_health_passed', 'service': service,
                           'internal_http_status': 200, 'runner_bridge_http_status': 200,
                           'network_internal': True, 'published_ports': 0}), flush=True)
-        process_uids = nonroot_process_uids(docker('top', application, '-eo', 'uid').stdout)
+        process_uids = inspect_nonroot_processes(docker, application)
         if service == 'frontend':
             expect_http(probe, '/', 401, 'frontend_missing_auth', failures=validation_failures)
             basic = 'Basic ' + base64.b64encode(('ci-visitor:' + visitor_password).encode()).decode()
