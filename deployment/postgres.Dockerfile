@@ -13,11 +13,23 @@ FROM ghcr.io/railwayapp-templates/postgres-ssl:18@sha256:4fc833b43d2aaf6ecc9b186
 # Keep the upstream PostgreSQL/SSL/volume/entrypoint contract. Do not replace
 # libxml2 with an incompatible ABI, remove XML support, or suppress its advisories.
 # Supa uses JSONB memories and no vector extension; this candidate is for fresh DBs.
-RUN apt-mark hold postgresql-18 postgresql-client-18 \
-    && apt-get update && apt-get upgrade -y \
-    && apt-get purge -y --no-auto-remove postgresql-18-pgvector \
-    && test "$(dpkg-query -W -f='${Status}' postgresql-18)" = 'install ok installed' \
-    && apt-mark unhold postgresql-18 postgresql-client-18 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-mark hold postgresql-18 postgresql-client-18
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get purge -y --no-auto-remove postgresql-18-pgvector
+# ${Status} includes the selection ("hold"), not just installation health.
+# Check installation independently and retain the exact server/client versions.
+RUN set -eu; \
+    for package in postgresql-18 postgresql-client-18; do \
+      test "$(dpkg-query -W -f='${db:Status-Status}' "$package")" = installed; \
+      test "$(dpkg-query -W -f='${db:Status-Eflag}' "$package")" = ok; \
+      dpkg-query -W -f='${Package} ${Version} ${Status}\n' "$package"; \
+    done; \
+    /usr/lib/postgresql/18/bin/postgres --version; \
+    ldd /usr/lib/postgresql/18/bin/postgres > /tmp/postgres-libraries; \
+    cat /tmp/postgres-libraries; \
+    ! grep -q 'not found' /tmp/postgres-libraries; \
+    rm /tmp/postgres-libraries; \
+    apt-mark unhold postgresql-18 postgresql-client-18; \
+    rm -rf /var/lib/apt/lists/*
 COPY --from=gosu-build --chmod=755 /out/gosu /usr/local/bin/gosu
 RUN gosu --version && test "$(gosu postgres id -u)" = "$(id -u postgres)"
