@@ -101,6 +101,10 @@ jobs:
           set -euo pipefail
           rustup toolchain install 1.93.0 --profile minimal --no-self-update
           rustup default 1.93.0
+      - name: Check validation harness security and metadata comparisons offline
+        run: |
+          python3 scripts/test-staging-validation.py
+          python3 scripts/test-postgres-metadata.py
       - name: Build native test services
         run: cargo build --locked -p supa-api --bin supa-api --bin supa-staging-schema -p supa-runtime --bin supa-runtime
       - name: Validate migrations, concurrency, accounting, recovery and restore on PostgreSQL 18
