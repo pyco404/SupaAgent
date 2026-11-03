@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import shutil
 import tarfile
@@ -17,6 +18,9 @@ ROOT = Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location('publication', ROOT / 'scripts/publish-postgres-image.py')
 publication = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(publication)
+spec = importlib.util.spec_from_file_location('candidate_images', ROOT / 'scripts/ci-staging-images.py')
+images = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(images)
 
 
 class PublicationTests(unittest.TestCase):
@@ -83,6 +87,73 @@ class PublicationTests(unittest.TestCase):
                        {'scan': {'secret_findings': 0, 'findings': [{'Severity': 'CRITICAL'}]}}]:
             with self.subTest(change=change), self.assertRaises(ValueError):
                 publication.check_candidate({**self.record, **change}, self.env)
+
+    def test_actual_candidate_writer_round_trips_private_validated_image_handoff(self):
+        path = self.root / 'candidate.json'
+        previous_umask = os.umask(0)
+        try:
+            images.write_candidate_record(path, self.record)
+        finally:
+            os.umask(previous_umask)
+        self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+        retained = json.loads(path.read_text())
+        self.assertEqual(retained, self.record)
+        self.assertEqual(publication.check_candidate(retained, self.env), self.archive)
+        identity, manifest = publication.canonical_layout(self.archive, self.root / 'retained-oci', retained)
+        self.assertEqual(manifest['config']['digest'], retained['image_id'])
+        publication.verify_layout(self.root / 'retained-oci', identity, manifest)
+
+    def test_actual_candidate_writer_refuses_existing_files_and_symlinks(self):
+        existing = self.root / 'existing.json'
+        existing.write_text('preserve existing evidence')
+        symlink = self.root / 'candidate-link.json'
+        symlink.symlink_to(existing)
+        dangling = self.root / 'dangling-link.json'
+        dangling.symlink_to(self.root / 'absent.json')
+        for path in (existing, symlink, dangling):
+            with self.subTest(path=path.name), self.assertRaises(FileExistsError):
+                images.write_candidate_record(path, self.record)
+        self.assertEqual(existing.read_text(), 'preserve existing evidence')
+        self.assertTrue(symlink.is_symlink())
+        self.assertTrue(dangling.is_symlink())
+        self.assertFalse((self.root / 'absent.json').exists())
+
+    def test_actual_candidate_writer_removes_partial_records_and_propagates_failure(self):
+        path = self.root / 'candidate.json'
+        original_dump = images.json.dump
+
+        def interrupted_dump(candidate, output):
+            output.write('{"validated":true,')
+            raise OSError('synthetic interrupted write')
+
+        for fail_at in ('write', 'flush', 'fsync', 'close'):
+            with self.subTest(stage=fail_at):
+                original_open = open
+
+                @contextlib.contextmanager
+                def interrupted_stream(*args, **kwargs):
+                    with original_open(*args, **kwargs) as output:
+                        if fail_at == 'flush':
+                            from unittest.mock import Mock
+                            proxy = Mock(wraps=output)
+                            proxy.flush.side_effect = OSError('synthetic flush failure')
+                            yield proxy
+                        else:
+                            yield output
+                    if fail_at == 'close':
+                        raise OSError('synthetic close failure')
+
+                with patch.object(images.json, 'dump', side_effect=interrupted_dump if fail_at == 'write' else original_dump), \
+                        patch.object(images.os, 'fsync', side_effect=OSError('synthetic sync failure') if fail_at == 'fsync' else None), \
+                        patch('builtins.open', side_effect=interrupted_stream):
+                    with self.assertRaises(OSError):
+                        images.write_candidate_record(path, self.record)
+                self.assertFalse(path.exists())
+                with patch.object(publication, 'run') as tool, patch.object(publication, 'http_json') as network:
+                    with self.assertRaises(FileNotFoundError):
+                        publication.publish(path, 'synthetic-token', self.env)
+                    tool.assert_not_called()
+                    network.assert_not_called()
 
     def test_unreviewed_lower_findings_stop_without_hiding_the_existing_advisory(self):
         record = json.loads(json.dumps(self.record))
