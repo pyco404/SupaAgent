@@ -1,0 +1,72 @@
+name: Private PostgreSQL candidate publication
+
+# Source push and owner dispatch require their own explicit approvals.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_source_sha:
+        description: Exact approved main commit to build, validate and publish
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supa-private-postgres-publication
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish-postgres:
+    if: github.repository == 'pyco404/SupaAgent' && github.ref == 'refs/heads/main' && github.actor == 'pyco404'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    permissions:
+      contents: read
+      packages: write
+    env:
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+    steps:
+      - name: Check out exact approved source without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify manual owner scope and package permission request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/publish-postgres-image.py --preflight-only
+      - name: Install verified scanner and distribution tools on disposable runner
+        env:
+          TRIVY_VERSION: '0.76.1'
+          TRIVY_SHA256: c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$RUNNER_TEMP/supa-publication" "$RUNNER_TEMP/supa-tools"
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+            --output "$RUNNER_TEMP/supa-tools/trivy.tar.gz"
+          echo "$TRIVY_SHA256  $RUNNER_TEMP/supa-tools/trivy.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/supa-tools/trivy.tar.gz" -C "$RUNNER_TEMP/supa-tools" trivy
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends skopeo
+          skopeo --version
+      - name: Build PostgreSQL once and pass existing scans and compatibility checks
+        run: |
+          set -euo pipefail
+          python3 scripts/ci-staging-images.py --service api \
+            --trivy "$RUNNER_TEMP/supa-tools/trivy" \
+            --publication-record "$RUNNER_TEMP/supa-publication/candidate.json"
+      - name: Publish validated contents and verify private manifest config and layers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/publish-postgres-image.py --authorize-private-publication \
+            --candidate "$RUNNER_TEMP/supa-publication/candidate.json"
