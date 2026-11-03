@@ -24,6 +24,19 @@ import uuid
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def rust_failure_evidence(log):
+    """Keep source locations and stable codes, never panic values or DB URLs."""
+    sites = []
+    for name, path, line, column in re.findall(
+            r"thread '([A-Za-z0-9_:]+)' panicked at ([A-Za-z0-9_/.-]+\.rs):(\d+):(\d+):", log):
+        if path.startswith('crates/'):
+            sites.append({'test': name, 'file': path, 'line': int(line), 'column': int(column)})
+    return {'failed_tests': re.findall(r'^test ([A-Za-z0-9_:]+) \.\.\. FAILED$', log, re.MULTILINE)[:50],
+            'panic_sites': sites[:50],
+            'sqlstates': sorted(set(re.findall(r'code: "([0-9A-Z]{5})"',log))),
+            'compiler_codes': sorted(set(re.findall(r'error\[(E\d{4})\]',log)))}
+
+
 def version18(text):
     if not re.search(r'\(PostgreSQL\) 18\.', text):
         raise ValueError('postgresql_18_binaries_required')
@@ -251,9 +264,8 @@ def validate(binary, library, evidence, offline=False):
                                     stdout=log, stderr=subprocess.STDOUT, timeout=2400)
         tests = (evidence / 'rust.log').read_text()
         if result.returncode:
-            failed = re.findall(r'^test ([A-Za-z0-9_:]+) \.\.\. FAILED$',tests,re.MULTILINE)
             print(json.dumps({'stage':'postgres18_rust_tests_failed','exit_code':result.returncode,
-                              'failed_tests':failed[:50]}),flush=True)
+                              **rust_failure_evidence(tests)}),flush=True)
             raise AssertionError('postgres18_rust_suite_failed_see_failed_test_names')
         passed = sum(map(int, re.findall(r'test result: ok\. (\d+) passed', tests)))
         assert passed > 100
