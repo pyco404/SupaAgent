@@ -73,10 +73,21 @@ class StagingSecurity(unittest.TestCase):
                 self.assertEqual(images.excluded_runtime_paths_absent(path), expected)
 
     def test_actual_container_process_uids_reject_root_empty_and_malformed_inventory(self):
-        self.assertEqual(images.nonroot_process_uids('UID\n65532\n65532\n'), [65532])
-        for value in ['', 'UID\n', 'UID\n0\n', 'UID\n65532\n0\n', 'USER\nnonroot\n', 'UID\nroot\n']:
+        self.assertEqual(images.nonroot_process_uids('  PID   UID\n123 65532\n124 65532\n'), [65532])
+        for value in ['', 'PID UID\n', 'PID UID\n123 0\n', 'PID UID\n123 65532\n124 0\n',
+                      'UID\n65532\n', 'PID USER\n123 nonroot\n', 'PID UID\n123 root\n',
+                      'PID UID\n0 65532\n', 'PID UID\n123 65532 extra\n']:
             with self.assertRaises(ValueError):
                 images.nonroot_process_uids(value)
+
+    def test_docker_top_command_includes_pid_and_verifies_nonroot(self):
+        from unittest.mock import Mock
+        docker = Mock(return_value=Mock(stdout='PID UID\n123 65532\n'))
+        self.assertEqual(images.inspect_nonroot_processes(docker, 'owned-test-container'), [65532])
+        docker.assert_called_once_with('top', 'owned-test-container', '-eo', 'pid,uid')
+        docker.return_value.stdout = 'PID UID\n123 0\n'
+        with self.assertRaises(ValueError):
+            images.inspect_nonroot_processes(docker, 'owned-test-container')
 
     def test_security_candidates_are_pinned_and_keep_runtime_contracts(self):
         for service in ('api', 'worker', 'frontend'):
@@ -95,7 +106,12 @@ class StagingSecurity(unittest.TestCase):
         self.assertNotIn('/edge/', source)
         self.assertIn('libxml2-16=2.15.4-r2', source)
         self.assertIn('postgresql-18-base=18.6-r7', source)
-        self.assertIn('posix-libc-utils=2.43-r13', source)
+        self.assertIn('posix-libc-utils-2.44=2.44-r13', source)
+        self.assertIn('glibc-2.44=2.44-r13', source)
+        self.assertIn('glibc-2.44-locales=2.44-r13', source)
+        self.assertIn('libLLVM-19=19.1.7-r31', source)
+        self.assertNotIn('glibc-locales=2.43', source)
+        self.assertNotIn('posix-libc-utils=2.43', source)
         self.assertIn("-name 'libxml2.so.2*'", source)
         self.assertIn('PGDATA=/var/lib/postgresql/data/pgdata', source)
         self.assertIn('deployment/postgres-entrypoint.sh', source)
@@ -245,6 +261,16 @@ class StagingSecurity(unittest.TestCase):
         self.assertNotIn('private-fixture', json.dumps(evidence))
         self.assertNotIn('sensitive-source', json.dumps(evidence))
 
+    def test_scan_evidence_retains_all_severities_without_changing_gate(self):
+        report = {'SchemaVersion': 2, 'Results': [{'Target': 'synthetic-package-inventory',
+            'Vulnerabilities': [{'VulnerabilityID': 'CVE-' + severity, 'PkgName': 'example',
+                                 'Severity': severity, 'InstalledVersion': '1', 'FixedVersion': '2'}
+                                for severity in ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')]}]}
+        evidence = images.scan_evidence(report)
+        self.assertEqual({row['Severity'] for row in evidence['findings']}, {'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'})
+        with self.assertRaises(ValueError):
+            images.vulnerability_gate(report)
+
     def test_only_frontend_can_exit_with_conventional_sigterm_status(self):
         for service in images.SERVICES:
             self.assertTrue(images.clean_shutdown(service, 0))
@@ -341,6 +367,34 @@ class StagingSecurity(unittest.TestCase):
             self.assertTrue(images.contains_canary(layer))
             layer.write_bytes(b'ordinary image bytes')
             self.assertFalse(images.contains_canary(layer))
+
+    def test_build_failure_evidence_retains_first_solver_error_and_redacts_every_chunk(self):
+        import contextlib, io
+        secret = 'synthetic-sensitive-value-12345'
+        text = 'ERROR: unable to select packages: ' + secret + '\n' + ('dependency chain\n' * 300) + 'final build failed'
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            images.emit_build_failure_evidence(text, [secret])
+        rows = [json.loads(line) for line in output.getvalue().splitlines()]
+        combined = ''.join(row['diagnostic'] for row in rows)
+        self.assertIn('ERROR: unable to select packages:', combined)
+        self.assertIn('dependency chain\n' * 300, combined)
+        self.assertIn('final build failed', combined)
+        self.assertNotIn(secret, combined)
+        self.assertEqual([row['chunk'] for row in rows], list(range(1, len(rows) + 1)))
+        self.assertTrue(all(not row['truncated'] and len(row['diagnostic']) <= 6000 for row in rows))
+
+    def test_oversized_build_diagnostics_keep_head_and_tail_and_flag_truncation(self):
+        import contextlib, io
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            images.emit_build_failure_evidence('first solver error\n' + 'x' * (3 * 1024 * 1024) + '\nlast build error')
+        rows = [json.loads(line) for line in output.getvalue().splitlines()]
+        combined = ''.join(row['diagnostic'] for row in rows)
+        self.assertTrue(all(row['truncated'] for row in rows))
+        self.assertTrue(combined.startswith('first solver error'))
+        self.assertTrue(combined.endswith('last build error'))
+        self.assertLess(len(combined), 2 * 1024 * 1024 + 100)
 
     def test_failure_diagnostics_are_bounded_and_redact_ci_credentials(self):
         private = 'synthetic-private-value-1234567890'
