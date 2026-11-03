@@ -35,6 +35,7 @@
 !reference-web/public/**
 !deployment/
 !deployment/*.Dockerfile
+!deployment/postgres-entrypoint.sh
 # Defense in depth, including files accidentally placed in an allowed directory.
 **/.env*
 **/*.pem
