@@ -11,19 +11,20 @@ COPY reference-web/index.html reference-web/not-found.html reference-web/style.c
 COPY reference-web/public /app/reference-web/public
 RUN npm run build && npm prune --omit=dev
 
-FROM node:24-trixie-slim AS runtime
-RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /usr/local/lib/node_modules/npm /opt/yarn-* /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:b8cec4b2f2126ff7bd034ec9ac207ffb3272667dfdc48376e3b035d3270549ba AS runtime
+# Preserve Node 24 and the approved Next.js app without a shell/package manager.
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 SUPA_SITE_MODE=staging PORT=3000
 WORKDIR /app/web
-COPY --from=build --chown=node:node /app/web/package.json ./package.json
-COPY --from=build --chown=node:node /app/web/node_modules ./node_modules
-COPY --from=build --chown=node:node /app/web/.next ./.next
-COPY --from=build --chown=node:node /app/web/public ./public
-COPY --from=build --chown=node:node /app/web/next.config.ts ./next.config.ts
+COPY --from=build --chown=65532:65532 /app/web/package.json ./package.json
+COPY --from=build --chown=65532:65532 /app/web/node_modules ./node_modules
+COPY --from=build --chown=65532:65532 /app/web/.next ./.next
+COPY --from=build --chown=65532:65532 /app/web/public ./public
+COPY --from=build --chown=65532:65532 /app/web/next.config.ts ./next.config.ts
 # The approved experience is served verbatim; contracts/auth stay server-side.
-COPY --from=build --chown=node:node /app/web/src/lib ./src/lib
-COPY --from=build --chown=node:node /app/reference-web /app/reference-web
-USER node
+COPY --from=build --chown=65532:65532 /app/web/src/lib ./src/lib
+COPY --from=build --chown=65532:65532 /app/reference-web /app/reference-web
+USER 65532:65532
 EXPOSE 3000
-CMD ["sh", "-c", "exec node node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port \"$PORT\""]
+ENTRYPOINT ["/nodejs/bin/node"]
+# Next.js reads PORT from the environment; no shell expansion or wrapper process.
+CMD ["node_modules/next/dist/bin/next", "start", "--hostname", "0.0.0.0"]
