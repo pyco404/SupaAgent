@@ -195,6 +195,15 @@ def postgres_xml_coverage(package_versions):
             'advisories_requiring_coverage_verification': XML_HIGH_ADVISORIES if version < (2, 15, 4) else []}
 
 
+def verify_postgres_locale(value):
+    """Do not turn a locale fix into an unreviewed collation/provider change."""
+    expected = {'encoding': 'UTF8', 'collate': 'en_US.utf8',
+                'ctype': 'en_US.utf8', 'provider': 'c'}
+    if not isinstance(value, dict) or any(value.get(key) != item for key, item in expected.items()):
+        raise ValueError('postgres_locale_identity_mismatch')
+    return value
+
+
 def node_sqlite_coverage(versions):
     """Inspect the bundled library too, not just removed OS SQLite packages."""
     node = versions.get('node', '')
@@ -494,6 +503,12 @@ def validate(service, trivy):
             wait_for_database(docker, database, private_values)
             postgres_version = sql('SHOW server_version_num')
             assert postgres_version.startswith('18')
+            locale_identity = verify_postgres_locale(json.loads(sql(
+                "SELECT json_build_object('encoding',pg_encoding_to_char(encoding),"
+                "'collate',datcollate,'ctype',datctype,'provider',datlocprovider,"
+                "'collation_version',datcollversion) FROM pg_database WHERE datname=current_database()")))
+            print(json.dumps({'stage': 'postgres_locale_identity_verified',
+                              'manifest_digest': postgres_manifest_digest, **locale_identity}), flush=True)
             assert sql("SELECT xml_is_well_formed('<supa/>')") == 't'
             assert sql("SELECT (xpath('/root/item/text()', '<root><item>safe</item></root>'::xml))[1]::text") == 'safe'
             assert sql('SHOW ssl') == 'on'
@@ -506,7 +521,7 @@ def validate(service, trivy):
                           '/var/lib/postgresql/data/supa-tls/server.key').stdout.strip() == '600'
             pg_process_uids = inspect_nonroot_processes(docker, database)
             package_versions = docker('exec', database, 'apk', 'info', '-v', 'libxml2-16', 'libLLVM-19', 'glibc-2.44',
-                                     'glibc-2.44-locales', 'posix-libc-utils-2.44', 'openssl-4.0', 'postgresql-18-base').stdout.strip()
+                                     'glibc-2.44-locale-en', 'posix-libc-utils-2.44', 'openssl-4.0', 'postgresql-18-base').stdout.strip()
             xml_coverage = postgres_xml_coverage(package_versions)
             assert xml_coverage['critical_upstream_fix_present'], 'postgres_critical_xml_fix_required'
             print(json.dumps({'stage':'postgres_xml_advisory_coverage','manifest_digest':postgres_manifest_digest,
