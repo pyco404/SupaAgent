@@ -3,6 +3,15 @@ name: Isolated staging validation
 # Publication does not start a build. Dispatch requires a separate operator decision.
 on:
   workflow_dispatch:
+    inputs:
+      validation_scope:
+        description: Full validation or focused PostgreSQL candidate plus restricted API runtime
+        type: choice
+        required: true
+        default: full
+        options:
+          - full
+          - postgres-candidate
 
 permissions:
   contents: read
@@ -24,7 +33,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        service: [frontend, api, worker]
+        service: ${{ fromJSON(inputs.validation_scope == 'postgres-candidate' && '["api"]' || '["frontend","api","worker"]') }}
     steps:
       - name: Check out approved main without persisted credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -50,7 +59,7 @@ jobs:
           python3 scripts/ci-staging-images.py --service "$SERVICE" --trivy "$RUNNER_TEMP/supa-tools/trivy"
 
   postgres18:
-    if: github.repository == 'pyco404/SupaAgent' && github.ref == 'refs/heads/main'
+    if: github.repository == 'pyco404/SupaAgent' && github.ref == 'refs/heads/main' && inputs.validation_scope != 'postgres-candidate'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
