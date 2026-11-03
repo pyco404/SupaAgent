@@ -2,6 +2,12 @@
 
 **Born to think. Built to survive.**
 
+Official website domain: [trysupaagent.xyz](https://trysupaagent.xyz) (designated for future deployment; not a deployment announcement).
+Official X: [@trysupaagent](https://x.com/trysupaagent). Autonomous publishing remains disabled.
+Blockchain: **Solana**. Planned token: **Supa Agent**, ticker **SUPA**; not live.
+Launching other tokens is a separate planned platform capability.
+See [official identity and future domain setup](docs/official-project-identity.md).
+
 Supa Agent is a Solana-native autonomous-agent project. Milestones 1 and 2 implement a local Rust backend with durable identities, bounded reasoning cycles, permissioned tools, provenance-aware memory, prioritized goals, personality, metered OpenAI calls, draft-only social content, and simulated economics. Milestone 3 adds encrypted Devnet wallet identities, read-only payment monitoring and separate verified test-token accounting.
 
 Wallet support is opt-in and Devnet-only. No transaction signing/broadcast, Jupiter trade, X publisher, shell tool, autonomous agent-creation tool, or code-modification tool is included. Milestone 4 adds a local, read-only Next.js console with the requested near-black, mint and pixel-typographic design. See [the website implementation and actual browser evidence](docs/milestone-4.md).
