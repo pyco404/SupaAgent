@@ -23,6 +23,53 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_bridge_probe_accepts_only_one_owned_private_ipv4_network(self):
+        self.assertEqual(images.container_address({'owned':{'IPAddress':'172.20.0.3'}},'owned'),'172.20.0.3')
+        for ip in ['8.8.8.8','127.0.0.1','0.0.0.0','::1','192.0.2.5','169.254.1.1']:
+            with self.subTest(ip=ip):
+                with self.assertRaises(ValueError):
+                    images.container_address({'owned':{'IPAddress':ip}},'owned')
+        with self.assertRaises(ValueError):
+            images.container_address({'owned':{'IPAddress':'172.20.0.3'},'egress':{}},'owned')
+
+    def test_bridge_transport_keeps_logical_host_and_authentication(self):
+        from unittest.mock import Mock
+        response = Mock()
+        response.__enter__ = Mock(return_value=Mock(status=401))
+        response.__exit__ = Mock(return_value=False)
+        opener = Mock(); opener.open.return_value = response
+        with patch.object(images.urllib.request, 'build_opener', return_value=opener):
+            self.assertEqual(images.request(3000,'/operator','Basic synthetic',host='172.20.0.3'),401)
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.full_url,'http://172.20.0.3:3000/operator')
+        self.assertEqual(request.get_header('Host'),'127.0.0.1:3000')
+        self.assertEqual(request.get_header('Authorization'),'Basic synthetic')
+
+    def test_transport_diagnostics_exclude_url_headers_and_error_prose(self):
+        from unittest.mock import Mock
+        opener = Mock()
+        opener.open.side_effect = images.urllib.error.URLError(ConnectionRefusedError(111,'private fixture prose'))
+        diagnostic = {}
+        with patch.object(images.urllib.request,'build_opener',return_value=opener):
+            self.assertIsNone(images.request(8080,'/ready','Bearer private fixture',diagnostic=diagnostic))
+        self.assertEqual(diagnostic,{'error_type':'ConnectionRefusedError','errno':111})
+        opener.open.side_effect = images.urllib.error.HTTPError('http://127.0.0.1:8080/ready',503,'unavailable',{},None)
+        with patch.object(images.urllib.request,'build_opener',return_value=opener):
+            self.assertEqual(images.request(8080,'/ready',diagnostic=diagnostic),503)
+        self.assertEqual(diagnostic,{})
+
+    def test_internal_probe_enters_only_network_namespace_of_running_container(self):
+        import subprocess
+        from unittest.mock import Mock
+        docker = Mock(return_value=subprocess.CompletedProcess([],0,'12345\n',''))
+        with patch.object(images.subprocess,'run',return_value=subprocess.CompletedProcess([],0,'200\n','')) as run:
+            self.assertTrue(images.internal_health(docker,'owned-container',8080,'/ready'))
+        command = run.call_args.args[0]
+        self.assertEqual(command[:8],['sudo','-n','nsenter','--target','12345','--net','--','/usr/bin/python3'])
+        self.assertNotIn('--mount',command)
+        docker.return_value = subprocess.CompletedProcess([],0,'1\n','')
+        with self.assertRaises(ValueError): images.internal_health(docker,'owned-container',8080,'/ready')
+
     def test_scan_evidence_never_serializes_matched_secret_material(self):
         report = {'SchemaVersion': 2, 'Results': [{'Target': 'public-package-metadata',
             'Vulnerabilities': [{'VulnerabilityID': 'CVE-fixture', 'PkgName': 'example',
