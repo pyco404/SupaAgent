@@ -81,7 +81,10 @@ export async function sectionView(id, state, agentId) {
     add('Supa Agent / SUPA','heading');add('Born to think. Built to survive.');add('Vision: '+description);
     add('Current foundation: six-crate Rust runtime, PostgreSQL persistence, metered LLM abstraction, permissioned tools, simulated economics and read-only Devnet observations.');
     add('The model proposes actions. Application policy decides what is permitted. Personality never grants financial permissions.');
-    add('Mainnet spending, trading, publishing, token launches and child-agent creation remain disabled. SUPA is brand notation, not evidence of a launched token.');
+    add('Mainnet spending, trading, publishing, token launches and child-agent creation remain disabled. The planned Supa Agent token (SUPA) on Solana is not live. Launching other tokens is a separate planned platform capability.');
+    add('Official domain designated for future deployment; this is not a deployment announcement. Official X account; autonomous publishing remains disabled.');
+    rows.push({kind:'link',text:'Official website / trysupaagent.xyz',href:'https://trysupaagent.xyz'});
+    rows.push({kind:'link',text:'Official X / @trysupaagent',href:'https://x.com/trysupaagent'});
     rows.push({kind:'link',text:'Source / github.com/pyco404/SupaAgent',href:'https://github.com/pyco404/SupaAgent'});
   } else if(!agentId) { add('Select an agent in Agents to explore saved records.','notice'); }
   else {
