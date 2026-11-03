@@ -1,4 +1,6 @@
 //! SELECT-only disposable role regression. No live provider or existing evaluation writes.
+#[path = "support/disposable.rs"]
+mod disposable;
 #[path = "support/work_provider.rs"]
 mod support;
 use axum::{
@@ -43,14 +45,11 @@ async fn get(app: &Router, path: &str, token: &str) -> (StatusCode, Value) {
 }
 
 #[tokio::test]
-#[ignore = "requires disposable PostgreSQL on port 55680; no provider calls"]
+#[ignore = "requires verified disposable PostgreSQL; no provider calls"]
 async fn select_only_job_reads_preserve_wallet_locks_and_owner_boundaries() {
     let base = std::env::var("TEST_DATABASE_URL").unwrap();
     let options: sqlx::postgres::PgConnectOptions = base.parse().unwrap();
-    assert_eq!(options.get_host(), "localhost");
-    assert_eq!(options.get_port(), 55680);
-    assert_eq!(options.get_database(), Some("supa_m10_test"));
-    let admin = Store::connect(&base).await.unwrap();
+    let admin = disposable::connect(&options).await;
     let suffix = Uuid::new_v4().simple().to_string();
     let database = format!("supa_read_{suffix}_test");
     let role = format!("supa_read_{suffix}");
@@ -100,15 +99,18 @@ async fn select_only_job_reads_preserve_wallet_locks_and_owner_boundaries() {
         .transition(agent.id, Lifecycle::Paused, "Read-only regression", true)
         .await
         .unwrap();
+    let password = Uuid::new_v4().simple().to_string();
     sqlx::query(&format!(
-        "CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+        "CREATE ROLE {role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '{password}'"
     ))
     .execute(admin.pool())
     .await
     .unwrap();
     sqlx::raw_sql(&format!("GRANT CONNECT ON DATABASE {database} TO {role}; GRANT USAGE ON SCHEMA public TO {role}; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {role}; ALTER ROLE {role} SET default_transaction_read_only=on;"))
         .execute(store.pool()).await.unwrap();
-    let reader_url = sqlx::ConnectOptions::to_url_lossy(&db_options.username(&role)).to_string();
+    let reader_url =
+        sqlx::ConnectOptions::to_url_lossy(&db_options.username(&role).password(&password))
+            .to_string();
     let reader = Store::connect(&reader_url).await.unwrap();
     let app = router(
         AppState::new(
@@ -224,13 +226,19 @@ async fn select_only_job_reads_preserve_wallet_locks_and_owner_boundaries() {
     // Mirror the reviewed execution grants in this throwaway database only.
     // The real evaluation login and its budget are never changed by this test.
     let execution_role = format!("supa_exec_{suffix}");
-    sqlx::query(&format!("CREATE ROLE {execution_role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"))
+    let execution_password = Uuid::new_v4().simple().to_string();
+    sqlx::query(&format!("CREATE ROLE {execution_role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '{execution_password}'"))
         .execute(admin.pool()).await.unwrap();
     sqlx::raw_sql(&format!("GRANT CONNECT ON DATABASE {database} TO {execution_role}; GRANT USAGE ON SCHEMA public TO {execution_role}; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {execution_role}; GRANT UPDATE(id) ON agents,economic_jobs TO {execution_role}; GRANT UPDATE(committed_microusd) ON live_budgets TO {execution_role}; GRANT INSERT,UPDATE ON live_sessions TO {execution_role}; GRANT INSERT ON live_session_audit TO {execution_role}; GRANT USAGE ON SEQUENCE live_session_audit_id_seq TO {execution_role};"))
         .execute(store.pool()).await.unwrap();
     let options: sqlx::postgres::PgConnectOptions = url.parse().unwrap();
     let executor = Store::connect(
-        sqlx::ConnectOptions::to_url_lossy(&options.username(&execution_role)).as_str(),
+        sqlx::ConnectOptions::to_url_lossy(
+            &options
+                .username(&execution_role)
+                .password(&execution_password),
+        )
+        .as_str(),
     )
     .await
     .unwrap();
