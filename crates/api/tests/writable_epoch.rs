@@ -8,6 +8,8 @@ use supa_persistence::Store;
 use supa_providers::Offline;
 use supa_runtime::Runtime;
 use uuid::Uuid;
+#[path = "support/disposable.rs"]
+mod disposable;
 
 // Fixture children must not outlive a failed browser or HTTP assertion.
 struct ProcessGuard(std::process::Child);
@@ -45,13 +47,19 @@ impl Fixture {
         let base = std::env::var("TEST_DATABASE_URL").expect("disposable database required");
         let opts: PgConnectOptions = base.parse().unwrap();
         assert!(opts.get_database().unwrap().ends_with("_test"));
+        let ci = opts.get_database() == Some("supa_pg18_suite_test");
         assert!(
-            opts.get_socket()
+            ci || opts
+                .get_socket()
                 .unwrap()
                 .to_string_lossy()
                 .contains("/postgres-data/")
         );
-        let admin = Store::connect(&base).await.unwrap();
+        let admin = if ci {
+            disposable::connect(&opts).await
+        } else {
+            Store::connect(&base).await.unwrap()
+        };
         let suffix = Uuid::new_v4().simple().to_string();
         let database = format!("supa_writable_{suffix}_test");
         sqlx::query(&format!("CREATE DATABASE {database} TEMPLATE template0"))
@@ -61,25 +69,27 @@ impl Fixture {
         let backup = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../postgres-data/preflight/1d0e9efe-e66e-4e4f-afc4-478eee4f0833/database.dump",
         );
-        assert!(
-            Command::new("/usr/lib/postgresql/16/bin/pg_restore")
-                .args([
-                    "--exit-on-error",
-                    "--single-transaction",
-                    "--dbname",
-                    &database
-                ])
-                .arg(backup)
-                .env_clear()
-                .env("PATH", "/usr/bin:/bin")
-                .env("PGHOST", opts.get_socket().unwrap())
-                .env("PGPORT", opts.get_port().to_string())
-                .env("PGUSER", opts.get_username())
-                .output()
-                .unwrap()
-                .status
-                .success()
-        );
+        if !ci {
+            assert!(
+                Command::new("/usr/lib/postgresql/16/bin/pg_restore")
+                    .args([
+                        "--exit-on-error",
+                        "--single-transaction",
+                        "--dbname",
+                        &database
+                    ])
+                    .arg(backup)
+                    .env_clear()
+                    .env("PATH", "/usr/bin:/bin")
+                    .env("PGHOST", opts.get_socket().unwrap())
+                    .env("PGPORT", opts.get_port().to_string())
+                    .env("PGUSER", opts.get_username())
+                    .output()
+                    .unwrap()
+                    .status
+                    .success()
+            );
+        }
         let rootopts = opts
             .clone()
             .database(&database)
@@ -88,6 +98,10 @@ impl Fixture {
             .await
             .unwrap();
         root.migrate().await.unwrap();
+        if ci {
+            sqlx::query("INSERT INTO application_epoch(id,accounting_namespace,label,kind,state,historical_database) VALUES($1,$2,'Synthetic CI epoch','development','prepared','unrecovered')")
+                .bind(Uuid::new_v4()).bind(Uuid::new_v4()).execute(root.pool()).await.unwrap();
+        }
         let epoch = root.application_epoch().await.unwrap().unwrap();
         assert_eq!(epoch.state, "prepared");
         assert_eq!(epoch.revision, 0);
@@ -722,8 +736,10 @@ async fn epoch_worker_process_is_finite_and_restart_cannot_replay_admission() {
     drop(listener);
     let options = f.service.pool().connect_options();
     let url = sqlx::ConnectOptions::to_url_lossy(options.as_ref()).to_string();
-    let binary =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/debug/supa-runtime");
+    let target = std::env::var_os("CARGO_TARGET_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target"));
+    let binary = target.join("debug/supa-runtime");
     let launch = || {
         Command::new(&binary)
             .env_clear()
