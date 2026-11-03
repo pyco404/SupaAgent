@@ -14,7 +14,7 @@ test('all ten clean routes support direct entry refresh and matching selected ca
   await page.reload();await ready(page);
   await expect(page.locator('body')).toHaveAttribute('data-view','projects');
   await expect(page.locator('.wheel-item[aria-selected=true]')).toHaveAttribute('data-index',String(index));
-  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',item.path);
+  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',new URL(item.path,'https://trysupaagent.xyz').href);
   expect(new URL(page.url()).search).toBe('?preview=public');
  }
 });
@@ -49,4 +49,16 @@ test('canonical paths preserve query state and unknown routes return genuine 404
  expect((await request.get('/api/not-a-resource')).status()).toBe(403);
  const auth=await request.get('/operator',{maxRedirects:0});expect(auth.status()).toBe(401);
  for(const path of ['/app.js','/style.css','/public/assets/supa-agent-icon.svg','/healthz'])expect((await request.get(path)).status()).toBe(200);
+});
+
+test('official metadata and About links preserve planned-token and publishing boundaries',async({page})=>{
+  await page.goto('/about?preview=public');await ready(page);
+  const reveal=page.getByRole('button',{name:'Show all text',exact:true});if(await reveal.isVisible())await reveal.click();
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content','https://trysupaagent.xyz/about');
+  await expect(page.locator('meta[name="twitter:site"]')).toHaveAttribute('content','@trysupaagent');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content','noindex, nofollow');
+  await expect(page.getByRole('link',{name:'Official website / trysupaagent.xyz',exact:true})).toHaveAttribute('href','https://trysupaagent.xyz');
+  await expect(page.getByRole('link',{name:'Official X / @trysupaagent',exact:true})).toHaveAttribute('href','https://x.com/trysupaagent');
+  await expect(page.locator('.buffer')).toContainText('SUPA) on Solana is not live');
+  await expect(page.locator('.buffer')).toContainText('autonomous publishing remains disabled');
 });
