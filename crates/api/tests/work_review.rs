@@ -1,4 +1,4 @@
-//! Reviews only restored disposable copies. Never loads provider/owner credentials.
+//! Synthetic schema-12 review fixtures. Never loads historical evaluations or credentials.
 use axum::{
     Router,
     body::{Body, to_bytes},
@@ -14,10 +14,12 @@ use supa_providers::Offline;
 use supa_runtime::Runtime;
 use tower::ServiceExt;
 use uuid::{Uuid, uuid};
-const AGENT: Uuid = uuid!("82c254ff-4659-4404-94c4-c497565567e6");
-const SESSION: Uuid = uuid!("41316d3e-40b8-4b7d-8605-83db7aab36b8");
-const ACTOR: Uuid = uuid!("acede749-746b-4541-b178-0085434dcd39");
-const HASH: &str = "01fcfc0576fb7d8cebfc09666c060eb1bff5c85a08b2682d2b17842cfe5abc42";
+#[path = "support/disposable.rs"]
+mod disposable;
+const AGENT: Uuid = uuid!("00000000-0000-4000-8000-000000010001");
+const SESSION: Uuid = uuid!("00000000-0000-4000-8000-000000010002");
+const ACTOR: Uuid = uuid!("00000000-0000-4000-8000-000000010003");
+const HASH: &str = "81b5f3c6fb97947c777fd8dde2fdd4b5ab8a8c74bae2728d0372a762d3f4de53";
 const OWNER: &str = "fixture-review-owner-credential-000000000";
 const PUBLIC: &str = "fixture-review-public-credential-00000000";
 fn path() -> String {
@@ -26,19 +28,172 @@ fn path() -> String {
 async fn unmigrated_clone() -> Store {
     let base = std::env::var("TEST_DATABASE_URL").unwrap();
     let options: sqlx::postgres::PgConnectOptions = base.parse().unwrap();
-    assert_eq!(options.get_host(), "localhost");
-    assert_eq!(options.get_port(), 55680);
-    assert_eq!(options.get_database(), Some("supa_m10_test"));
-    let admin = Store::connect(&base).await.unwrap();
+    let admin = disposable::connect(&options).await;
     let name = format!("supa_review_{}_test", Uuid::new_v4().simple());
-    sqlx::query(&format!(
-        "CREATE DATABASE {name} TEMPLATE supa_review_seed_test"
-    ))
-    .execute(admin.pool())
+    sqlx::query(&format!("CREATE DATABASE {name} TEMPLATE template0"))
+        .execute(admin.pool())
+        .await
+        .unwrap();
+    let url = sqlx::ConnectOptions::to_url_lossy(&options.database(&name)).to_string();
+    let store = Store::connect(&url).await.unwrap();
+    // Rebuild schema 12 with its authentic SQLx checksums, never a private dump.
+    let mut migrations = sqlx::migrate!("../../migrations");
+    migrations.migrations = std::borrow::Cow::Owned(
+        migrations
+            .iter()
+            .filter(|m| m.version <= 12)
+            .cloned()
+            .collect(),
+    );
+    migrations.run(store.pool()).await.unwrap();
+    seed_review(&store).await;
+    store
+}
+
+async fn seed_review(store: &Store) {
+    let mut agent = Agent::new(
+        "Synthetic review fixture".into(),
+        Personality::default(),
+        CycleConfig::default(),
+        [Capability::ReadMemory, Capability::EvaluateGoal].into(),
+    )
+    .unwrap();
+    agent.id = AGENT;
+    agent.lifecycle = Lifecycle::Active;
+    store.create_owned(&agent, ACTOR).await.unwrap();
+    let service = Uuid::new_v4();
+    store
+        .offer_service(
+            AGENT,
+            ACTOR,
+            service,
+            ServiceSpec {
+                name: "Synthetic review".into(),
+                kind: ServiceKind::Summary,
+                price_atoms: 5000,
+                estimated_inference_atoms: 1000,
+                estimated_infrastructure_atoms: 100,
+                max_input_bytes: 8000,
+                max_attempts: 2,
+            },
+        )
+        .await
+        .unwrap();
+    let request = WorkRequest {
+        objective: "Review supplied facts".into(),
+        material: "Synthetic supplied fact.".into(),
+        requirements: vec![],
+        require_external_research: false,
+    };
+    let job = store
+        .create_economic_job(
+            ACTOR,
+            CreateJob {
+                request_id: Uuid::new_v4(),
+                service_id: service,
+                network: EconomicNetwork::Simulated,
+                input: serde_json::to_string(&request).unwrap(),
+                valid_for_seconds: 3600,
+            },
+        )
+        .await
+        .unwrap();
+    store
+        .transition(
+            AGENT,
+            Lifecycle::Paused,
+            "Synthetic review preparation",
+            true,
+        )
+        .await
+        .unwrap();
+    let policy = InferencePolicy {
+        model: "synthetic-review".into(),
+        live: true,
+        budget_id: Some(Uuid::new_v4()),
+        budget_limit_microusd: 5000,
+        input_rate: 100000,
+        cached_input_rate: 10000,
+        cache_write_rate: 125000,
+        output_rate: 500000,
+        input_token_bound: 24192,
+        max_output_tokens: 1024,
+    };
+    sqlx::query(
+        "INSERT INTO live_budgets(id,limit_microusd,committed_microusd) VALUES($1,5000,35)",
+    )
+    .bind(policy.budget_id)
+    .execute(store.pool())
     .await
     .unwrap();
-    let url = sqlx::ConnectOptions::to_url_lossy(&options.database(&name)).to_string();
-    Store::connect(&url).await.unwrap()
+    let now = Utc::now();
+    let consent = LiveConsent {
+        request_id: Uuid::new_v4(),
+        goal: request.objective.clone(),
+        model: policy.model.clone(),
+        authorize_paid: true,
+        consented_at: now,
+        expires_at: now + Duration::minutes(2),
+        max_requests: 1,
+        max_input_tokens: 24192,
+        max_output_tokens: 1024,
+        max_cost_microusd: 4000,
+    };
+    let report:WorkProposal=serde_json::from_value(json!({"interpretation":"Synthetic review fixture","summary":"Synthetic supplied evidence review, not model-generated work.","status":"supported","tools":["inspect_input","extract_evidence","check_requirements"],"findings":[{"observation":"Synthetic supplied fact.","interpretation":"Supplied synthetic evidence only.","evidence":[{"source":"material","line":1,"quote":"Synthetic supplied fact."}]}],"totals":[],"proposed_steps":[],"missing_information":[],"memory_ids":[]})).unwrap();
+    let baseline = analyze_work(&request, ServiceKind::Summary).unwrap();
+    report
+        .validate(&LiveWorkInput {
+            request: request.clone(),
+            kind: ServiceKind::Summary,
+            approved_tools: report.tools.clone(),
+            memories: vec![],
+            deterministic_findings: baseline["findings"].clone(),
+        })
+        .unwrap();
+    let session = LiveSession {
+        provider_diagnostics: vec![],
+        technical_failure_code: None,
+        provider_scope: Some("synthetic".into()),
+        id: SESSION,
+        agent_id: AGENT,
+        approved_by: ACTOR,
+        consent: consent.clone(),
+        policy,
+        status: "awaiting_approval".into(),
+        memory_ids: vec![],
+        proposal: None,
+        usage: Some(TokenUsage {
+            input_tokens: 100,
+            output_tokens: 50,
+            ..TokenUsage::default()
+        }),
+        reserved_microusd: 4000,
+        accounted_microusd: 35,
+        failure_code: None,
+        metadata_requests: 0,
+        generation_requests: 1,
+        project_verified: false,
+        tool_result: None,
+        work: Some(LiveWorkRecord {
+            provider_evidence: "mock".into(),
+            authorization: LiveWorkConsent {
+                job_id: job.id,
+                expected_revision: job.revision,
+                input_sha256: store.work_input_sha256(job.id, ACTOR).await.unwrap(),
+                approved_tools: report.tools.clone(),
+                use_memory: false,
+                consent,
+            },
+            request,
+            kind: ServiceKind::Summary,
+            baseline,
+            report: Some(report),
+            tool_results: None,
+        }),
+        created_at: now,
+        finished_at: Some(now),
+    };
+    sqlx::query("INSERT INTO live_sessions(id,agent_id,approved_by,budget_id,status,lease_until,data) VALUES($1,$2,$3,$4,'awaiting_approval',$5,$6)").bind(SESSION).bind(AGENT).bind(ACTOR).bind(session.policy.budget_id).bind(now).bind(serde_json::to_value(session).unwrap()).execute(store.pool()).await.unwrap();
 }
 async fn setup() -> Store {
     let store = unmigrated_clone().await;
@@ -175,7 +330,7 @@ async fn snapshot(store: &Store) -> Vec<(String, Value)> {
     result
 }
 #[tokio::test]
-#[ignore = "requires isolated restored supa_review_seed_test; no provider calls"]
+#[ignore = "requires isolated synthetic review fixture; no provider calls"]
 async fn acceptance_preserves_every_generation_and_financial_record_and_survives_restart() {
     let store = setup().await;
     let app = app(&store, vec![], false);
