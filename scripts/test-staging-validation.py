@@ -23,6 +23,17 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_gosu_requires_reviewed_release_toolchain_and_linux_platform(self):
+        for arch in ['amd64', 'arm64']:
+            version = f'1.20 (go1.27.3 on linux/{arch}; gc)'
+            self.assertEqual(images.verify_gosu_version(version), version)
+        for version in ['', '1.19 (go1.27.3 on linux/amd64; gc)',
+                        '1.20 (go1.24.6 on linux/amd64; gc)',
+                        '1.20 (go1.27.3 on windows/amd64; gc)',
+                        '1.20 (go1.27.3 on linux/amd64; gc)\nprivate prose']:
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                images.verify_gosu_version(version)
+
     def test_database_locale_identity_rejects_silent_encoding_collation_and_provider_changes(self):
         valid = {'encoding': 'UTF8', 'collate': 'en_US.utf8', 'ctype': 'en_US.utf8',
                  'provider': 'c', 'collation_version': '2.44'}
@@ -579,6 +590,9 @@ class StagingSecurity(unittest.TestCase):
         # Ignore descriptive comments when checking executable workflow policy.
         source = '\n'.join(line.split(' # ', 1)[0] for line in text.splitlines() if not line.lstrip().startswith('#'))
         self.assertIn('  workflow_dispatch:', source)
+        self.assertIn('default: full', source)
+        self.assertIn('inputs.validation_scope == \'postgres-candidate\' && \'["api"]\'', source)
+        self.assertIn("inputs.validation_scope != 'postgres-candidate'", source)
         self.assertNotIn('  push:', source)
         self.assertNotIn('  pull_request', source)
         self.assertNotIn('secrets.', source)
