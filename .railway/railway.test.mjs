@@ -2,19 +2,51 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { createRailwayContext, project, validateGraph, RAILWAY_GRAPH_VERSION } from 'railway/iac';
-import program from './railway.ts';
+import program, { reviewedPostgresImage, stagingDefinition, stagingSession } from './railway.ts';
 import { preflight, targetPreflight } from './preflight.mjs';
 
-const definition = await program(createRailwayContext({ command:'plan', environment:'staging' }), project);
+// Synthetic reference only: no image is published or approved by this test.
+const imageFixture = { approved:true, private:true,
+  reference:'ghcr.io/pyco404/supa-agent-postgres@sha256:'+'1'.repeat(64),
+  source_revision:'2'.repeat(40),
+  scan_run_url:'https://github.com/pyco404/SupaAgent/actions/runs/1',
+  high_critical_findings:0, secret_findings:0 };
+const target = { command:'plan', environment:'staging', projectId:stagingSession.projectId,
+  environmentId:stagingSession.environmentId };
+const definition = stagingDefinition(createRailwayContext(target), imageFixture);
 const resources = definition.resources;
 const api = resources.find(r=>r.name === 'supa-api');
 const worker = resources.find(r=>r.name === 'supa-worker');
 const frontend = resources.find(r=>r.name === 'supa-web');
 
-test('official SDK validates four unique staging resources with a fresh PostgreSQL helper', () => {
+test('official SDK validates four unique resources with a digest-pinned PostgreSQL database', () => {
   assert.equal(resources.length, 4);
   assert.equal(resources.find(r=>r.type === 'database').engine, 'postgres');
   assert.deepEqual(validateGraph({ version:RAILWAY_GRAPH_VERSION, resources, edges:[] }), []);
+});
+test('unapproved actual configuration refuses graph generation without a generic fallback', async () => {
+  await assert.rejects(async()=>program(createRailwayContext(target),project), /reviewed private PostgreSQL/);
+  for (const change of [{projectId:'different'}, {environmentId:'different'}, {projectId:undefined}]) {
+    assert.throws(()=>stagingDefinition(createRailwayContext({...target,...change}),imageFixture), /exact existing/);
+  }
+  assert.equal(stagingSession.maximumHours,6);
+  assert.equal(stagingSession.incrementalBudgetUSD,1);
+  assert.equal(stagingSession.syntheticDataOnly,true);
+  assert.equal(stagingSession.deploymentAuthorized,false);
+});
+test('image review rejects tags, other repositories, missing evidence and findings', () => {
+  assert.equal(reviewedPostgresImage(imageFixture),imageFixture.reference);
+  for (const value of [null, [], {},
+    ...[{approved:false},{private:false},{reference:'ghcr.io/railwayapp-templates/postgres-ssl:18'},
+      {reference:'ghcr.io/pyco404/supa-agent-postgres:latest'},
+      {reference:'ghcr.io/other/supa-agent-postgres@sha256:'+'1'.repeat(64)},
+      {reference:'ghcr.io/pyco404/supa-agent-postgres@sha256:'+'0'.repeat(64)},
+      {source_revision:null},{source_revision:'0'.repeat(40)},
+      {scan_run_url:'https://github.com/other/repo/actions/runs/1'},
+      {high_critical_findings:1},{high_critical_findings:'0'},
+      {secret_findings:1}].map(change=>({...imageFixture,...change}))]) {
+    assert.throws(()=>reviewedPostgresImage(value), /reviewed private PostgreSQL/);
+  }
 });
 test('all application source, Dockerfiles, ports and private network boundaries are declared', () => {
   for (const resource of [api,worker,frontend]) {
@@ -118,7 +150,8 @@ test('offline target review rejects another workspace, environment, resources or
 
 test('database major and persistent mount match the reviewed recovery target', () => {
   const database = resources.find(resource => resource.type === 'database');
-  assert.equal(database.image, 'ghcr.io/railwayapp-templates/postgres-ssl:18');
+  assert.equal(database.image, imageFixture.reference);
+  assert.equal(database.source.image, imageFixture.reference);
   assert.equal(database.defaultMountPath, '/var/lib/postgresql/data');
 });
 
