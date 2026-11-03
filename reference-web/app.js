@@ -124,10 +124,16 @@ async function reload(currentScene=sceneData){
 }
 $('.reload-records').addEventListener('click',()=>{closeCommand(false);$('.buffer').focus({preventScroll:true});void reload();});
 $('#agent-select').addEventListener('change',event=>{agentId=event.target.value;syncAgentPicker();void select(itemIndex);});
+function updateOfficialMetadata(path){
+  const url=new URL(path,'https://trysupaagent.xyz').href;
+  $('link[rel=canonical]').setAttribute('href',url);
+  $('meta[property="og:url"]').setAttribute('content',url);
+  for(const selector of ['meta[property="og:title"]','meta[name="twitter:title"]'])$(selector).setAttribute('content',document.title);
+}
 function setView(projects){
   closeAgentPicker();
   entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
-  if(!projects){document.title='Supa Agent — Born to think. Built to survive.';$('link[rel=canonical]').setAttribute('href','/');}
+  if(!projects){document.title='Supa Agent — Born to think. Built to survive.';updateOfficialMetadata('/');}
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
   if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));wheel.reveal();$('.buffer').focus({preventScroll:true});});}
 }
@@ -178,7 +184,7 @@ async function select(index,background=false){
   if(!background&&document.body.dataset.view==='projects'){
     if(location.pathname!==item.path)history.pushState({view:'projects'},'',`${item.path}${location.search}`);
     document.title=`${item.label.split(' · ')[0]} / Supa Agent`;
-    $('link[rel=canonical]').setAttribute('href',item.path);
+    updateOfficialMetadata(item.path);
   }
   const buffer=$('.buffer');
   if(!background){
