@@ -423,11 +423,20 @@ def request(port, path, authorization=None, host='127.0.0.1', diagnostic=None):
         return None
 
 
-def validate(service, trivy):
+def validate(service, trivy, publication_record=None):
     require_hosted_ci(os.environ)
+    if publication_record is not None:
+        if service != 'api':
+            raise ValueError('publication_candidate_requires_restricted_api_validation')
+        runner = Path(os.environ['RUNNER_TEMP']).resolve(strict=True)
+        publication_record = Path(publication_record)
+        if (publication_record.is_symlink() or publication_record.exists() or
+                not publication_record.parent.resolve(strict=True).is_relative_to(runner)):
+            raise ValueError('new_runner_private_publication_record_required')
     if shutil.disk_usage(ROOT).free < 12 * 1024 ** 3:
         raise ValueError('at_least_12_gib_free_required_on_disposable_ci_runner')
-    work = Path(tempfile.mkdtemp(prefix='supa-ci-image-'))
+    work = Path(tempfile.mkdtemp(prefix='supa-ci-image-',
+                               dir=str(runner) if publication_record is not None else None))
     context = work / 'context'
     context.mkdir()
     copy_context(ROOT, context)
@@ -826,6 +835,26 @@ def validate(service, trivy):
         if validation_failures:
             print(json.dumps({'stage':'validation_failed','failures':validation_failures}),flush=True)
             raise RuntimeError('container_validation_failed_see_all_checkpoints')
+        if publication_record is not None:
+            # Only an already-scanned image archive and sanitized identity leave
+            # validation. Never export the working directory or runtime env files.
+            with pg_archive.open('rb') as archive_input:
+                archive_hash = hashlib.file_digest(archive_input, 'sha256').hexdigest()
+            candidate = {
+                'validated': True, 'source_revision': os.environ['GITHUB_SHA'],
+                'run_id': os.environ['GITHUB_RUN_ID'],
+                'image_id': pg_config['Id'], 'archive': str(pg_archive),
+                'archive_sha256': archive_hash, 'diff_ids': pg_config['RootFS']['Layers'],
+                'architecture': pg_config['Architecture'],
+                'scan': scan_evidence(pg_report),
+                'compatibility': {'xml': True, 'tls': True, 'locale': True,
+                                  'restricted_api': True, 'restore': True},
+            }
+            with publication_record.open('x', opener=lambda path, flags: os.open(path, flags, 0o600)) as output:
+                json.dump(candidate, output)
+            print(json.dumps({'stage': 'postgres_publication_candidate_retained',
+                              'config_image_id': pg_config['Id'],
+                              'archive_sha256': archive_hash, 'registry_pushes': 0}), flush=True)
     finally:
         for name in owned_containers:
             docker('rm', '--force', '--volumes', name, check=False)
@@ -840,5 +869,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--service', choices=SERVICES, required=True)
     parser.add_argument('--trivy', type=Path, required=True)
+    parser.add_argument('--publication-record', type=Path)
     arguments = parser.parse_args()
-    validate(arguments.service, arguments.trivy.resolve(strict=True))
+    validate(arguments.service, arguments.trivy.resolve(strict=True), arguments.publication_record)
