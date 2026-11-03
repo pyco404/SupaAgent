@@ -23,6 +23,43 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_http_error_only_allows_known_authentication_codes(self):
+        from unittest.mock import Mock
+        import io
+        for code, expected in [('permission_denied',{'error_code':'permission_denied'}),
+                               ('private_customer_prose',{})]:
+            opener = Mock()
+            opener.open.side_effect = images.urllib.error.HTTPError('http://fixture/agents',403,'private',{},
+                io.BytesIO(json.dumps({'error':code}).encode()))
+            diagnostic = {}
+            with patch.object(images.urllib.request,'build_opener',return_value=opener):
+                self.assertEqual(images.request(8080,'/agents',diagnostic=diagnostic),403)
+            self.assertEqual(diagnostic,expected)
+
+    def test_rust_failure_evidence_omits_panic_values_and_credentials(self):
+        log = "test fixture_test ... FAILED\nthread 'fixture_test' panicked at crates/api/tests/live_work.rs:48:5:\n" + \
+              'private customer prose secret postgres://fixture-host/fixture-db code: "42501" error[E0308]'
+        evidence = postgres.rust_failure_evidence(log)
+        self.assertEqual(evidence['failed_tests'],['fixture_test'])
+        self.assertEqual(evidence['panic_sites'][0]['line'],48)
+        self.assertEqual(evidence['sqlstates'],['42501'])
+        self.assertEqual(evidence['compiler_codes'],['E0308'])
+        self.assertNotIn('secret',json.dumps(evidence))
+        self.assertNotIn('customer',json.dumps(evidence))
+
+    def test_http_contract_reports_status_and_stage_without_secret_or_body(self):
+        from unittest.mock import Mock
+        import contextlib
+        import io
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            with self.assertRaisesRegex(AssertionError, 'http_contract_failed_named_viewer'):
+                images.expect_http(Mock(return_value=403), '/agents', 200, 'named_viewer', 'Bearer private-fixture')
+        evidence = json.loads(output.getvalue())
+        self.assertEqual(evidence['http_status'],403)
+        self.assertEqual(evidence['stage'],'named_viewer')
+        self.assertNotIn('private-fixture',output.getvalue())
+
     def test_held_postgres_package_is_installed_without_relaxing_health_check(self):
         import subprocess
         # A private dpkg database: no system package selections are changed.
