@@ -210,6 +210,27 @@ def validate(binary, library, evidence, offline=False):
                                   env={**env, 'PGDATABASE': 'supa_pg18_restore_test'}, capture_output=True,
                                   text=True, check=True).stdout.strip()
         metadata.require_equal(schema, json.loads(restored), evidence)
+        # Exercise the exact PG18 CHECK/NOT NULL identities which the former
+        # `name`-typed UNION collapsed. Tamper only with the disposable restore.
+        constraint = 'public.application_epoch.application_epoch_historical_database_check'
+        not_null = 'public.application_epoch.application_epoch_historical_database_not_null'
+        restored_schema = json.loads(restored)
+        assert constraint in restored_schema['constraints'] and not_null in restored_schema['constraints']
+        def restored_sql(query):
+            return subprocess.run([str(binary/'psql'), '-XqAt', '-v', 'ON_ERROR_STOP=1', '-c', query],
+                env={**env, 'PGDATABASE':'supa_pg18_restore_test'}, capture_output=True,
+                text=True, check=True).stdout.strip()
+        definition = restored_schema['constraints'][constraint]['definition']
+        restored_sql("ALTER TABLE public.application_epoch DROP CONSTRAINT application_epoch_historical_database_check, "
+                     "ADD CONSTRAINT application_epoch_historical_database_check CHECK(historical_database='changed')")
+        changes = metadata.compare(schema, json.loads(restored_sql(metadata.SNAPSHOT_SQL)))
+        assert len(changes)==1 and changes[0]['category']=='constraints' and changes[0]['object']==constraint
+        (evidence/'constraint-tamper.json').write_text(json.dumps(changes,indent=2)+'\n')
+        restored_sql('ALTER TABLE public.application_epoch DROP CONSTRAINT application_epoch_historical_database_check, '
+                     'ADD CONSTRAINT application_epoch_historical_database_check '+definition)
+        assert not metadata.compare(schema,json.loads(restored_sql(metadata.SNAPSHOT_SQL)))
+        print(json.dumps({'stage':'constraint_identity_and_tamper_passed',
+                          'distinct_check_and_not_null':True,'real_change_detected':True}),flush=True)
         print(json.dumps({'stage':'postgres18_runtime_restore_passed','migrations':len(checksums),
                           'metadata_counts':{k:len(v) for k,v in schema.items()},
                           'restricted_runtime':True,'crash_recovery':True,
