@@ -6,6 +6,7 @@ import argparse
 import base64
 import hashlib
 import http.client
+import importlib.util
 import ipaddress
 import json
 import os
@@ -15,6 +16,7 @@ import secrets
 import shutil
 import subprocess
 import tempfile
+import tarfile
 import time
 import urllib.error
 import urllib.parse
@@ -23,6 +25,9 @@ import uuid
 
 ROOT = Path(__file__).resolve().parent.parent
 SERVICES = {'frontend': 3000, 'api': 8080, 'worker': 8081}
+POSTGRES_DOCKERFILE = 'deployment/postgres-wolfi.Dockerfile'
+XML_HIGH_ADVISORIES = ['CVE-2026-74860', 'CVE-2026-86138', 'CVE-2026-86139',
+                       'CVE-2026-86140', 'CVE-2026-86142', 'CVE-2026-86143', 'CVE-2026-86144']
 CANARY = b'SUPA_CI_EXCLUDED_CONTEXT_CANARY_6A_NOT_A_CREDENTIAL'
 
 
@@ -124,6 +129,78 @@ def contains_canary(path):
     return False
 
 
+def excluded_runtime_paths_absent(path):
+    """Inspect an exported filesystem without executing a shell or extracting it."""
+    excluded = {'app/web/.env.local', 'app/.env.ci-sentinel', 'app/.supa-secrets/canary'}
+    with tarfile.open(path, mode='r|*') as archive:
+        for member in archive:
+            name = member.name.removeprefix('./').lstrip('/')
+            if name in excluded:
+                return False
+    return True
+
+
+def nonroot_process_uids(output):
+    """docker top uses host ps; do not require account utilities in the image."""
+    lines = output.splitlines()
+    if not lines or lines[0].strip() != 'UID':
+        raise ValueError('container_process_uid_inventory_required')
+    uids = [line.strip() for line in lines[1:] if line.strip()]
+    if not uids or any(not uid.isdecimal() or int(uid) == 0 for uid in uids):
+        raise ValueError('all_application_processes_must_be_nonroot')
+    return sorted({int(uid) for uid in uids})
+
+
+def runtime_package_inventory(path):
+    """Read public Debian package metadata from the exact built filesystem."""
+    packages = {}
+    with tarfile.open(path, mode='r|*') as archive:
+        for member in archive:
+            name = member.name.removeprefix('./').lstrip('/')
+            if not member.isfile() or not (name == 'var/lib/dpkg/status' or name.startswith('var/lib/dpkg/status.d/')):
+                continue
+            if member.size > 1024 * 1024:
+                raise ValueError('package_inventory_metadata_too_large')
+            content = archive.extractfile(member).read().decode('utf-8')
+            for paragraph in content.split('\n\n'):
+                fields = dict(line.split(': ', 1) for line in paragraph.splitlines() if ': ' in line and not line.startswith(' '))
+                package, version = fields.get('Package', ''), fields.get('Version', '')
+                if re.fullmatch(r'[a-z0-9][a-z0-9+.-]*', package) and re.fullmatch(r'[0-9A-Za-z:~+._-]{1,256}', version):
+                    packages[package] = version
+    if not packages:
+        raise ValueError('actual_runtime_package_inventory_required')
+    return dict(sorted(packages.items()))
+
+
+def postgres_xml_coverage(package_versions):
+    """Do not equate an absent distro advisory with verified upstream coverage.
+
+    For this vendor-package candidate, 2.11 fixes the critical parser issue and
+    2.15.4 covers the seven newer upstream advisories. A future audited vendor
+    backport requires a separate code review, never an environment waiver.
+    """
+    versions = set(re.findall(r'^libxml2(?:-16)?-(\d+)\.(\d+)\.(\d+)(?:-r\d+)?(?:\s|$)', package_versions, re.MULTILINE))
+    if len(versions) != 1:
+        raise ValueError('unambiguous_xml_version_required')
+    version = tuple(map(int, versions.pop()))
+    return {'upstream_version': '.'.join(map(str, version)),
+            'critical_upstream_fix_present': version >= (2, 11, 0),
+            'all_known_upstream_fixes_present': version >= (2, 15, 4),
+            'advisories_requiring_coverage_verification': XML_HIGH_ADVISORIES if version < (2, 15, 4) else []}
+
+
+def node_sqlite_coverage(versions):
+    """Inspect the bundled library too, not just removed OS SQLite packages."""
+    node = versions.get('node', '')
+    sqlite = versions.get('sqlite', '')
+    if not re.fullmatch(r'26\.\d+\.\d+', node):
+        raise ValueError('approved_node_26_lts_required')
+    if not re.fullmatch(r'\d+\.\d+\.\d+', sqlite):
+        raise ValueError('actual_bundled_sqlite_version_required')
+    return {'node_version':node,'bundled_sqlite_version':sqlite,'advisory':'CVE-2026-119373',
+            'upstream_fix_present':tuple(map(int,sqlite.split('.'))) >= (3, 54, 0)}
+
+
 def safe_ci_diagnostic(text, private_values=()):
     """Bound failure evidence; never output container environment/inspect config."""
     text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', text)
@@ -219,6 +296,8 @@ def validate(service, trivy):
     private_values = []
     made_network = False
     validation_failures = []
+    xml_coverage = None
+    sqlite_coverage = None
     build_log = work / 'build.log'
 
     def docker(*args, check=True, timeout=180):
@@ -229,8 +308,9 @@ def validate(service, trivy):
             raise RuntimeError('docker_validation_operation_failed_' + args[0])
         return result
 
-    def sql(query):
-        return docker('exec', database, 'psql', '-XqAt', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'supa_ci_test',
+    def sql(query, database_name='supa_ci_test'):
+        assert database_name in ('supa_ci_test', 'supa_ci_restore_test')
+        return docker('exec', database, 'psql', '-XqAt', '-h', '127.0.0.1', '-U', 'postgres', '-d', database_name,
                       '-v', 'ON_ERROR_STOP=1', '-c', query).stdout.strip()
 
     try:
@@ -255,11 +335,27 @@ def validate(service, trivy):
                           'architecture': config['Architecture'],
                           'runtime_validated': False, 'scan_passed': False}), flush=True)
         assert config['Config']['User'] not in ('', '0', 'root', '0:0')
+        if service == 'frontend':
+            versions = json.loads(docker('run', '--rm', '--network', 'none',
+                '--entrypoint', '/nodejs/bin/node', image, '-p', 'JSON.stringify(process.versions)').stdout)
+            sqlite_coverage = node_sqlite_coverage(versions)
+            print(json.dumps({'stage':'node_component_versions','manifest_digest':digest,
+                              'versions':versions,**sqlite_coverage}),flush=True)
         archive = work / 'image.tar'
         docker('image', 'save', '--output', archive, image)
         assert not contains_canary(archive), 'excluded_canary_leaked_into_image_layers'
-        docker('run', '--rm', '--network', 'none', '--entrypoint', '/bin/sh', image, '-c',
-               'test ! -e /app/web/.env.local && test ! -e /app/.env.ci-sentinel && test ! -e /app/.supa-secrets/canary')
+        inspection = 'supa-inspect-' + suffix
+        owned_containers.append(inspection)
+        docker('create', '--name', inspection, '--network', 'none', image)
+        filesystem = work / 'filesystem.tar'
+        docker('export', '--output', filesystem, inspection)
+        assert excluded_runtime_paths_absent(filesystem), 'excluded_file_present_in_runtime'
+        packages = runtime_package_inventory(filesystem)
+        print(json.dumps({'stage':'runtime_package_inventory','service':service,
+                          'manifest_digest':digest,'packages':packages}),flush=True)
+        filesystem.unlink()
+        docker('rm', inspection)
+        owned_containers.remove(inspection)
         scanner_result = work / 'image-scan.json'
         scan = subprocess.run([str(trivy), 'image', '--input', str(archive), '--scanners', 'vuln,secret',
                                '--ignorefile', '/dev/null', '--format', 'json', '--output', str(scanner_result)],
@@ -320,7 +416,7 @@ def validate(service, trivy):
             pg_metadata = work / 'postgres-build-metadata.json'
             docker('buildx', 'build', '--pull', '--load', '--provenance=false',
                    '--metadata-file', pg_metadata, '--tag', postgres,
-                   '--file', context / 'deployment/postgres.Dockerfile', context, timeout=900)
+                   '--file', context / POSTGRES_DOCKERFILE, context, timeout=900)
             postgres_manifest_digest = json.loads(pg_metadata.read_text()).get('containerimage.digest')
             assert re.fullmatch(r'sha256:[0-9a-f]{64}', postgres_manifest_digest or '')
             pg_config = json.loads(docker('image', 'inspect', postgres).stdout)[0]
@@ -348,20 +444,40 @@ def validate(service, trivy):
             postgres_version = sql('SHOW server_version_num')
             assert postgres_version.startswith('18')
             assert sql("SELECT xml_is_well_formed('<supa/>')") == 't'
+            assert sql("SELECT (xpath('/root/item/text()', '<root><item>safe</item></root>'::xml))[1]::text") == 'safe'
+            assert sql('SHOW ssl') == 'on'
+            tls = docker('exec', '-e', 'PGSSLMODE=require', database, 'psql', '-XqAt',
+                         '-h', '127.0.0.1', '-U', 'postgres', '-d', 'supa_ci_test',
+                         '-v', 'ON_ERROR_STOP=1', '-c',
+                         'SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()').stdout.strip()
+            assert tls == 't', 'postgres_tls_connection_required'
+            assert docker('exec', database, 'stat', '-c', '%a',
+                          '/var/lib/postgresql/data/supa-tls/server.key').stdout.strip() == '600'
+            pg_process_uids = nonroot_process_uids(docker('top', database, '-eo', 'uid').stdout)
+            package_versions = docker('exec', database, 'apk', 'info', '-v', 'libxml2-16', 'openssl-4.0', 'postgresql-18-base').stdout.strip()
+            xml_coverage = postgres_xml_coverage(package_versions)
+            assert xml_coverage['critical_upstream_fix_present'], 'postgres_critical_xml_fix_required'
+            print(json.dumps({'stage':'postgres_xml_advisory_coverage','manifest_digest':postgres_manifest_digest,
+                              **xml_coverage}),flush=True)
+            tls_fingerprint = docker('exec', database, 'openssl', 'x509', '-in',
+                '/var/lib/postgresql/data/supa-tls/server.crt', '-noout', '-fingerprint', '-sha256').stdout.strip()
             print(json.dumps({'stage':'postgres_initialized','server_version_num':postgres_version,
-                              'xml_support_preserved':True}),flush=True)
-            if service == 'api':
-                pg_archive, pg_scan = work / 'postgres.tar', work / 'postgres-scan.json'
-                docker('image', 'save', '--output', pg_archive, postgres)
-                checked = subprocess.run([str(trivy), 'image', '--input', str(pg_archive), '--scanners',
-                                          'vuln,secret', '--ignorefile', '/dev/null', '--format', 'json',
-                                          '--output', str(pg_scan)], cwd=work, timeout=900)
-                if checked.returncode:
-                    raise RuntimeError('postgres_image_scanner_failed_closed')
-                pg_report = json.loads(pg_scan.read_text())
-                scan_shape(pg_report)
-                print(json.dumps({'stage': 'postgres_scanned', **scan_evidence(pg_report)}), flush=True)
-                dependency_report.setdefault('Results', []).extend(pg_report['Results'])
+                              'xml_support_preserved':True,'tls_required_connection_passed':True,
+                              'runtime_package_versions':package_versions,
+                              'postgres_process_uids':pg_process_uids,
+                              'candidate_dockerfile':POSTGRES_DOCKERFILE}),flush=True)
+            pg_archive, pg_scan = work / 'postgres.tar', work / 'postgres-scan.json'
+            docker('image', 'save', '--output', pg_archive, postgres)
+            checked = subprocess.run([str(trivy), 'image', '--input', str(pg_archive), '--scanners',
+                                      'vuln,secret', '--ignorefile', '/dev/null', '--format', 'json',
+                                      '--output', str(pg_scan)], cwd=work, timeout=900)
+            if checked.returncode:
+                raise RuntimeError('postgres_image_scanner_failed_closed')
+            pg_report = json.loads(pg_scan.read_text())
+            scan_shape(pg_report)
+            print(json.dumps({'stage': 'postgres_scanned', 'service':service,
+                              'manifest_digest':postgres_manifest_digest, **scan_evidence(pg_report)}), flush=True)
+            dependency_report.setdefault('Results', []).extend(pg_report['Results'])
             authority = 'postgres:' + urllib.parse.quote(password, safe='') + '@' + database + ':5432'
             admin_url = urllib.parse.urlunsplit(('postgresql', authority, '/supa_ci_test', '', ''))
             migration_env = work / 'migration.env'
@@ -423,7 +539,7 @@ def validate(service, trivy):
                               'transport': transport_diagnostic,
                               'diagnostic': safe_ci_diagnostic(logs.stdout + logs.stderr, private_values)}), flush=True)
             if service == 'frontend':
-                probe = docker('exec', application, 'node', '-e',
+                probe = docker('exec', application, '/nodejs/bin/node', '-e',
                     "require('http').get('http://127.0.0.1:3000/healthz',r=>{console.log(JSON.stringify({internal_http_status:r.statusCode}));r.resume()}).on('error',e=>{console.log(JSON.stringify({internal_error:e.code}));process.exitCode=1})",
                     check=False)
                 print(json.dumps({'stage': 'frontend_internal_probe',
@@ -433,7 +549,7 @@ def validate(service, trivy):
         print(json.dumps({'stage': 'application_health_passed', 'service': service,
                           'internal_http_status': 200, 'runner_bridge_http_status': 200,
                           'network_internal': True, 'published_ports': 0}), flush=True)
-        assert docker('exec', application, 'id', '-u').stdout.strip() != '0'
+        process_uids = nonroot_process_uids(docker('top', application, '-eo', 'uid').stdout)
         if service == 'frontend':
             expect_http(probe, '/', 401, 'frontend_missing_auth', failures=validation_failures)
             basic = 'Basic ' + base64.b64encode(('ci-visitor:' + visitor_password).encode()).decode()
@@ -469,11 +585,42 @@ def validate(service, trivy):
             time.sleep(1)
         assert probe(health) == 200
         assert internal_health(docker, application, port, health)
+        if service != 'frontend':
+            assert docker('exec', database, 'openssl', 'x509', '-in',
+                '/var/lib/postgresql/data/supa-tls/server.crt', '-noout', '-fingerprint', '-sha256').stdout.strip() == tls_fingerprint
+            assert sql('SHOW ssl') == 'on'
         if service == 'worker':
             assert sql('SELECT count(*) FROM cycles') == '0'
         docker('stop', '--time', '20', application)
         exit_code = int(docker('inspect', '--format', '{{.State.ExitCode}}', application).stdout.strip())
         assert clean_shutdown(service, exit_code)
+        if service != 'frontend':
+            # The application is stopped, so worker heartbeats cannot race the
+            # before/after snapshot. This is only the owned, new CI container.
+            def module(name, file):
+                spec = importlib.util.spec_from_file_location(name, ROOT / 'scripts' / file)
+                value = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(value)
+                return value
+            metadata = module('container_metadata', 'postgres-metadata.py')
+            persistent = module('container_fingerprint', 'persistent-postgres.py')
+            persistent.sql = sql
+            fingerprint = persistent.fingerprint('supa_ci_test')
+            schema = json.loads(sql(metadata.SNAPSHOT_SQL))
+            docker('exec', database, 'gosu', 'postgres', '/bin/sh', '-c',
+                   'umask 077; exec pg_dump --format=custom --file=/tmp/supa-ci-restore.dump '
+                   '--host=127.0.0.1 --username=postgres supa_ci_test')
+            assert docker('exec', database, 'stat', '-c', '%a', '/tmp/supa-ci-restore.dump').stdout.strip() == '600'
+            sql('CREATE DATABASE supa_ci_restore_test TEMPLATE template0')
+            docker('exec', database, 'gosu', 'postgres', 'pg_restore', '--single-transaction',
+                   '--exit-on-error', '--host=127.0.0.1', '--username=postgres',
+                   '--dbname=supa_ci_restore_test', '/tmp/supa-ci-restore.dump')
+            assert fingerprint == persistent.fingerprint('supa_ci_test') == persistent.fingerprint('supa_ci_restore_test')
+            metadata.require_equal(schema, json.loads(sql(metadata.SNAPSHOT_SQL, 'supa_ci_restore_test')), work)
+            docker('exec', database, 'rm', '/tmp/supa-ci-restore.dump')
+            print(json.dumps({'stage':'postgres_container_restore_passed','data_and_schema_equal':True,
+                              'tls_identity_preserved_after_restart':True,'fingerprint':fingerprint,
+                              'metadata_counts':{k:len(v) for k,v in schema.items()}}),flush=True)
         image_report.setdefault('Results', []).extend(dependency_report.get('Results', []))
         findings = [{'id': v.get('VulnerabilityID'), 'package': v.get('PkgName'),
                      'severity': v.get('Severity'), 'installed': v.get('InstalledVersion'),
@@ -491,6 +638,9 @@ def validate(service, trivy):
                   'high_critical_findings': findings, 'service': service, 'manifest_digest': digest, 'config_image_id': config['Id'],
                   'postgres_repo_digests': postgres_digest, 'non_root': True, 'health_start_and_restart': True,
                   'postgres_candidate_manifest_digest': postgres_manifest_digest,
+                  'application_process_uids': process_uids,
+                  'postgres_xml_advisory_coverage': xml_coverage,
+                  'node_bundled_sqlite_coverage': sqlite_coverage,
                   'sigterm_exit_code': exit_code, 'excluded_context_canary_absent': True,
                   'restricted_runtime_credentials': service != 'frontend',
                   'runtime_schema_create_and_financial_update_denied': service != 'frontend',
@@ -500,6 +650,10 @@ def validate(service, trivy):
         if summary:
             with open(summary, 'a') as output:
                 output.write('\n```json\n' + json.dumps(report, indent=2) + '\n```\n')
+        if xml_coverage and not xml_coverage['all_known_upstream_fixes_present']:
+            validation_failures.append('postgres_xml_source_advisory_coverage_unverified')
+        if sqlite_coverage and not sqlite_coverage['upstream_fix_present']:
+            validation_failures.append('node_bundled_sqlite_upstream_fix_unverified')
         try:
             vulnerability_gate(image_report)
         except ValueError as error:
