@@ -5,7 +5,9 @@ SNAPSHOT_SQL = r"""
 WITH namespaces AS (
  SELECT oid,nspname,nspowner,nspacl FROM pg_namespace WHERE nspname IN ('public','epoch_guard')
 ), objects AS (
- SELECT 'schemas' AS kind,n.nspname AS identity,
+ -- The first UNION arm determines the identity type. `name` silently
+ -- truncates qualified identities to 63 bytes and collapses JSON keys.
+ SELECT 'schemas' AS kind,n.nspname::text AS identity,
    jsonb_build_object('owner',pg_get_userbyid(n.nspowner),'acl',
     (SELECT jsonb_agg(jsonb_build_array(pg_get_userbyid(a.grantor),
        CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,
@@ -38,7 +40,11 @@ WITH namespaces AS (
      FROM aclexplode(coalesce(c.relacl,acldefault(CASE WHEN c.relkind='S' THEN 'S'::"char" ELSE 'r'::"char" END,c.relowner))) a))
  FROM pg_class c JOIN namespaces n ON n.oid=c.relnamespace
  UNION ALL
- SELECT 'constraints',n.nspname||'.'||c.relname||'.'||x.conname,to_jsonb(pg_get_constraintdef(x.oid))
+ SELECT 'constraints',n.nspname||'.'||c.relname||'.'||x.conname,
+   jsonb_build_object('definition',pg_get_constraintdef(x.oid),'type',x.contype,
+     'validated',x.convalidated,'deferrable',x.condeferrable,'deferred',x.condeferred,
+     'no_inherit',x.connoinherit,
+     'enforced',coalesce((to_jsonb(x)->>'conenforced')::boolean,true))
  FROM pg_constraint x JOIN pg_class c ON c.oid=x.conrelid JOIN namespaces n ON n.oid=c.relnamespace
  UNION ALL
  SELECT 'indexes',schemaname||'.'||indexname,to_jsonb(indexdef)
@@ -98,9 +104,14 @@ def require_equal(source, restored, evidence):
               'restored_counts': {k: len(v) for k,v in restored.items()}}
     (evidence / 'schema-comparison.json').write_text(json.dumps(report, indent=2)+'\n')
     if differences:
-        # Full definitions remain in disposable private evidence; logs get bounded identities only.
+        # This runs on synthetic CI schemas, never customer records. Retain
+        # bounded constraint definitions so a runner teardown cannot erase
+        # the only evidence needed to distinguish drift from comparison bugs.
         print(json.dumps({'stage': 'schema_restore_mismatch', 'count': len(differences),
-                          'objects': [{'category': d['category'], 'object': d['object']}
-                                      for d in differences[:50]]}), flush=True)
+                          'objects': [{'category': d['category'], 'object': d['object'],
+                                       **({'source': str(d['source'])[:2000],
+                                           'restored': str(d['restored'])[:2000]}
+                                          if d['category']=='constraints' and i<10 else {})}
+                                      for i,d in enumerate(differences[:50])]}), flush=True)
         raise AssertionError('restored_schema_metadata_differs_see_schema_comparison')
     return report
