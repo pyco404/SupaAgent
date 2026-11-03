@@ -42,6 +42,18 @@ class MetadataTests(unittest.TestCase):
                 metadata.require_equal({'functions': {'f()': 'before'}}, {'functions': {'f()': 'after'}}, path)
             self.assertEqual(json.loads((path/'schema-comparison.json').read_text())['differences'][0]['source'], 'before')
 
+    def test_constraint_expression_and_enforcement_changes_are_not_normalized_away(self):
+        original = {'definition': "CHECK ((historical_database = 'unrecovered'::text))",
+                    'validated': True, 'enforced': True, 'type': 'c',
+                    'deferrable': False, 'deferred': False, 'no_inherit': False}
+        key = 'public.application_epoch.application_epoch_historical_database_check'
+        for field, value in [('definition', "CHECK ((historical_database = 'other'::text))"),
+                             ('validated', False), ('enforced', False), ('no_inherit', True),
+                             ('deferrable', True), ('deferred', True), ('type', 'n')]:
+            with self.subTest(field=field):
+                self.assertEqual(len(metadata.compare({'constraints': {key: original}},
+                    {'constraints': {key: {**original, field: value}}})), 1)
+
 
 def rehearsal():
     """Use only the identified running launch fixture; copy no application rows."""
@@ -84,6 +96,17 @@ def rehearsal():
         for migration in sorted((ROOT/'migrations').glob('*.sql')):
             pg('psql','-Xq','--single-transaction','-v','ON_ERROR_STOP=1',
                db=source,data=migration.read_text())
+        # PG18 adds named NOT NULL constraints alongside CHECK constraints.
+        # Reproduce their qualified-identity collision even on local PG16.
+        sql("CREATE TABLE public.metadata_identity_fixture(historical_database text, "
+            "CONSTRAINT application_epoch_historical_database_check CHECK(historical_database='unrecovered'), "
+            "CONSTRAINT application_epoch_historical_database_not_null CHECK(historical_database IS NOT NULL))",source)
+        type_probe = sql("WITH objects AS (SELECT 'public'::name AS identity UNION ALL SELECT repeat('x',100)) "
+                         "SELECT pg_typeof(identity)::text||':'||length(identity::text) FROM objects ORDER BY length(identity::text)",source)
+        assert type_probe == 'name:6\nname:63'
+        fixed_probe = sql("WITH objects AS (SELECT 'public'::text AS identity UNION ALL SELECT repeat('x',100)) "
+                          "SELECT pg_typeof(identity)::text||':'||length(identity::text) FROM objects ORDER BY length(identity::text)",source)
+        assert fixed_probe == 'text:6\ntext:100'
         old_query = """SELECT jsonb_build_object(
           'functions',(SELECT jsonb_agg(pg_get_functiondef(p.oid) ORDER BY n.nspname,p.proname,p.oid::regprocedure::text)
             FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','epoch_guard')),
@@ -91,6 +114,12 @@ def rehearsal():
           'privileges',(SELECT coalesce(jsonb_agg(to_jsonb(p)-'table_catalog' ORDER BY table_schema,table_name,grantee,privilege_type),'[]')
             FROM information_schema.table_privileges p WHERE table_schema IN ('public','epoch_guard')))"""
         before = json.loads(sql(metadata.SNAPSHOT_SQL,source))
+        prefix = 'public.metadata_identity_fixture.'
+        fixture_constraints = {k:v for k,v in before['constraints'].items() if k.startswith(prefix)}
+        assert len(fixture_constraints)==2 and all(len(k)>63 for k in fixture_constraints)
+        broken_query = metadata.SNAPSHOT_SQL.replace('n.nspname::text AS identity','n.nspname AS identity')
+        broken = json.loads(sql(broken_query,source))
+        assert len([k for k in broken['constraints'] if k.startswith(prefix)]) == 1
         old_before = json.loads(sql(old_query,source))
         dump = out/'schema-only-fixture.dump'
         pg('pg_dump','--format=custom','--file',str(dump),db=source)
@@ -105,9 +134,16 @@ def rehearsal():
             'old_trigger_order_differences':[
                 {'index':i,'source':a,'restored':b} for i,(a,b) in enumerate(zip(old_before['triggers'],old_after['triggers'])) if a!=b],
             'new_comparison':metadata.require_equal(before,after,out),
+            'identity_type_truncation_reproduced':True,'long_constraints_preserved':fixture_constraints,
             'postgres_major':16,'historical_application_rows_copied':0,'primary_accessed':False}
         (out/'rehearsal.json').write_text(json.dumps(report,indent=2)+'\n')
         # Confirm the same comparison detects a real change, without mutating source.
+        sql("ALTER TABLE public.metadata_identity_fixture DROP CONSTRAINT application_epoch_historical_database_check, "
+            "ADD CONSTRAINT application_epoch_historical_database_check CHECK(historical_database='changed')",restored)
+        constraint_changes = metadata.compare(before,json.loads(sql(metadata.SNAPSHOT_SQL,restored)))
+        assert any(d['category']=='constraints' and d['object']==prefix+'application_epoch_historical_database_check'
+                   for d in constraint_changes)
+        (out/'constraint-change.json').write_text(json.dumps(constraint_changes,indent=2)+'\n')
         sql('ALTER TABLE public.agents DISABLE TRIGGER operational_write',restored)
         changed_schema = json.loads(sql(metadata.SNAPSHOT_SQL,restored))
         changes = metadata.compare(before,changed_schema)
