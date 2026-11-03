@@ -23,6 +23,18 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_database_locale_identity_rejects_silent_encoding_collation_and_provider_changes(self):
+        valid = {'encoding': 'UTF8', 'collate': 'en_US.utf8', 'ctype': 'en_US.utf8',
+                 'provider': 'c', 'collation_version': '2.44'}
+        self.assertEqual(images.verify_postgres_locale(valid), valid)
+        for field, changed in [('encoding', 'SQL_ASCII'), ('collate', 'C'),
+                               ('collate', 'C.UTF-8'), ('ctype', 'de_DE.utf8'), ('provider', 'i')]:
+            with self.subTest(field=field, changed=changed), self.assertRaises(ValueError):
+                images.verify_postgres_locale({**valid, field: changed})
+        for value in ({}, None, {'encoding':'UTF8'}):
+            with self.assertRaises(ValueError):
+                images.verify_postgres_locale(value)
+
     def test_node_bundled_sqlite_is_checked_independently_of_removed_os_packages(self):
         self.assertFalse(images.node_sqlite_coverage({'node':'26.13.0','sqlite':'3.53.4'})['upstream_fix_present'])
         self.assertTrue(images.node_sqlite_coverage({'node':'26.13.0','sqlite':'3.54.0'})['upstream_fix_present'])
@@ -108,7 +120,11 @@ class StagingSecurity(unittest.TestCase):
         self.assertIn('postgresql-18-base=18.6-r7', source)
         self.assertIn('posix-libc-utils-2.44=2.44-r13', source)
         self.assertIn('glibc-2.44=2.44-r13', source)
-        self.assertIn('glibc-2.44-locales=2.44-r13', source)
+        self.assertIn('glibc-2.44-locale-en=2.44-r13', source)
+        self.assertNotIn('glibc-2.44-locales=', source)
+        self.assertIn('LANG=en_US.utf8', source)
+        self.assertIn("grep -Fx 'en_US.utf8'", source)
+        self.assertIn('LC_ALL=en_US.utf8 locale charmap', source)
         self.assertIn('libLLVM-19=19.1.7-r31', source)
         self.assertNotIn('glibc-locales=2.43', source)
         self.assertNotIn('posix-libc-utils=2.43', source)
