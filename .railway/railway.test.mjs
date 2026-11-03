@@ -124,7 +124,7 @@ test('database major and persistent mount match the reviewed recovery target', (
 
 test('container runtime entrypoints preserve health ports, non-root users and SIGTERM delivery', async () => {
   const { readFile } = await import('node:fs/promises');
-  for (const [resource, port, user] of [[api, '8080', '10001'], [worker, '8081', '10001'], [frontend, '3000', 'node']]) {
+  for (const [resource, port, user] of [[api, '8080', '65532:65532'], [worker, '8081', '65532:65532'], [frontend, '3000', '65532:65532']]) {
     const dockerfile = await readFile(new URL('../' + resource.build.dockerfilePath, import.meta.url), 'utf8');
     const runtime = dockerfile.split(/FROM .+ AS runtime\n/)[1];
     assert.ok(runtime, 'a separate runtime stage is required');
@@ -132,7 +132,9 @@ test('container runtime entrypoints preserve health ports, non-root users and SI
     assert.match(runtime, new RegExp(`^EXPOSE ${port}$`, 'm'));
     assert.equal(resource.variables.PORT.value, port);
     if (resource === frontend) {
-      assert.match(runtime, /exec node node_modules\/next\/dist\/bin\/next start --hostname 0\.0\.0\.0 --port/);
+      assert.match(runtime, /^ENTRYPOINT \["\/nodejs\/bin\/node"\]$/m);
+      assert.match(runtime, /^CMD \["node_modules\/next\/dist\/bin\/next", "start", "--hostname", "0\.0\.0\.0"\]$/m);
+      assert.match(runtime, /PORT=3000/);
     } else {
       assert.match(runtime, /^ENTRYPOINT \["\/usr\/local\/bin\/supa-(api|runtime)"\]$/m);
     }
