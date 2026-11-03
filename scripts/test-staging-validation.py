@@ -42,18 +42,121 @@ class StagingSecurity(unittest.TestCase):
             with self.assertRaises(ValueError):
                 images.node_sqlite_coverage(value)
 
-    def test_xml_critical_fix_is_separate_from_all_known_high_advisory_coverage(self):
-        candidate = images.postgres_xml_coverage('libxml2-2.13.9-r2 description:\nXML library')
-        self.assertTrue(candidate['critical_upstream_fix_present'])
-        self.assertFalse(candidate['all_known_upstream_fixes_present'])
-        self.assertEqual(len(candidate['advisories_requiring_coverage_verification']), 7)
-        fixed = images.postgres_xml_coverage('libxml2-16-2.15.4-r2\n')
-        self.assertTrue(fixed['all_known_upstream_fixes_present'])
-        self.assertEqual(fixed['advisories_requiring_coverage_verification'], [])
-        self.assertFalse(images.postgres_xml_coverage('libxml2-2.9.14-r0')['critical_upstream_fix_present'])
-        for value in ['', 'libxml2-unknown', 'libxml2-2.13.9-r2\nlibxml2-2.15.4-r0']:
-            with self.assertRaises(ValueError):
-                images.postgres_xml_coverage(value)
+    def xml_fixture(self):
+        # Public package metadata from the pinned candidate; no prose/version inference.
+        return ('P:libLLVM-19\nV:19.1.7-r31\nA:x86_64\n'
+                'p:so-ver:libLLVM.so.19.1=19.1.7-r31 so:libLLVM.so.19.1=19.1\n\n'
+                'P:libxml2-16\nV:2.15.4-r2\nA:x86_64\n'
+                'p:so-ver:libxml2.so.16=2.15.4-r2 so:libxml2.so.16=16\n')
+
+    def test_xml_installed_metadata_accepts_exact_candidate_and_preserves_cve_checks(self):
+        packages = images.parse_apk_installed_inventory(self.xml_fixture())
+        coverage = images.postgres_xml_coverage(packages, 'amd64')
+        self.assertEqual(coverage['package'], 'libxml2-16')
+        self.assertEqual(coverage['package_version'], '2.15.4-r2')
+        self.assertEqual(coverage['architecture'], 'x86_64')
+        self.assertTrue(coverage['critical_upstream_fix_present'])
+        self.assertTrue(coverage['all_known_upstream_fixes_present'])
+        self.assertEqual(coverage['advisories_requiring_coverage_verification'], [])
+        self.assertEqual(images.parse_apk_installed_inventory(self.xml_fixture().replace('\n', '\r\n')), packages)
+
+    def test_xml_inventory_rejects_description_prose_missing_fields_and_unknown_versions(self):
+        for raw in ['libxml2-16: XML parser library\n', '',
+                    self.xml_fixture().replace('V:2.15.4-r2\n', ''),
+                    self.xml_fixture().replace('A:x86_64\n', ''),
+                    self.xml_fixture().replace('V:2.15.4-r2', 'V:unknown'),
+                    self.xml_fixture().replace('V:2.15.4-r2', 'V: 2.15.4-r2')]:
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                images.parse_apk_installed_inventory(raw)
+        for version in ['2.15.4', '2.15.4-rx', '2.15.4-custom']:
+            packages = images.parse_apk_installed_inventory(self.xml_fixture().replace('2.15.4-r2', version))
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, 'xml_library_version_invalid'):
+                images.postgres_xml_coverage(packages, 'amd64')
+
+    def test_xml_inventory_rejects_duplicate_fields_and_duplicate_conflicting_packages(self):
+        raw = self.xml_fixture()
+        for invalid in [raw.replace('V:2.15.4-r2', 'V:2.15.4-r2\nV:2.15.5-r0'),
+                        raw + '\n' + raw,
+                        raw + '\n' + raw.replace('2.15.4-r2', '2.15.5-r0')]:
+            with self.assertRaisesRegex(ValueError, 'apk_inventory_duplicate_'):
+                images.parse_apk_installed_inventory(invalid)
+
+    def test_xml_inventory_rejects_multiple_providers_even_with_the_same_version(self):
+        for version in ['2.15.4-r2', '2.15.5-r0']:
+            other = ('\nP:alternate-xml\nV:' + version + '\nA:x86_64\n'
+                     'p:so:libxml2.so.16=16 so-ver:libxml2.so.16=' + version + '\n')
+            packages = images.parse_apk_installed_inventory(self.xml_fixture() + other)
+            with self.assertRaisesRegex(ValueError, 'xml_library_provider_conflict'):
+                images.postgres_xml_coverage(packages, 'amd64')
+
+    def test_xml_inventory_rejects_missing_provider_legacy_libraries_and_vulnerable_versions(self):
+        with self.assertRaisesRegex(ValueError, 'xml_library_identity_missing'):
+            images.postgres_xml_coverage([], 'amd64')
+        for version in ['2.9.14-r0', '2.11.0-r0', '2.13.9-r2', '2.15.3-r0']:
+            packages = images.parse_apk_installed_inventory(self.xml_fixture().replace('2.15.4-r2', version))
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, 'xml_library_upstream_fixes_required'):
+                images.postgres_xml_coverage(packages, 'amd64')
+        raw = 'P:libxml2-2.13-2\nV:2.13.9-r2\nA:x86_64\np:so:libxml2.so.2=2\n'
+        with self.assertRaisesRegex(ValueError, 'xml_library_package_unapproved'):
+            images.postgres_xml_coverage(images.parse_apk_installed_inventory(raw), 'amd64')
+
+    def test_xml_inventory_rejects_architecture_and_abi_version_mismatches(self):
+        for architecture in ['aarch64', 'noarch']:
+            packages = images.parse_apk_installed_inventory(self.xml_fixture().replace('A:x86_64', 'A:' + architecture))
+            with self.assertRaisesRegex(ValueError, 'xml_library_architecture_mismatch'):
+                images.postgres_xml_coverage(packages, 'amd64')
+        with self.assertRaisesRegex(ValueError, 'xml_image_architecture_unsupported'):
+            images.postgres_xml_coverage(images.parse_apk_installed_inventory(self.xml_fixture()), 'unknown')
+        for raw in [self.xml_fixture().replace('so:libxml2.so.16=16', 'so:libxml2.so.2=2'),
+                    self.xml_fixture().replace('so-ver:libxml2.so.16=2.15.4-r2', 'so-ver:libxml2.so.16=2.15.4-r1'),
+                    self.xml_fixture().replace('p:so-ver:libxml2.so.16=2.15.4-r2 so:libxml2.so.16=16', 'p:')]:
+            with self.assertRaisesRegex(ValueError, 'xml_library_abi_version_mismatch'):
+                images.postgres_xml_coverage(images.parse_apk_installed_inventory(raw), 'amd64')
+
+    def test_xml_inventory_collection_uses_fixed_projection_and_records_identity_before_validation(self):
+        import contextlib, io
+        from unittest.mock import Mock
+        raw = self.xml_fixture() + '\nP:other-xml\nV:2.15.4-r2\nA:x86_64\np:so:libxml2.so.16=16\n'
+        docker = Mock(return_value=Mock(stdout=raw))
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            packages = images.collect_postgres_inventory(docker, 'owned-test-db', 'sha256:test')
+        docker.assert_called_once_with('exec', 'owned-test-db', '/usr/bin/awk',
+                                       images.APK_INVENTORY_PROJECTION, '/usr/lib/apk/db/installed')
+        record = json.loads(output.getvalue())
+        self.assertEqual(record['stage'], 'postgres_installed_package_inventory')
+        self.assertEqual(record['source'], 'installed-apk-db')
+        self.assertEqual({p['package'] for p in record['packages']}, {'libLLVM-19','libxml2-16','other-xml'})
+        with self.assertRaisesRegex(ValueError, 'xml_library_provider_conflict'):
+            images.postgres_xml_coverage(packages, 'amd64')
+
+    def test_xml_inventory_diagnostics_do_not_echo_malformed_private_prose(self):
+        import contextlib, io
+        from unittest.mock import Mock
+        private = 'synthetic-private-prose-never-log'
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), self.assertRaises(ValueError):
+            images.collect_postgres_inventory(Mock(return_value=Mock(stdout=private)), 'owned-db', 'sha256:test')
+        self.assertNotIn(private, output.getvalue())
+        self.assertIn('postgres_inventory_format_rejected', output.getvalue())
+        self.assertIn('input_sha256', output.getvalue())
+        with self.assertRaisesRegex(ValueError, 'apk_inventory_size_invalid'):
+            images.parse_apk_installed_inventory('x' * (256 * 1024 + 1))
+
+    def test_xml_inventory_rejects_duplicate_provides_and_bounds_diagnostics(self):
+        import contextlib, io
+        from unittest.mock import Mock
+        duplicate = self.xml_fixture().replace('so:libxml2.so.16=16', 'so:libxml2.so.16=16 so:libxml2.so.16=16')
+        with self.assertRaisesRegex(ValueError, 'apk_inventory_duplicate_provides'):
+            images.parse_apk_installed_inventory(duplicate)
+        oversized = '\n'.join('P:libxml2-fixture' + str(i) + '\nV:2.15.4-r2\nA:x86_64\np:' +
+                              ' '.join('unrelated-' + str(j) + '-' + 'x' * 450 for j in range(8)) + '\n'
+                              for i in range(12))
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), self.assertRaisesRegex(ValueError, 'postgres_inventory_diagnostic_limit'):
+            images.collect_postgres_inventory(Mock(return_value=Mock(stdout=oversized)), 'owned-db', 'sha256:test')
+        self.assertLess(len(output.getvalue()), 1024)
+        self.assertIn('postgres_inventory_diagnostic_limit', output.getvalue())
 
     def test_exact_filesystem_package_inventory_retains_versions_and_rejects_missing_metadata(self):
         import io
