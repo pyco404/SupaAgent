@@ -23,6 +23,83 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_node_bundled_sqlite_is_checked_independently_of_removed_os_packages(self):
+        self.assertFalse(images.node_sqlite_coverage({'node':'26.13.0','sqlite':'3.53.4'})['upstream_fix_present'])
+        self.assertTrue(images.node_sqlite_coverage({'node':'26.13.0','sqlite':'3.54.0'})['upstream_fix_present'])
+        for value in [{}, {'node':'27.0.0','sqlite':'3.54.0'}, {'node':'26.13.0','sqlite':'unknown'}]:
+            with self.assertRaises(ValueError):
+                images.node_sqlite_coverage(value)
+
+    def test_xml_critical_fix_is_separate_from_all_known_high_advisory_coverage(self):
+        candidate = images.postgres_xml_coverage('libxml2-2.13.9-r2 description:\nXML library')
+        self.assertTrue(candidate['critical_upstream_fix_present'])
+        self.assertFalse(candidate['all_known_upstream_fixes_present'])
+        self.assertEqual(len(candidate['advisories_requiring_coverage_verification']), 7)
+        fixed = images.postgres_xml_coverage('libxml2-16-2.15.4-r2\n')
+        self.assertTrue(fixed['all_known_upstream_fixes_present'])
+        self.assertEqual(fixed['advisories_requiring_coverage_verification'], [])
+        self.assertFalse(images.postgres_xml_coverage('libxml2-2.9.14-r0')['critical_upstream_fix_present'])
+        for value in ['', 'libxml2-unknown', 'libxml2-2.13.9-r2\nlibxml2-2.15.4-r0']:
+            with self.assertRaises(ValueError):
+                images.postgres_xml_coverage(value)
+
+    def test_exact_filesystem_package_inventory_retains_versions_and_rejects_missing_metadata(self):
+        import io
+        import tarfile
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'filesystem.tar'
+            content = b'Package: libc6\nVersion: 2.41-12+deb13u1\n\nPackage: libgcc-s1\nVersion: 14.2.0-19\n'
+            with tarfile.open(path, 'w') as archive:
+                member = tarfile.TarInfo('var/lib/dpkg/status.d/libc6')
+                member.size = len(content)
+                archive.addfile(member, io.BytesIO(content))
+            self.assertEqual(images.runtime_package_inventory(path), {'libc6':'2.41-12+deb13u1','libgcc-s1':'14.2.0-19'})
+            with tarfile.open(path, 'w'):
+                pass
+            with self.assertRaisesRegex(ValueError, 'actual_runtime_package_inventory_required'):
+                images.runtime_package_inventory(path)
+
+    def test_exported_filesystem_checks_do_not_need_image_shell_or_extraction(self):
+        import tarfile
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'filesystem.tar'
+            for names, expected in [(['app/web/package.json'], True),
+                                    (['./app/web/.env.local'], False),
+                                    (['app/.supa-secrets/canary'], False),
+                                    (['/app/.env.ci-sentinel'], False)]:
+                with tarfile.open(path, 'w') as archive:
+                    for name in names:
+                        archive.addfile(tarfile.TarInfo(name))
+                self.assertEqual(images.excluded_runtime_paths_absent(path), expected)
+
+    def test_actual_container_process_uids_reject_root_empty_and_malformed_inventory(self):
+        self.assertEqual(images.nonroot_process_uids('UID\n65532\n65532\n'), [65532])
+        for value in ['', 'UID\n', 'UID\n0\n', 'UID\n65532\n0\n', 'USER\nnonroot\n', 'UID\nroot\n']:
+            with self.assertRaises(ValueError):
+                images.nonroot_process_uids(value)
+
+    def test_security_candidates_are_pinned_and_keep_runtime_contracts(self):
+        for service in ('api', 'worker', 'frontend'):
+            source = (ROOT / f'deployment/{service}.Dockerfile').read_text()
+            runtime = source.split(' AS runtime\n')[1]
+            self.assertRegex(source, r'FROM gcr.io/distroless/[a-z0-9-]+:nonroot@sha256:[a-f0-9]{64} AS runtime')
+            self.assertIn('USER 65532:65532', runtime)
+            self.assertNotIn('apt-get', runtime)
+            self.assertNotIn('"sh"', runtime)
+            if service == 'frontend':
+                self.assertIn('nodejs26-debian13', source)
+                self.assertIn('node:26.13.0-trixie-slim@sha256:', source)
+        source = (ROOT / images.POSTGRES_DOCKERFILE).read_text()
+        self.assertRegex(source, r'FROM cgr.dev/chainguard/wolfi-base:latest@sha256:[a-f0-9]{64} AS runtime')
+        self.assertNotIn('--allow-untrusted', source)
+        self.assertNotIn('/edge/', source)
+        self.assertIn('libxml2-16=2.15.4-r2', source)
+        self.assertIn('postgresql-18-base=18.6-r7', source)
+        self.assertIn('posix-libc-utils=2.43-r13', source)
+        self.assertIn("-name 'libxml2.so.2*'", source)
+        self.assertIn('PGDATA=/var/lib/postgresql/data/pgdata', source)
+        self.assertIn('deployment/postgres-entrypoint.sh', source)
+
     def test_failed_auth_contract_can_collect_more_evidence_but_remains_failed(self):
         from unittest.mock import Mock
         import contextlib
