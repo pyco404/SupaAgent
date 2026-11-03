@@ -31,6 +31,12 @@ XML_HIGH_ADVISORIES = ['CVE-2026-74860', 'CVE-2026-86138', 'CVE-2026-86139',
 CANARY = b'SUPA_CI_EXCLUDED_CONTEXT_CANARY_6A_NOT_A_CREDENTIAL'
 
 
+def verify_gosu_version(value):
+    if not re.fullmatch(r'1\.20 \(go1\.27\.3 on linux/(amd64|arm64); gc\)', value):
+        raise ValueError('reviewed_gosu_version_required')
+    return value
+
+
 def require_hosted_ci(env):
     if any(env.get(key) != value for key, value in {
         'GITHUB_ACTIONS': 'true', 'GITHUB_REPOSITORY': 'pyco404/SupaAgent',
@@ -583,8 +589,13 @@ def validate(service, trivy):
             # Self-test the actual privilege-drop binary and dynamic XML linkage.
             gosu_version = docker('run', '--rm', '--network', 'none', '--entrypoint',
                                   '/usr/local/bin/gosu', postgres, '--version').stdout.strip()
-            assert 'go1.27.3' in gosu_version
-            print(json.dumps({'stage': 'postgres_gosu_verified', 'version': gosu_version}), flush=True)
+            verify_gosu_version(gosu_version)
+            dropped = docker('run', '--rm', '--network', 'none', '--entrypoint',
+                             '/usr/local/bin/gosu', postgres, 'postgres', '/bin/sh', '-c',
+                             'test "$(id -u)" -ne 0 && test "$(id -g)" -ne 0 && id -u').stdout.strip()
+            assert dropped.isdecimal() and int(dropped) > 0, 'gosu_privilege_drop_required'
+            print(json.dumps({'stage': 'postgres_gosu_verified', 'version': gosu_version,
+                              'privilege_drop_uid': int(dropped), 'network': 'none'}), flush=True)
             pg_env = work / 'postgres.env'
             # PGPASSWORD is inherited by exec probes; never put it in argv/logs.
             pg_env.write_text('POSTGRES_DB=supa_ci_test\nPGDATA=/var/lib/postgresql/data/pgdata\nPOSTGRES_PASSWORD=' + password + '\nPGPASSWORD=' + password + '\n')
