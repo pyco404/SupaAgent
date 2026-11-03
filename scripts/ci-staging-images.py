@@ -78,6 +78,16 @@ def clean_shutdown(service, exit_code):
     return exit_code in ((0, 143) if service == 'frontend' else (0,))
 
 
+def expect_http(probe, path, expected, stage, authorization=None, diagnostic=None):
+    status = probe(path, authorization)
+    # Never serialize the credential, response body or arbitrary server prose.
+    print(json.dumps({'stage': stage, 'path': path, 'http_status': status,
+                      'expected_status': expected, 'passed': status == expected,
+                      'error_code': (diagnostic or {}).get('error_code')}), flush=True)
+    if status != expected:
+        raise AssertionError('http_contract_failed_' + stage)
+
+
 def copy_context(source, destination):
     paths = ['Cargo.toml', 'Cargo.lock', 'migrations', '.dockerignore', 'deployment']
     for crate in ('domain', 'persistence', 'providers', 'capabilities', 'runtime', 'api'):
@@ -174,6 +184,13 @@ def request(port, path, authorization=None, host='127.0.0.1', diagnostic=None):
         with opener.open(urllib.request.Request(f'http://{host}:{port}{path}', headers=headers), timeout=8) as result:
             return result.status
     except urllib.error.HTTPError as error:
+        if diagnostic is not None and error.fp is not None:
+            try:
+                code = json.loads(error.read(1024)).get('error')
+                if code in ('permission_denied', 'unauthorized'):
+                    diagnostic['error_code'] = code
+            except (ValueError, OSError, AttributeError, http.client.HTTPException):
+                pass
         return error.code
     except (OSError, TimeoutError, http.client.HTTPException) as error:
         if diagnostic is not None:
@@ -415,9 +432,11 @@ def validate(service, trivy):
             assert probe('/', basic) == 200
             assert probe('/operator', basic) == 401
         elif service == 'api':
-            assert probe('/agents') == 401
-            assert probe('/agents', 'Bearer ' + public) == 200
-            assert probe('/agents', 'Bearer invalid-test-token') == 401
+            expect_http(probe, '/agents', 401, 'api_missing_token', diagnostic=transport_diagnostic)
+            expect_http(probe, '/directory', 200, 'api_public_directory', 'Bearer ' + public, transport_diagnostic)
+            expect_http(probe, '/agents', 403, 'api_service_cannot_impersonate_principal', 'Bearer ' + public, transport_diagnostic)
+            expect_http(probe, '/agents', 200, 'api_named_viewer_agents', 'Bearer ' + operator, transport_diagnostic)
+            expect_http(probe, '/agents', 401, 'api_invalid_token', 'Bearer invalid-test-token', transport_diagnostic)
         else:
             defaults = dict(entry.split('=', 1) for entry in config['Config']['Env'])
             assert defaults.get('SUPA_WORKER_ENABLED') == 'false'
