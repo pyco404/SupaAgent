@@ -1,4 +1,6 @@
 //! Mocked inference + genuine disposable PostgreSQL. Never contacts OpenAI or the primary cluster.
+#[path = "support/disposable.rs"]
+mod disposable;
 #[path = "support/work_provider.rs"]
 mod support;
 use axum::{
@@ -45,12 +47,7 @@ async fn request(
 async fn setup() -> (Store, Uuid, Uuid, InferencePolicy) {
     let base = std::env::var("TEST_DATABASE_URL").unwrap();
     let options: sqlx::postgres::PgConnectOptions = base.parse().unwrap();
-    assert!(
-        matches!(options.get_host(), "localhost" | "127.0.0.1")
-            && options.get_port() == 55680
-            && options.get_database() == Some("supa_m10_test")
-    );
-    let admin = Store::connect(&base).await.unwrap();
+    let admin = disposable::connect(&options).await;
     let db = format!("supa_m10_{}_test", Uuid::new_v4().simple());
     sqlx::query(&format!("CREATE DATABASE {db} TEMPLATE template0"))
         .execute(admin.pool())
@@ -88,6 +85,71 @@ async fn setup() -> (Store, Uuid, Uuid, InferencePolicy) {
         .await
         .unwrap();
     (store, a.id, actor, policy)
+}
+
+#[tokio::test]
+#[ignore = "requires a verified disposable database; no provider requests"]
+async fn directory_and_named_agent_access_keep_service_identity_separate() {
+    let (store, agent, actor, policy) = setup().await;
+    let (app, provider) = make_app(&store, agent, actor, &policy, 0);
+    let service = "fixture-public-work-service-00000000000";
+    let (status, body) = request(&app, "/agents", service, None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["error"], Error::Denied.to_string());
+    assert_eq!(
+        request(&app, "/directory", service, None).await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(&app, "/agents", OWNER, None).await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(&app, "/agents", "invalid-test-token", None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    for role in [Role::Viewer, Role::Operator] {
+        let state = AppState::new(
+            store.clone(),
+            Runtime::new(store.clone(), Arc::new(Offline)),
+            service.into(),
+        )
+        .unwrap()
+        .with_credentials(vec![OperatorCredential {
+            id: actor,
+            role,
+            token: OWNER.into(),
+        }])
+        .unwrap();
+        let scoped = router(state);
+        assert_eq!(
+            request(&scoped, "/agents", OWNER, None).await.0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            request(&scoped, "/agents", OWNER, Some(json!({}))).await.0,
+            StatusCode::FORBIDDEN
+        );
+    }
+    let expired = AppState::new(
+        store.clone(),
+        Runtime::new(store.clone(), Arc::new(Offline)),
+        service.into(),
+    )
+    .unwrap()
+    .with_credentials(vec![OperatorCredential {
+        id: actor,
+        role: Role::Viewer,
+        token: OWNER.into(),
+    }])
+    .unwrap()
+    .with_credential_deadlines(std::collections::BTreeMap::from([(actor, 1)]))
+    .unwrap();
+    assert_eq!(
+        request(&router(expired), "/agents", OWNER, None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 0);
 }
 async fn job(store: &Store, agent: Uuid, actor: Uuid, case: &Value) -> EconomicJob {
     let service = Uuid::new_v4();
