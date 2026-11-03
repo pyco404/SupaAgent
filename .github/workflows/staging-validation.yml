@@ -105,6 +105,7 @@ jobs:
         run: |
           python3 scripts/test-staging-validation.py
           python3 scripts/test-postgres-metadata.py
+          python3 scripts/test-postgres-tls-entrypoint.py
       - name: Build native test services
         run: cargo build --locked -p supa-api --bin supa-api --bin supa-staging-schema -p supa-runtime --bin supa-runtime
       - name: Validate migrations, concurrency, accounting, recovery and restore on PostgreSQL 18
