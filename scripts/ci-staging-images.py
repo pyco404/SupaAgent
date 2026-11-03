@@ -6,13 +6,13 @@ import argparse
 import base64
 import hashlib
 import http.client
+import ipaddress
 import json
 import os
 from pathlib import Path
 import re
 import secrets
 import shutil
-import socket
 import subprocess
 import tempfile
 import time
@@ -139,16 +139,46 @@ def wait_for_database(docker, database, private_values):
     raise RuntimeError('database_startup_failed')
 
 
-def request(port, path, authorization=None):
+def container_address(networks, network):
+    if set(networks) != {network}:
+        raise ValueError('application_must_have_only_its_owned_internal_network')
+    address = ipaddress.ip_address(networks[network]['IPAddress'])
+    ranges = [ipaddress.ip_network(cidr) for cidr in ('10.0.0.0/8','172.16.0.0/12','192.168.0.0/16')]
+    if address.version != 4 or not any(address in subnet for subnet in ranges):
+        raise ValueError('private_container_ipv4_required')
+    return str(address)
+
+
+def internal_health(docker, application, port, path):
+    # Join only the owned container's network namespace, not its mount/user namespace.
+    # Uses the hosted Linux runner's Python; no app privileges or outbound route added.
+    pid = int(docker('inspect', '--format', '{{.State.Pid}}', application).stdout.strip())
+    if pid <= 1:
+        raise ValueError('running_owned_container_required')
+    code = "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); print(o.open('http://127.0.0.1:%d%s',timeout=8).status)" % (port, path)
+    result = subprocess.run(['sudo', '-n', 'nsenter', '--target', str(pid), '--net',
+                             '--', '/usr/bin/python3', '-c', code],
+                            capture_output=True, text=True, timeout=15)
+    return result.returncode == 0 and result.stdout.strip() == '200'
+
+
+def request(port, path, authorization=None, host='127.0.0.1', diagnostic=None):
+    if diagnostic is not None:
+        diagnostic.clear()
     headers = {'Authorization': authorization} if authorization else {}
+    # Preserve the reviewed logical origin while routing over the private bridge.
+    headers['Host'] = f'127.0.0.1:{port}'
     try:
         # Never send local health/auth probes through runner proxy configuration.
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(urllib.request.Request(f'http://127.0.0.1:{port}{path}', headers=headers), timeout=8) as result:
+        with opener.open(urllib.request.Request(f'http://{host}:{port}{path}', headers=headers), timeout=8) as result:
             return result.status
     except urllib.error.HTTPError as error:
         return error.code
-    except (OSError, TimeoutError, http.client.HTTPException):
+    except (OSError, TimeoutError, http.client.HTTPException) as error:
+        if diagnostic is not None:
+            reason = getattr(error, 'reason', error)
+            diagnostic.update(error_type=type(reason).__name__, errno=getattr(reason, 'errno', None))
         return None
 
 
@@ -170,8 +200,8 @@ def validate(service, trivy):
     made_network = False
     build_log = work / 'build.log'
 
-    def docker(*args, check=True):
-        result = subprocess.run(['docker', *map(str, args)], capture_output=True, text=True, timeout=180)
+    def docker(*args, check=True, timeout=180):
+        result = subprocess.run(['docker', *map(str, args)], capture_output=True, text=True, timeout=timeout)
         if check and result.returncode:
             print(json.dumps({'stage': 'docker_operation_failed', 'operation': args[0],
                               'diagnostic': safe_ci_diagnostic(result.stderr, private_values)}), flush=True)
@@ -251,9 +281,7 @@ def validate(service, trivy):
         password = secrets.token_hex(32)
         public, operator = secrets.token_hex(32), secrets.token_hex(32)
         credential = {'id': str(uuid.uuid4()), 'role': 'viewer', 'token': operator}
-        with socket.socket() as listener:
-            listener.bind(('127.0.0.1', 0))
-            port = listener.getsockname()[1]
+        port = SERVICES[service]
         env = {'SUPA_PRIVATE_STAGING': 'true', 'SUPA_PROVIDER': 'offline', 'SUPA_ALLOW_OPENAI': 'false',
                'SUPA_ALLOW_ANTHROPIC': 'false', 'SUPA_CONTROLLED_WORK': 'false',
                'SUPA_CONTROLLED_INFERENCE': 'false', 'SUPA_API_SCHEDULER_ENABLED': 'false',
@@ -263,13 +291,24 @@ def validate(service, trivy):
         visitor_password, operator_password = secrets.token_hex(24), secrets.token_hex(24)
         private_values.extend([password,public,operator,visitor_password,operator_password])
         if service != 'frontend':
-            postgres = 'ghcr.io/railwayapp-templates/postgres-ssl:18'
-            docker('pull', postgres)
+            postgres = 'supa-ci-postgres:' + suffix
+            pg_metadata = work / 'postgres-build-metadata.json'
+            docker('buildx', 'build', '--pull', '--load', '--provenance=false',
+                   '--metadata-file', pg_metadata, '--tag', postgres,
+                   '--file', context / 'deployment/postgres.Dockerfile', context, timeout=900)
+            postgres_manifest_digest = json.loads(pg_metadata.read_text()).get('containerimage.digest')
+            assert re.fullmatch(r'sha256:[0-9a-f]{64}', postgres_manifest_digest or '')
             pg_config = json.loads(docker('image', 'inspect', postgres).stdout)[0]
             assert pg_config['Os'] == 'linux' and pg_config['Architecture'] == config['Architecture']
             postgres_digest = pg_config['RepoDigests']
-            print(json.dumps({'stage': 'postgres_image_pulled', 'repo_digests': postgres_digest,
+            print(json.dumps({'stage': 'postgres_candidate_built', 'repo_digests': postgres_digest,
+                              'candidate_manifest_digest': postgres_manifest_digest,
                               'architecture': pg_config['Architecture']}), flush=True)
+            # Self-test the actual privilege-drop binary and dynamic XML linkage.
+            gosu_version = docker('run', '--rm', '--network', 'none', '--entrypoint',
+                                  '/usr/local/bin/gosu', postgres, '--version').stdout.strip()
+            assert 'go1.27.3' in gosu_version
+            print(json.dumps({'stage': 'postgres_gosu_verified', 'version': gosu_version}), flush=True)
             pg_env = work / 'postgres.env'
             # PGPASSWORD is inherited by exec probes; never put it in argv/logs.
             pg_env.write_text('POSTGRES_DB=supa_ci_test\nPGDATA=/var/lib/postgresql/data/pgdata\nPOSTGRES_PASSWORD=' + password + '\nPGPASSWORD=' + password + '\n')
@@ -281,7 +320,11 @@ def validate(service, trivy):
             # The initdb bootstrap server is socket-only. Wait for the final
             # TCP listener and diagnose an exited container before SQL probes.
             wait_for_database(docker, database, private_values)
-            assert sql('SHOW server_version_num').startswith('18')
+            postgres_version = sql('SHOW server_version_num')
+            assert postgres_version.startswith('18')
+            assert sql("SELECT xml_is_well_formed('<supa/>')") == 't'
+            print(json.dumps({'stage':'postgres_initialized','server_version_num':postgres_version,
+                              'xml_support_preserved':True}),flush=True)
             if service == 'api':
                 pg_archive, pg_scan = work / 'postgres.tar', work / 'postgres-scan.json'
                 docker('image', 'save', '--output', pg_archive, postgres)
@@ -323,6 +366,7 @@ def validate(service, trivy):
             env['DATABASE_URL'] = urllib.parse.urlunsplit(('postgresql', runtime_authority, '/supa_ci_test', '', ''))
         else:
             postgres_digest = []
+            postgres_manifest_digest = None
             env.update(SUPA_SITE_MODE='staging', SUPA_SITE_ORIGIN=f'http://127.0.0.1:{port}',
                        SUPA_BACKEND_URL='http://unavailable-ci-backend:8080',
                        SUPA_STAGING_USERNAME='ci-visitor', SUPA_STAGING_PASSWORD=visitor_password,
@@ -332,20 +376,27 @@ def validate(service, trivy):
         app_env.write_text(''.join(f'{key}={value}\n' for key, value in env.items()))
         app_env.chmod(0o600)
         owned_containers.insert(0, application)
-        docker('run', '--detach', '--name', application, '--network', network, '--env-file', app_env,
-               '--publish', f'127.0.0.1:{port}:{SERVICES[service]}', image)
+        docker('run', '--detach', '--name', application, '--network', network, '--env-file', app_env, image)
+        assert json.loads(docker('network', 'inspect', network).stdout)[0]['Internal'] is True
+        def address():
+            return container_address(json.loads(docker('inspect', '--format',
+                '{{json .NetworkSettings.Networks}}', application).stdout), network)
+        host = address()
+        transport_diagnostic = {}
+        def probe(path, authorization=None):
+            return request(port, path, authorization, host=host, diagnostic=transport_diagnostic)
         health = '/healthz' if service == 'frontend' else '/ready'
         for _ in range(120):
-            if request(port, health) == 200:
+            if probe(health) == 200:
                 break
             time.sleep(1)
-        health_status = request(port, health)
+        health_status = probe(health)
         if health_status != 200:
             logs = docker('logs', '--tail', '40', application, check=False)
             print(json.dumps({'stage': 'application_health_failed', 'service': service,
                               'http_status': health_status,
-                              'diagnostic': safe_ci_diagnostic(logs.stdout + logs.stderr,
-                                  [password, public, operator, visitor_password, operator_password])}), flush=True)
+                              'transport': transport_diagnostic,
+                              'diagnostic': safe_ci_diagnostic(logs.stdout + logs.stderr, private_values)}), flush=True)
             if service == 'frontend':
                 probe = docker('exec', application, 'node', '-e',
                     "require('http').get('http://127.0.0.1:3000/healthz',r=>{console.log(JSON.stringify({internal_http_status:r.statusCode}));r.resume()}).on('error',e=>{console.log(JSON.stringify({internal_error:e.code}));process.exitCode=1})",
@@ -353,16 +404,20 @@ def validate(service, trivy):
                 print(json.dumps({'stage': 'frontend_internal_probe',
                                   'diagnostic': safe_ci_diagnostic(probe.stdout + probe.stderr)}), flush=True)
             raise RuntimeError('application_health_failed')
+        assert internal_health(docker, application, port, health), 'internal_namespace_health_failed'
+        print(json.dumps({'stage': 'application_health_passed', 'service': service,
+                          'internal_http_status': 200, 'runner_bridge_http_status': 200,
+                          'network_internal': True, 'published_ports': 0}), flush=True)
         assert docker('exec', application, 'id', '-u').stdout.strip() != '0'
         if service == 'frontend':
-            assert request(port, '/') == 401
+            assert probe('/') == 401
             basic = 'Basic ' + base64.b64encode(('ci-visitor:' + visitor_password).encode()).decode()
-            assert request(port, '/', basic) == 200
-            assert request(port, '/operator', basic) == 401
+            assert probe('/', basic) == 200
+            assert probe('/operator', basic) == 401
         elif service == 'api':
-            assert request(port, '/agents') == 401
-            assert request(port, '/agents', 'Bearer ' + public) == 200
-            assert request(port, '/agents', 'Bearer invalid-test-token') == 401
+            assert probe('/agents') == 401
+            assert probe('/agents', 'Bearer ' + public) == 200
+            assert probe('/agents', 'Bearer invalid-test-token') == 401
         else:
             defaults = dict(entry.split('=', 1) for entry in config['Config']['Env'])
             assert defaults.get('SUPA_WORKER_ENABLED') == 'false'
@@ -377,11 +432,13 @@ def validate(service, trivy):
             assert {row['version']: row['checksum'] for row in actual if row['success']} == expected
             docker('restart', database)
         docker('restart', application)
+        host = address()
         for _ in range(120):
-            if request(port, health) == 200:
+            if probe(health) == 200:
                 break
             time.sleep(1)
-        assert request(port, health) == 200
+        assert probe(health) == 200
+        assert internal_health(docker, application, port, health)
         if service == 'worker':
             assert sql('SELECT count(*) FROM cycles') == '0'
         docker('stop', '--time', '20', application)
@@ -402,6 +459,7 @@ def validate(service, trivy):
         report = {'vulnerability_severity_counts': counts, 'other_advisory_ids': other_ids,
                   'high_critical_findings': findings, 'service': service, 'manifest_digest': digest, 'config_image_id': config['Id'],
                   'postgres_repo_digests': postgres_digest, 'non_root': True, 'health_start_and_restart': True,
+                  'postgres_candidate_manifest_digest': postgres_manifest_digest,
                   'sigterm_exit_code': exit_code, 'excluded_context_canary_absent': True,
                   'restricted_runtime_credentials': service != 'frontend',
                   'runtime_schema_create_and_financial_update_denied': service != 'frontend',
