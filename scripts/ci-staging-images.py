@@ -31,6 +31,22 @@ XML_HIGH_ADVISORIES = ['CVE-2026-74860', 'CVE-2026-86138', 'CVE-2026-86139',
 CANARY = b'SUPA_CI_EXCLUDED_CONTEXT_CANARY_6A_NOT_A_CREDENTIAL'
 
 
+def write_candidate_record(path, candidate):
+    """Exclusively create the private handoff; never retain a partial record."""
+    # builtins.open accepts opener; pathlib.Path.open does not (including 3.12
+    # on the Ubuntu 24.04 hosted runner). O_EXCL also rejects existing symlinks.
+    output = open(path, 'x', encoding='utf-8',
+                  opener=lambda name, flags: os.open(name, flags, 0o600))
+    try:
+        with output as stream:
+            json.dump(candidate, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        path.unlink()
+        raise
+
+
 def verify_gosu_version(value):
     if not re.fullmatch(r'1\.20 \(go1\.27\.3 on linux/(amd64|arm64); gc\)', value):
         raise ValueError('reviewed_gosu_version_required')
@@ -850,8 +866,7 @@ def validate(service, trivy, publication_record=None):
                 'compatibility': {'xml': True, 'tls': True, 'locale': True,
                                   'restricted_api': True, 'restore': True},
             }
-            with publication_record.open('x', opener=lambda path, flags: os.open(path, flags, 0o600)) as output:
-                json.dump(candidate, output)
+            write_candidate_record(publication_record, candidate)
             print(json.dumps({'stage': 'postgres_publication_candidate_retained',
                               'config_image_id': pg_config['Id'],
                               'archive_sha256': archive_hash, 'registry_pushes': 0}), flush=True)
