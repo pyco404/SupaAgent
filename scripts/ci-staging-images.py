@@ -178,21 +178,116 @@ def runtime_package_inventory(path):
     return dict(sorted(packages.items()))
 
 
-def postgres_xml_coverage(package_versions):
-    """Do not equate an absent distro advisory with verified upstream coverage.
+APK_INVENTORY_PROJECTION = '/^[PVA]:/ || /^p:/ || /^$/ { print }'
 
-    For this vendor-package candidate, 2.11 fixes the critical parser issue and
-    2.15.4 covers the seven newer upstream advisories. A future audited vendor
-    backport requires a separate code review, never an environment waiver.
+
+def parse_apk_installed_inventory(text):
+    """Parse only projected installed-db P/V/A/p fields, never repository search."""
+    if not isinstance(text, str) or len(text.encode('utf-8')) > 256 * 1024:
+        raise ValueError('apk_inventory_size_invalid')
+    records, fields, seen = [], {}, set()
+    for line in [*text.splitlines(), '']:
+        if not line.strip():
+            if not fields:
+                continue
+            if not {'P', 'V', 'A'} <= fields.keys():
+                raise ValueError('apk_inventory_identity_incomplete')
+            name, version, arch = (fields[key] for key in ('P', 'V', 'A'))
+            if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}', name):
+                raise ValueError('apk_inventory_name_invalid')
+            if not re.fullmatch(r'[0-9][A-Za-z0-9+_.~:-]{0,127}', version):
+                raise ValueError('apk_inventory_version_invalid')
+            if not re.fullmatch(r'[A-Za-z0-9_+-]{1,32}', arch):
+                raise ValueError('apk_inventory_architecture_invalid')
+            provides = fields.get('p', '').split()
+            if len(provides) > 256 or any(not re.fullmatch(r'[A-Za-z0-9+_.:/=~-]{1,512}', v) for v in provides):
+                raise ValueError('apk_inventory_provides_invalid')
+            if name in seen:
+                raise ValueError('apk_inventory_duplicate_package')
+            if len(set(provides)) != len(provides):
+                raise ValueError('apk_inventory_duplicate_provides')
+            seen.add(name)
+            records.append({'package': name, 'version': version, 'architecture': arch, 'provides': provides})
+            if len(records) > 1024:
+                raise ValueError('apk_inventory_package_limit')
+            fields = {}
+            continue
+        if len(line) > 8192 or len(line) < 2 or line[1] != ':' or line[0] not in 'PVAp':
+            raise ValueError('apk_inventory_format_invalid')
+        if line[0] in fields:
+            raise ValueError('apk_inventory_duplicate_field')
+        fields[line[0]] = line[2:]
+    if not records:
+        raise ValueError('apk_inventory_empty')
+    return sorted(records, key=lambda row: row['package'])
+
+
+def xml_related_package(row):
+    return (row['package'].startswith('libxml2') or
+            any(v.startswith(('so:libxml2.so.', 'so-ver:libxml2.so.')) for v in row['provides']))
+
+
+def collect_postgres_inventory(docker, database, digest, private_values=()):
+    # Fixed projection excludes file lists, scripts, environment and descriptions.
+    raw = docker('exec', database, '/usr/bin/awk', APK_INVENTORY_PROJECTION,
+                 '/usr/lib/apk/db/installed').stdout
+    try:
+        packages = parse_apk_installed_inventory(raw)
+    except ValueError as error:
+        print(json.dumps({'stage': 'postgres_inventory_format_rejected', 'code': str(error),
+                          'manifest_digest': digest, 'input_bytes': len(raw.encode('utf-8')),
+                          'input_sha256': hashlib.sha256(raw.encode('utf-8')).hexdigest()}), flush=True)
+        raise
+    selected = [row for row in packages if xml_related_package(row) or row['package'] in
+                ('libLLVM-19', 'glibc-2.44', 'glibc-2.44-locale-en', 'posix-libc-utils-2.44',
+                 'openssl-4.0', 'postgresql-18-base')]
+    evidence = json.dumps({'stage': 'postgres_installed_package_inventory', 'manifest_digest': digest,
+                           'source': 'installed-apk-db', 'package_count': len(packages), 'packages': selected})
+    if len(evidence.encode('utf-8')) > 32768:
+        print(json.dumps({'stage': 'postgres_inventory_format_rejected',
+                          'code': 'postgres_inventory_diagnostic_limit', 'manifest_digest': digest,
+                          'selected_package_count': len(selected)}), flush=True)
+        raise ValueError('postgres_inventory_diagnostic_limit')
+    print(_scrub_ci_diagnostic(evidence, private_values), flush=True)
+    return packages
+
+
+def postgres_xml_coverage(packages, architecture):
+    """Require one ABI-16 provider with matching package/so-version and architecture.
+
+    Preserve independent upstream coverage: 2.11 fixes the critical parser issue;
+    2.15.4 covers all seven newer HIGH advisories. No environment waiver/backport
+    assumption, human-readable description fallback, or version-only set dedup.
     """
-    versions = set(re.findall(r'^libxml2(?:-16)?-(\d+)\.(\d+)\.(\d+)(?:-r\d+)?(?:\s|$)', package_versions, re.MULTILINE))
-    if len(versions) != 1:
-        raise ValueError('unambiguous_xml_version_required')
-    version = tuple(map(int, versions.pop()))
-    return {'upstream_version': '.'.join(map(str, version)),
+    expected_arch = {'amd64': 'x86_64', 'arm64': 'aarch64'}.get(architecture)
+    if not expected_arch:
+        raise ValueError('xml_image_architecture_unsupported')
+    related = [row for row in packages if xml_related_package(row)]
+    if not related:
+        raise ValueError('xml_library_identity_missing')
+    if len(related) != 1:
+        raise ValueError('xml_library_provider_conflict')
+    package = related[0]
+    if package['package'] != 'libxml2-16':
+        raise ValueError('xml_library_package_unapproved')
+    if package['architecture'] != expected_arch:
+        raise ValueError('xml_library_architecture_mismatch')
+    match = re.fullmatch(r'(\d+)\.(\d+)\.(\d+)-r(\d+)', package['version'])
+    if not match:
+        raise ValueError('xml_library_version_invalid')
+    xml_provides = {v for v in package['provides'] if v.startswith(('so:libxml2.', 'so-ver:libxml2.'))}
+    required = {'so:libxml2.so.16=16', 'so-ver:libxml2.so.16=' + package['version']}
+    if xml_provides != required:
+        raise ValueError('xml_library_abi_version_mismatch')
+    version = tuple(map(int, match.groups()[:3]))
+    if version < (2, 15, 4):
+        raise ValueError('xml_library_upstream_fixes_required')
+    return {'package': package['package'], 'package_version': package['version'],
+            'architecture': package['architecture'], 'provides': sorted(xml_provides),
+            'upstream_version': '.'.join(map(str, version)),
             'critical_upstream_fix_present': version >= (2, 11, 0),
             'all_known_upstream_fixes_present': version >= (2, 15, 4),
-            'advisories_requiring_coverage_verification': XML_HIGH_ADVISORIES if version < (2, 15, 4) else []}
+            'advisories_requiring_coverage_verification': []}
 
 
 def verify_postgres_locale(value):
@@ -520,9 +615,13 @@ def validate(service, trivy):
             assert docker('exec', database, 'stat', '-c', '%a',
                           '/var/lib/postgresql/data/supa-tls/server.key').stdout.strip() == '600'
             pg_process_uids = inspect_nonroot_processes(docker, database)
-            package_versions = docker('exec', database, 'apk', 'info', '-v', 'libxml2-16', 'libLLVM-19', 'glibc-2.44',
-                                     'glibc-2.44-locale-en', 'posix-libc-utils-2.44', 'openssl-4.0', 'postgresql-18-base').stdout.strip()
-            xml_coverage = postgres_xml_coverage(package_versions)
+            package_inventory = collect_postgres_inventory(docker, database, postgres_manifest_digest, private_values)
+            try:
+                xml_coverage = postgres_xml_coverage(package_inventory, config['Architecture'])
+            except ValueError as error:
+                print(json.dumps({'stage': 'postgres_xml_inventory_rejected', 'code': str(error),
+                                  'manifest_digest': postgres_manifest_digest}), flush=True)
+                raise
             assert xml_coverage['critical_upstream_fix_present'], 'postgres_critical_xml_fix_required'
             print(json.dumps({'stage':'postgres_xml_advisory_coverage','manifest_digest':postgres_manifest_digest,
                               **xml_coverage}),flush=True)
@@ -530,7 +629,7 @@ def validate(service, trivy):
                 '/var/lib/postgresql/data/supa-tls/server.crt', '-noout', '-fingerprint', '-sha256').stdout.strip()
             print(json.dumps({'stage':'postgres_initialized','server_version_num':postgres_version,
                               'xml_support_preserved':True,'tls_required_connection_passed':True,
-                              'runtime_package_versions':package_versions,
+                              'runtime_package_versions':package_inventory,
                               'postgres_process_uids':pg_process_uids,
                               'candidate_dockerfile':POSTGRES_DOCKERFILE}),flush=True)
             authority = 'postgres:' + urllib.parse.quote(password, safe='') + '@' + database + ':5432'
