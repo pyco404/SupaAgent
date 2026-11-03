@@ -23,6 +23,28 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_failed_auth_contract_can_collect_more_evidence_but_remains_failed(self):
+        from unittest.mock import Mock
+        import contextlib
+        import io
+        failures = []
+        with contextlib.redirect_stdout(io.StringIO()):
+            images.expect_http(Mock(return_value=403),'/agents',200,'viewer',failures=failures)
+            images.expect_http(Mock(return_value=401),'/agents',401,'expired',failures=failures)
+        self.assertEqual(failures,['http_contract_failed_viewer'])
+
+    def test_individual_test_evidence_survives_a_later_failure(self):
+        log = "Running tests/live_work.rs (target/debug/deps/work)\ntest work_ok ... ok\n" + \
+              "Running tests/wallet_read_permissions.rs (target/debug/deps/read)\ntest bad_read ... FAILED\n"
+        events = postgres.rust_test_results(log)
+        self.assertEqual([e['outcome'] for e in events],['ok','FAILED'])
+        self.assertEqual(events[0]['target'],'tests/live_work.rs')
+        unit = postgres.rust_test_results('Running unittests src/lib.rs (target/debug/deps/supa_domain-abc)\ntest safe ... ok')
+        self.assertEqual(unit[0]['binary'],'supa_domain-abc')
+        failure = postgres.rust_failure_evidence("thread 'bad_read' (123) panicked at crates/api/tests/wallet_read_permissions.rs:51:5:\nprivate prose")
+        self.assertEqual(failure['panic_sites'][0]['line'],51)
+        self.assertNotIn('private',json.dumps(failure))
+
     def test_http_error_only_allows_known_authentication_codes(self):
         from unittest.mock import Mock
         import io
