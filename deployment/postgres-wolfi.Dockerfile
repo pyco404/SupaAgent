@@ -14,11 +14,12 @@ FROM cgr.dev/chainguard/wolfi-base:latest@sha256:629d9acaceda7746cd9293365eb0d8e
 # shared-library patches. APK verifies the vendor's signed packages by default.
 # Match the base's glibc family; pin LLVM's ABI-16 build instead of the legacy
 # virtual provider that would pull vulnerable libxml2.so.2 back into the image.
+# -locale-en contains generated en_US.utf8; -locales does not ship that data.
 RUN apk add --no-cache \
       postgresql-18-base=18.6-r7 postgresql-18-client-base=18.6-r7 \
       postgresql-18-contrib-base=18.6-r7 postgresql-18-oci-entrypoint-base=18.6-r7 \
       libxml2-16=2.15.4-r2 openssl-4.0=4.0.3-r8 bash=5.3-r14 \
-      glibc-2.44=2.44-r13 glibc-2.44-locales=2.44-r13 \
+      glibc-2.44=2.44-r13 glibc-2.44-locale-en=2.44-r13 \
       posix-libc-utils-2.44=2.44-r13 libLLVM-19=19.1.7-r31
 ENV PATH=/usr/libexec/postgresql18:/usr/local/bin:/usr/bin:/bin \
     PG_MAJOR=18 PG_VERSION=18.6 LANG=en_US.utf8 PGDATA=/var/lib/postgresql/data/pgdata
@@ -30,7 +31,11 @@ RUN set -eu; \
     mkdir -p /var/lib/postgresql/data /var/lib/postgres/initdb /var/run/postgresql; \
     chown postgres:postgres /var/lib/postgresql/data /var/run/postgresql; \
     chmod 3777 /var/run/postgresql; \
-    apk info -v libxml2-16 libLLVM-19 glibc-2.44 glibc-2.44-locales posix-libc-utils-2.44 postgresql-18-base openssl-4.0; \
+    apk info -v libxml2-16 libLLVM-19 glibc-2.44 glibc-2.44-locale-en posix-libc-utils-2.44 postgresql-18-base openssl-4.0; \
+    locale -a > /tmp/postgres-locales; \
+    grep -Fx 'en_US.utf8' /tmp/postgres-locales; \
+    test "$(LC_ALL=en_US.utf8 locale charmap)" = UTF-8; \
+    rm /tmp/postgres-locales; \
     postgres --version; \
     ldd /usr/libexec/postgresql18/postgres > /tmp/postgres-libraries 2>&1; \
     cat /tmp/postgres-libraries; \
