@@ -23,6 +23,34 @@ postgres = load('postgres18', 'validate-postgres18.py')
 
 
 class StagingSecurity(unittest.TestCase):
+    def test_held_postgres_package_is_installed_without_relaxing_health_check(self):
+        import subprocess
+        # A private dpkg database: no system package selections are changed.
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp)
+            for selection in ['hold', 'install']:
+                (path/'status').write_text('Package: supa-package-fixture\n'
+                    f'Status: {selection} ok installed\nPriority: optional\nSection: misc\n'
+                    'Architecture: all\nVersion: 18.3-1\nDescription: synthetic fixture\n\n')
+                query = ['dpkg-query', '--admindir='+temp, '-W']
+                actual = subprocess.run(query+['-f=${Status}', 'supa-package-fixture'],
+                    capture_output=True, text=True, check=True).stdout
+                installed = subprocess.run(query+['-f=${db:Status-Status}', 'supa-package-fixture'],
+                    capture_output=True, text=True, check=True).stdout
+                self.assertEqual(actual, selection+' ok installed')
+                self.assertEqual(installed, 'installed')
+                self.assertEqual(subprocess.run(query+['-f=${db:Status-Eflag}', 'supa-package-fixture'],
+                    capture_output=True, text=True, check=True).stdout, 'ok')
+            (path/'status').write_text((path/'status').read_text().replace('install ok installed','hold reinstreq installed'))
+            self.assertEqual(subprocess.run(query+['-f=${db:Status-Eflag}', 'supa-package-fixture'],
+                capture_output=True, text=True, check=True).stdout, 'reinstreq')
+            (path/'status').write_text((path/'status').read_text().replace('hold reinstreq installed','deinstall ok config-files'))
+            self.assertEqual(subprocess.run(query+['-f=${db:Status-Status}', 'supa-package-fixture'],
+                capture_output=True, text=True, check=True).stdout, 'config-files')
+        candidate = (ROOT/'deployment/postgres.Dockerfile').read_text()
+        self.assertIn("${db:Status-Status}", candidate)
+        self.assertNotIn("= 'install ok installed'", candidate)
+
     def test_bridge_probe_accepts_only_one_owned_private_ipv4_network(self):
         self.assertEqual(images.container_address({'owned':{'IPAddress':'172.20.0.3'}},'owned'),'172.20.0.3')
         for ip in ['8.8.8.8','127.0.0.1','0.0.0.0','::1','192.0.2.5','169.254.1.1']:
