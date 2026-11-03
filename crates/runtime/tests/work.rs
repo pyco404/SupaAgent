@@ -1,4 +1,7 @@
 //! Disposable-only work evaluation. No paid provider, retrieval, primary epoch or worker.
+#[path = "../../api/tests/support/disposable.rs"]
+mod disposable;
+
 use serde_json::json;
 use std::sync::{
     Arc,
@@ -9,6 +12,80 @@ use supa_persistence::Store;
 use supa_providers::{Context, Offline, Reasoner};
 use supa_runtime::Runtime;
 use uuid::Uuid;
+
+fn permitted_work_parent(options: &sqlx::postgres::PgConnectOptions) -> bool {
+    let legacy = options.get_socket().is_none()
+        && matches!(options.get_host(), "localhost" | "127.0.0.1")
+        && options.get_port() == 55680
+        && options.get_database() == Some("supa_m9_test");
+    let isolated =
+        options.get_database() == Some("supa_pg18_suite_test") && disposable::permitted(options);
+    legacy || isolated
+}
+
+async fn work_parent(options: &sqlx::postgres::PgConnectOptions) -> Store {
+    assert!(
+        permitted_work_parent(options),
+        "unexpected_work_test_parent"
+    );
+    let store = if options.get_socket().is_some() {
+        // Verifies the canonical /tmp directory, server data directory and
+        // socket-only listener before any database creation or migration.
+        disposable::connect(options).await
+    } else {
+        Store::connect(&sqlx::ConnectOptions::to_url_lossy(options).to_string())
+            .await
+            .expect("disposable_connection_failed")
+    };
+    let (database, principal, port, address, can_create): (
+        String,
+        String,
+        String,
+        Option<String>,
+        bool,
+    ) = sqlx::query_as(
+        "SELECT current_database(),current_user::text,current_setting('port'),
+         inet_server_addr()::text,rolcanlogin AND (rolcreatedb OR rolsuper)
+         FROM pg_roles WHERE rolname=current_user",
+    )
+    .fetch_one(store.pool())
+    .await
+    .expect("disposable_metadata_required");
+    assert_eq!(Some(database.as_str()), options.get_database());
+    assert_eq!(principal, options.get_username());
+    assert_eq!(port, options.get_port().to_string());
+    assert!(can_create, "authorized_disposable_administrator_required");
+    if options.get_socket().is_some() {
+        assert!(address.is_none(), "disposable_socket_connection_required");
+    } else {
+        assert!(matches!(address.as_deref(), Some("127.0.0.1" | "::1")));
+    }
+    store
+}
+
+#[test]
+fn work_parent_rejects_unexpected_database_transport_and_port() {
+    for url in [
+        "postgresql://localhost/supa_m9_test?port=55680",
+        "postgresql://localhost/supa_pg18_suite_test?host=/tmp/supa-pg18-validation-fixture/socket&port=55448",
+    ] {
+        assert!(permitted_work_parent(&url.parse().unwrap()));
+    }
+    for url in [
+        "postgresql://localhost/supa_m9_test",
+        "postgresql://remote/supa_m9_test?port=55680",
+        "postgresql://localhost/supa_m10_test?port=55680",
+        "postgresql://localhost/production?port=55680",
+        "postgresql://localhost/supa_pg18_suite_test?port=55448",
+        "postgresql://localhost/supa_m9_test?host=/tmp/supa-pg18-validation-fixture/socket&port=55680",
+        "postgresql://localhost/supa_pg18_suite_test?host=/tmp/unapproved/socket&port=55448",
+        "postgresql://localhost/supa_pg18_suite_test?host=/tmp/supa-pg18-validation-fixture/socket&port=5432",
+        "postgresql://localhost/supa_pg18_suite_test?host=/home/pikoo/postgres-data/socket&port=55448",
+        "postgresql://localhost/production?host=/tmp/supa-pg18-validation-fixture/socket&port=55448",
+    ] {
+        assert!(!permitted_work_parent(&url.parse().unwrap()));
+    }
+}
 
 fn command(job: &EconomicJob, operation: &str) -> JobCommand {
     JobCommand {
@@ -94,11 +171,24 @@ impl Reasoner for Repair {
 async fn bounded_work_is_grounded_scoped_durable_and_never_earns_on_abstention() {
     let base = std::env::var("TEST_DATABASE_URL").unwrap();
     let options: sqlx::postgres::PgConnectOptions = base.parse().unwrap();
-    assert!(
-        matches!(options.get_host(), "localhost" | "127.0.0.1")
-            && options.get_database() == Some("supa_m9_test")
-    );
-    let admin = Store::connect(&base).await.unwrap();
+    let admin = work_parent(&options).await;
+    if let Some(socket) = options.get_socket() {
+        // A plausible socket URL is not authority: a different canonical
+        // parent forwarding to this server must fail the server metadata fence.
+        let alias = tempfile::Builder::new()
+            .prefix("supa-pg18-validation-")
+            .tempdir_in("/tmp")
+            .unwrap();
+        let forwarded = alias.path().join("socket");
+        std::os::unix::fs::symlink(socket, &forwarded).unwrap();
+        let impostor = options.clone().socket(&forwarded);
+        assert!(permitted_work_parent(&impostor));
+        let denied = match tokio::spawn(async move { work_parent(&impostor).await }).await {
+            Err(error) => error,
+            Ok(_) => panic!("mismatched_server_directory_must_be_rejected"),
+        };
+        assert!(denied.is_panic());
+    }
     let db = format!("supa_work_{}_test", Uuid::new_v4().simple());
     sqlx::query(&format!("CREATE DATABASE {db} TEMPLATE template0"))
         .execute(admin.pool())
