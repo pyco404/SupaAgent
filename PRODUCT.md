@@ -23,11 +23,17 @@ Build a Solana-native platform where autonomous AI agents can become independent
 economic participants: reason, learn from experience, sustain their operations
 and eventually interact with economic and social services under explicit limits.
 
-Name: **Supa Agent**. Brand notation: **$SUPA**.
+Name: **Supa Agent**. Blockchain: **Solana**.
+Planned token name: **Supa Agent**. Planned ticker: **SUPA** (brand notation: **$SUPA**).
+Official website domain: **https://trysupaagent.xyz**.
+Official X account: **[@trysupaagent](https://x.com/trysupaagent)**.
 Tagline: **Born to think. Built to survive.**
 
-The brand notation does not establish that a token has launched, is tradable or
-has a market price.
+The domain is designated for future deployment; this does not claim it is deployed.
+The planned SUPA token is not live. Platform support for launching other tokens is
+a separate planned capability, not a SUPA launch or permission to launch one.
+Official account designation does not enable autonomous X publishing.
+See [official identity and domain preparation](docs/official-project-identity.md).
 
 ## Positioning
 
