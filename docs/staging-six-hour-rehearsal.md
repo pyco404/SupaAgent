@@ -4,7 +4,10 @@ Status: local preparation only. No publication, CI dispatch, registry access,
 credential installation, resource creation or deployment is authorized by this
 document. Existing functional evidence is CI run
 [41679768139](https://github.com/pyco404/SupaAgent/actions/runs/41679768139).
-Its image digests predate the Gosu change and must not be reused as new evidence.
+The focused Gosu 1.20 candidate subsequently passed CI run
+[41685032319](https://github.com/pyco404/SupaAgent/actions/runs/41685032319) at
+source revision `2be2597522e9631145d9d872409ace2fb791ec1a`. No new CI run is
+needed for this document-only acceptance preparation.
 
 ## PostgreSQL candidate
 
@@ -19,15 +22,63 @@ CVE-2026-61801, and `x/sys v0.1.0`. The build checks those module identities,
 module checksums, Gosu version and privilege drop. The existing pinned Go 1.27.3
 toolchain is retained instead of using the older upstream release binary.
 The runtime harness additionally checks the actual binary version and performs
-a network-free non-root user/group switch. These executable checks are prepared
-for CI; they have not run locally because Docker/Go are unavailable and disk
-headroom is approximately 720 MiB. Local tests exercise the version guard only.
+a network-free non-root user/group switch. The focused run passed these checks:
+Gosu 1.20 / Go 1.27.3 / linux/amd64 dropped to UID 70. Locale, XML/TLS, restricted
+API access, authentication, migrations, restart and restoration passed. No local
+container rebuild was performed. Local tests exercised the version guard only.
 
 PostgreSQL 18.6-r7, libxml2-16 2.15.4-r2, ABI 16, LLVM, glibc, en_US.utf8,
 UTF8/libc locale, XML/TLS, volume layout and entrypoint are unchanged.
 CVE-2026-39824 remains visible as UNKNOWN: its affected function is in
 `x/sys/windows`, while this candidate is Linux. No severity override or suppression
-is introduced. Fresh image scanning, including lower severities, is still required.
+is introduced. The focused PostgreSQL scan returned zero HIGH/CRITICAL/MEDIUM/LOW
+findings and one UNKNOWN. A future new artifact still requires fresh scanning.
+
+## Residual security disposition: pending operator acceptance
+
+The PostgreSQL UNKNOWN is **CVE-2026-39824**, `golang.org/x/sys v0.1.0`, reported
+fixed in v0.44.0. The official Go advisory identifies `x/sys/windows` function
+`NewNTUnicodeString`; Linux is outside that documented affected platform. This is
+a platform-reachability assessment, not a severity downgrade, suppression or proof
+that all Gosu code is safe. Gosu is used during startup to drop privileges; protect
+the image, entrypoint, user/group files and mounted paths. CVE-2026-61801 is no
+longer reported after the verified user-module update.
+
+Application evidence: frontend has 41 MEDIUM / eight LOW findings; API and worker
+each have 36 MEDIUM / eight LOW. API evidence is the focused run; frontend/worker
+evidence is the prior full run. Each contains the same 29 distinct CVE identifiers;
+counts include duplicate GCC-family package associations. No fixes were returned
+for these findings by those scanner reports. That is not proof that upstream fixes
+or future compatible packages do not exist.
+
+| Exact package and installed version | Findings | Runtime exposure, mitigation and residual risk |
+| --- | --- | --- |
+| `gcc-14-base`, `libgcc-s1`, `libgomp1`, `libstdc++6`, each `14.2.0-19` | Five MEDIUM associations per package: CVE-2026-102010, -114690, -114691, -115455, -95619 | Compiler-family metadata and runtime support libraries are present. Presence does not establish a vulnerable symbol is called. Do not assume all compiler/runtime advisories are unreachable. Keep non-root processes, immutable image files, no untrusted native binaries or compilation tools, and restrictive tool permissions. Conditional corruption/availability risk remains; per-symbol reachability was not proved. |
+| `libatomic1 14.2.0-19` (frontend only) | Same five MEDIUM associations | Node's native runtime support; no arbitrary native plugin loading. Same compiler-family reachability limitation applies. |
+| `libc6 2.41-12+deb13u4` | 14 MEDIUM / eight LOW | Native runtime functions are used by all applications. Crafted parsing/string/locale/pattern inputs can matter depending on the affected function. Authentication, bounded application inputs, memory/CPU monitoring and non-root operation reduce exposure; they do not eliminate memory-safety or denial-of-service risk. Exact exploit reachability is not established. |
+| `zlib1g 1:1.3.dfsg+really1.3.1-1+b1` | MEDIUM CVE-2026-27171 and CVE-2026-85091 | Compression library is installed. Reachability through specific application compressed-input paths has not been established. Do not introduce arbitrary archive uploads or decompression tasks; preserve bounded requests and resource limits. Residual denial-of-service/corruption risk cannot be dismissed. |
+
+The libc MEDIUM identifiers are CVE-2026-18374, -19499, -19542, -5435, -6238,
+-6368, -6791, -77117, -80489, -84243, -8674, -86805, -89092 and -95818.
+Its LOW identifiers are CVE-2010-4756, CVE-2018-20796, CVE-2019-1010022,
+CVE-2019-1010023, CVE-2019-1010024, CVE-2019-1010025, CVE-2019-9192 and
+CVE-2026-97399. Full package/version/CVE rows remain visible in the CI scan logs.
+No finding or failing gate is removed by this disposition.
+
+Proposed acceptance wording (NOT accepted or applied):
+
+> I accept the listed lower-severity findings and incomplete independent recovery
+> solely for one six-hour, synthetic-data-only rehearsal in the named staging
+> environment, using subsequently reviewed artifact digests. No HIGH/CRITICAL or
+> secret finding may be waived. The database must contain only rebuildable fixtures
+> and disposable credentials. Stop on scope drift, unexpected exposure, new severe
+> findings, a $1 incremental spending threshold or the six-hour deadline. This
+> acceptance expires at shutdown and authorizes no persistent sensitive staging,
+> publication, credential installation, provisioning or deployment by itself.
+
+Record the approving operator, timestamp, session start/end, actual image digests
+and evidence references when this separate decision is made. A changed image,
+finding set, duration or data classification requires review; no automatic renewal.
 
 ## Focused CI, after separate push and dispatch approval
 
@@ -61,6 +112,24 @@ The operator has not approved or created this package. Do not create it or test
 credentials as a side effect of validation. Confirm package access, ownership,
 private visibility, storage/transfer charges and publication scope first.
 
+Read-only permission review found repository admin/push access and a read-only
+default workflow-token policy, with PR-review approval disabled. These do not prove
+packages:write or read:packages authority. Exact package metadata lookup returned
+HTTP 404; that can mean missing or inaccessible and is not proof of either absence
+or private visibility. No token/header was inspected, no registry login attempted
+and no credential created/retrieved. Package ACL and publisher/puller capability
+remain explicit checks after approval.
+
+The historical CI build digest is
+`sha256:fec85dee966ee525d07c59399f8bff24b017cf8e80fd31382fd35dbf6879d0bc`.
+The would-be reference under the proposed destination is
+`ghcr.io/pyco404/supa-agent-postgres@sha256:fec85dee966ee525d07c59399f8bff24b017cf8e80fd31382fd35dbf6879d0bc`.
+It is NOT published, pullable or approved. The run's artifact inventory returned
+zero artifacts. The harness retained images only on a disposable hosted runner;
+no OCI/archive copy is available in the reviewed evidence. A digest is not a backup
+of its contents. Therefore exact publication of that historical image cannot be
+promised, and the real deployment reference remains unassigned/null.
+
 For an explicitly approved publication, use a separate manual workflow with
 packages:write only for its publishing job, protected environment approval and
 repository-bound GITHUB_TOKEN. Publish the exact locally scanned OCI artifact;
@@ -69,6 +138,45 @@ verify the registry manifest after publication. Local Docker image IDs must not
 be mistaken for a remotely retrievable manifest digest. If rebuilding is needed,
 scan and exercise the new artifact before publication. Do not enable publication
 in the existing read-only validation workflow.
+
+Minimum publication sequence to approve, not execute now:
+
+1. Confirm the exact GHCR repository, owner, private package ACL, publisher identity,
+   reviewer and package costs. A public source repository does not establish that
+   its container package is private. No registry or protected environment has been
+   created by this preparation.
+2. Since the old artifact is unavailable, explicitly authorize a fresh build and
+   focused validation at an exact source commit. Export one canonical OCI artifact
+   and record its manifest, config and layer digests. Disable unsolicited provenance
+   or platform changes during copying, or account for them in the reviewed manifest.
+3. Run the existing candidate checks and scans against the exported image contents.
+   Bind the scan to the manifest/config/layers used by runtime probes. Preserve only
+   the image archive and sanitized evidence needed for publication. Never export the
+   harness working directory, credential env files, temporary database volumes or
+   synthetic login material. Do not upload a private image as a publicly accessible
+   artifact in the public source repository.
+4. If publication occurs in a later job, use approved private artifact storage and
+   verify its hashes on retrieval. If that storage is unavailable, perform validation
+   and the explicitly approved publication on the same controlled runner. Rebuilding
+   after validation invalidates artifact identity and requires revalidation.
+5. After separate publication approval, use a registry copier with digest preservation
+   (for example Skopeo --preserve-digests). Stop if a media-type conversion changes
+   the manifest. A unique staging tag may transport the image; it is never the
+   deployment reference. Keep publish authentication out of argv, logs and image
+   layers; use short-lived job credentials and private auth files.
+6. Read back the registry manifest and compare its SHA-256 and config/layer descriptor
+   digests with the canonical validated artifact. Reject a manifest-list versus
+   platform-manifest mix-up. Verify by-digest retrieval and actual private visibility;
+   anonymous access must not retrieve the private manifest or blobs. Stop on a
+   mismatch or unexpected visibility, without enrolling or deploying the image.
+7. Present the actual registry-qualified digest and new evidence for image enrollment.
+   Do not fill the local approved-image record with the historical CI config/image
+   identifier or invent a registry digest before this comparison passes.
+
+Digest-preserving copy semantics are documented in the upstream
+[Skopeo copy manual](https://github.com/containers/skopeo/blob/main/docs/skopeo-copy.1.md).
+No publication workflow with write permissions is installed or dispatched here;
+its exact source and permission changes need review before that approval is used.
 
 Railway GHCR pulls require separately installed read:packages credentials and
 the supported plan. Private registry support requires Pro; recheck the actual
@@ -94,6 +202,13 @@ flag can substitute an image reference. Offline tests use synthetic references,
 not published or approved images. Actual registry pull and Railway product-plan
 compatibility remain unverified until their separately approved steps.
 
+Frontend/API/worker publication is not included in the PostgreSQL package proposal.
+Their current IaC builds from GitHub main rather than pulling retained CI artifacts.
+Before deployment, freeze the approved source revision and disable automatic
+redeployments. Review build costs and resulting image evidence; these are not proven
+byte-identical to previous CI images. If the operator requires immutable registry
+images for every service, approve those additional packages/publications separately.
+
 ## Exact proposed rehearsal and cost boundary
 
 - Workspace: Daniel 's Projects, `e319f68a-9897-49ed-b119-743f1f846aa0`.
@@ -117,6 +232,29 @@ compatibility remain unverified until their separately approved steps.
   publishing remain disabled. Test credentials expire no later than session end;
   agent activation remains a separate approval and is outside this rehearsal.
 
+Proposed initial resource ceilings, not yet installed or validated under load:
+
+| Service | Replicas | RAM ceiling target | CPU ceiling target |
+| --- | --- | --- | --- |
+| Next.js frontend | 1 | 512 MiB | 0.5 vCPU |
+| Rust API | 1 | 256 MiB | 0.25 vCPU |
+| Disabled worker | 1 | 128 MiB | 0.125 vCPU |
+| PostgreSQL | 1 | 512 MiB | 0.5 vCPU |
+
+These total 1,408 MiB and 1.375 vCPU. Confirm Railway accepts the exact granularities
+and that startup fits; do not silently round limits upward or enlarge them after
+OOM failures. The current IaC does not set these numeric ceilings. Include their
+exact supported provider settings in the resource plan before provisioning approval.
+An inability to enforce the proposed settings is a review boundary. There is no
+autoscaling or second replica in the proposal. A smaller 1 GB synthetic-only volume
+may be selected instead of the earlier 5 GB proposal if the operator approves it and
+the actual database sizing fits; neither volume has been created.
+
+For browser access, choose either a separately approved access-controlled HTTPS
+frontend origin or an approved private access mechanism. A password-gated public
+HTTPS origin is not a network-private endpoint. API, worker and PostgreSQL receive
+no public domains or TCP proxies. Do not create a frontend domain by implication.
+
 Proposed maximum duration is six hours, incremental spending policy $1, with an
 operator check at launch, hourly and at shutdown. These exported IaC policy values
 are not a Railway TTL or a provider-enforced per-service spending cap. Nominate a
@@ -137,6 +275,31 @@ unrelated usage, registry and build charges remain uncertain. Allocation is not
 measured consumption; do not enforce untested low memory caps that cause OOM loops.
 Full-month continuous operation is outside the proposed authorization. Do not
 raise the shared limit or claim the forecast is guaranteed.
+
+At the proposed aggregate resource ceilings, using decimal-GB RAM billing and a
+30-day arithmetic month, six-hour compute is roughly $0.35; this is not a measured
+provider charge or account hard cap. A 1 GB retained volume adds approximately
+$0.15/month; the earlier 5 GB option adds $0.75/month. Up to 1 GB of service egress
+adds $0.05. Under average-use assumptions above, six-hour compute remains roughly
+$0.07–0.16. Together these support a short-session $1 monitoring envelope, but build
+costs, package storage/transfer, startup peaks, taxes, billing delay and unrelated
+workspace consumption are not independently bounded by it. Registry/GitHub charges
+need their own approval and must not be silently shifted into or outside the policy.
+Retaining 5 GB for a full month plus ceiling-level compute and egress exceeds $1;
+approve a specific volume size/retention deadline or do not start. No automatic
+volume deletion is authorized. Recheck $6.38 forecast headroom before launch and
+leave a safety margin; the shared $40 limit can interrupt unrelated workloads.
+
+Record a named shutdown operator, an independent deadline reminder and a fallback
+operator before launch. At shutdown: close frontend access and prevent new requests;
+stop frontend, API and disabled worker; confirm no outstanding connections; stop
+PostgreSQL gracefully; verify all four deployment processes stopped, no replacement
+deployment is pending and automatic redeploys remain disabled. Preserve the volume,
+record final usage/status and revoke only the rehearsal's credentials through the
+approved mechanism. Database-resident tokens may require revocation before the
+database is stopped. Never use an environment-wide delete, remove unrelated services
+or mistake worker enabled=false for zero compute usage. Any later restart is a new
+session requiring approval, not a continuation or an automatic retry.
 
 ## Synthetic-only recovery decision
 
@@ -163,16 +326,38 @@ $0.004048 and $0.003536 are not modified, imported, refunded or settled.
 
 ## Required separate decisions
 
-1. Approve code push and exactly one focused validation run.
-2. Review its actual scan/runtime evidence and residual findings.
-3. Approve private registry destination/publication and read-only Railway pull
-   credential provisioning; verify artifact digest and private visibility.
-4. Approve the exact existing-project additive resource plan, six-hour/$1 policy,
-   monitoring/shutdown responsibility, synthetic credentials, isolated schema-only
-   migration administration, volume retention and authenticated frontend access.
-5. Separately authorize deployment. No paid inference or agent execution is included.
+1. **Residual-risk acceptance:** approve the bounded wording above with exact evidence,
+   eventual artifact identities and the synthetic-only recovery exception. This grants
+   no operational permission and expires at session shutdown.
+2. **Registry publication:** approve only the named private PostgreSQL package,
+   fresh canonical build/scan/runtime validation necessitated by lost CI artifacts,
+   reviewed publisher workflow/permissions, package charges and exact artifact copy.
+   Require digest/visibility verification. It grants no Railway pull credentials or
+   service creation. A code push/CI dispatch needs explicit scope if required.
+3. **Railway pull authentication:** separately approve creating/installing a scoped,
+   expiry-bound read:packages credential with access to that package. An owner uses
+   a private credential channel, not chat. Confirm Pro support without an automatic
+   upgrade, private by-digest pull and revocation plan. No S3/application/model token
+   reuse, broad write/delete scope, resource creation or deployment is included.
+4. **Resource provisioning:** approve the additive plan in the exact existing project
+   and staging environment, the four services, numeric resource settings, volume
+   capacity/retention, fresh synthetic roles/credentials, schema-only migrations and
+   access mechanism. No local dump imports, primary operations or resource deletion.
+   If provider provisioning starts deployments automatically, stop: that combined
+   operation also requires decision 5 before execution, not an inferred approval.
+5. **Six-hour deployment and shutdown:** approve exact source/image identities,
+   session start/deadline, $1 incremental monitoring scope, nominated operators,
+   authenticated access and stopping only the newly provisioned rehearsal compute.
+   Include startup/readiness/authentication checks and emergency stop, but no agent
+   activation, paid calls, real data or financial actions. After six hours there is
+   no implied renewal. Separate volume deletion and persistent-staging/recovery
+   approval remain necessary.
+
+All five decisions remain pending. Do not combine them into a blanket authorization.
+The current request authorizes only safe preparation and local one-file commits.
 
 References: [Gosu 1.20](https://github.com/tianon/gosu/releases/tag/1.20),
+[official Go advisory](https://pkg.go.dev/vuln/GO-2026-5024),
 [Railway private registries](https://docs.railway.com/builds/private-registries),
 [GHCR authentication](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry),
 [Railway pricing](https://docs.railway.com/pricing).
