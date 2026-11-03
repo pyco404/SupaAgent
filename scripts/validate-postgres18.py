@@ -196,23 +196,25 @@ def validate(binary, library, evidence, offline=False):
         persistent.BIN = binary
         persistent.environment = lambda db='postgres': {**env, 'PGDATABASE': db}
         fingerprint = persistent.fingerprint(database)
-        schema_query = """SELECT jsonb_build_object(
-          'functions',(SELECT jsonb_agg(pg_get_functiondef(p.oid) ORDER BY n.nspname,p.proname,p.oid::regprocedure::text)
-            FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','epoch_guard')),
-          'triggers',(SELECT jsonb_agg(pg_get_triggerdef(t.oid) ORDER BY t.tgname) FROM pg_trigger t WHERE NOT t.tgisinternal),
-          'privileges',(SELECT coalesce(jsonb_agg(to_jsonb(p)-'table_catalog' ORDER BY table_schema,table_name,grantee,privilege_type),'[]')
-            FROM information_schema.table_privileges p WHERE table_schema IN ('public','epoch_guard')))"""
-        schema = sql(schema_query)
+        metadata_spec = importlib.util.spec_from_file_location('metadata', ROOT / 'scripts/postgres-metadata.py')
+        metadata = importlib.util.module_from_spec(metadata_spec)
+        metadata_spec.loader.exec_module(metadata)
+        schema = json.loads(sql(metadata.SNAPSHOT_SQL))
         dump = base / 'compat.dump'
         pg('pg_dump', '--format=custom', '--file', dump, database)
         dump.chmod(0o600)
         pg('createdb', '--template=template0', 'supa_pg18_restore_test')
         pg('pg_restore', '--single-transaction', '--exit-on-error', '--dbname', 'supa_pg18_restore_test', dump)
         assert fingerprint == persistent.fingerprint(database) == persistent.fingerprint('supa_pg18_restore_test')
-        restored = subprocess.run([str(binary / 'psql'), '-XqAt', '-v', 'ON_ERROR_STOP=1', '-c', schema_query],
+        restored = subprocess.run([str(binary / 'psql'), '-XqAt', '-v', 'ON_ERROR_STOP=1', '-c', metadata.SNAPSHOT_SQL],
                                   env={**env, 'PGDATABASE': 'supa_pg18_restore_test'}, capture_output=True,
                                   text=True, check=True).stdout.strip()
-        assert schema == restored
+        metadata.require_equal(schema, json.loads(restored), evidence)
+        print(json.dumps({'stage':'postgres18_runtime_restore_passed','migrations':len(checksums),
+                          'metadata_counts':{k:len(v) for k,v in schema.items()},
+                          'restricted_runtime':True,'crash_recovery':True,
+                          'worker_disabled_zero_cycles':True,'accounting_constraints':True,
+                          'restored_data_and_schema_equal':True}),flush=True)
         test_env = {key: env[key] for key in ('PATH', 'HOME', 'LANG') if key in env}
         test_env.update(TEST_DATABASE_URL=url('supa_pg18_suite_test'))
         # The existing cached local binaries are used; CI can set debug profiles before compilation.
@@ -226,8 +228,12 @@ def validate(binary, library, evidence, offline=False):
         with (evidence / 'rust.log').open('w') as log:
             result = subprocess.run(args + ['--', '--include-ignored'], cwd=ROOT, env=test_env,
                                     stdout=log, stderr=subprocess.STDOUT, timeout=2400)
-        assert result.returncode == 0, 'postgres18_rust_suite_failed_see_local_log'
         tests = (evidence / 'rust.log').read_text()
+        if result.returncode:
+            failed = re.findall(r'^test ([A-Za-z0-9_:]+) \.\.\. FAILED$',tests,re.MULTILINE)
+            print(json.dumps({'stage':'postgres18_rust_tests_failed','exit_code':result.returncode,
+                              'failed_tests':failed[:50]}),flush=True)
+            raise AssertionError('postgres18_rust_suite_failed_see_failed_test_names')
         passed = sum(map(int, re.findall(r'test result: ok\. (\d+) passed', tests)))
         assert passed > 100
         report = {'passed': True, 'postgres_version': version, 'migrations': checksums,
