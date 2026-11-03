@@ -28,13 +28,29 @@ def rust_failure_evidence(log):
     """Keep source locations and stable codes, never panic values or DB URLs."""
     sites = []
     for name, path, line, column in re.findall(
-            r"thread '([A-Za-z0-9_:]+)' panicked at ([A-Za-z0-9_/.-]+\.rs):(\d+):(\d+):", log):
+            r"thread '([A-Za-z0-9_:]+)'(?: \(\d+\))? panicked at ([A-Za-z0-9_/.-]+\.rs):(\d+):(\d+):", log):
         if path.startswith('crates/'):
             sites.append({'test': name, 'file': path, 'line': int(line), 'column': int(column)})
     return {'failed_tests': re.findall(r'^test ([A-Za-z0-9_:]+) \.\.\. FAILED$', log, re.MULTILINE)[:50],
             'panic_sites': sites[:50],
             'sqlstates': sorted(set(re.findall(r'code: "([0-9A-Z]{5})"',log))),
             'compiler_codes': sorted(set(re.findall(r'error\[(E\d{4})\]',log)))}
+
+
+def rust_test_results(log):
+    """Retain every individual outcome, not captured test prose or secrets."""
+    target = 'unknown'
+    binary = 'unknown'
+    events = []
+    for line in log.splitlines():
+        running = re.search(r'Running (?:unittests )?([A-Za-z0-9_./-]+\.rs) \(([A-Za-z0-9_./-]+)\)',line)
+        if running:
+            target = running[1]
+            binary = Path(running[2]).name
+        outcome = re.fullmatch(r'test ([A-Za-z0-9_:]+) \.\.\. (ok|FAILED|ignored)(?:,.*)?',line)
+        if outcome:
+            events.append({'target':target,'binary':binary,'test':outcome[1],'outcome':outcome[2]})
+    return events
 
 
 def version18(text):
@@ -256,13 +272,22 @@ def validate(binary, library, evidence, offline=False):
         for key in ('CARGO_PROFILE_DEV_DEBUG', 'CARGO_PROFILE_TEST_DEBUG', 'CARGO_INCREMENTAL'):
             if key in os.environ:
                 test_env[key] = os.environ[key]
-        args = ['cargo', 'test', '--workspace', '--locked', '--exclude', 'supa-migration-admin']
+        args = ['cargo', 'test', '--workspace', '--locked', '--no-fail-fast', '--exclude', 'supa-migration-admin']
         if offline:
             args.append('--offline')
         with (evidence / 'rust.log').open('w') as log:
-            result = subprocess.run(args + ['--', '--include-ignored'], cwd=ROOT, env=test_env,
-                                    stdout=log, stderr=subprocess.STDOUT, timeout=2400)
+            try:
+                result = subprocess.run(args + ['--', '--include-ignored'], cwd=ROOT, env=test_env,
+                                        stdout=log, stderr=subprocess.STDOUT, timeout=2400)
+            except subprocess.TimeoutExpired:
+                # Preserve the completed individual outcomes even on timeout.
+                result = subprocess.CompletedProcess(args,124)
+                print(json.dumps({'stage':'rust_suite_timeout','timeout_seconds':2400}),flush=True)
         tests = (evidence / 'rust.log').read_text()
+        outcomes = rust_test_results(tests)
+        (evidence/'rust-results.json').write_text(json.dumps(outcomes,indent=2)+'\n')
+        for outcome in outcomes:
+            print(json.dumps({'stage':'rust_test_result',**outcome}),flush=True)
         if result.returncode:
             print(json.dumps({'stage':'postgres18_rust_tests_failed','exit_code':result.returncode,
                               **rust_failure_evidence(tests)}),flush=True)
