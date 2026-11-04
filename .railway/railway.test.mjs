@@ -22,9 +22,11 @@ const api = resources.find(r=>r.name === 'supa-api');
 const worker = resources.find(r=>r.name === 'supa-worker');
 const frontend = resources.find(r=>r.name === 'supa-web');
 
-test('official SDK validates four compute resources and one explicit persistent volume', () => {
+test('official SDK validates three running replicas, a dormant worker and explicit storage', () => {
   assert.equal(resources.length, 5);
   assert.equal(resources.find(r=>r.type === 'database').engine, 'postgres');
+  assert.equal(resources.filter(r=>r.type==='service' || r.type==='database')
+    .reduce((sum,r)=>sum+(r.type==='database'?1:r.deploy.numReplicas),0),3);
   assert.deepEqual(validateGraph({ version:RAILWAY_GRAPH_VERSION, resources, edges:[] }), []);
 });
 test('reviewed actual configuration pins the image while deployment and unverified replica caps remain unauthorized', async () => {
@@ -39,6 +41,7 @@ test('reviewed actual configuration pins the image while deployment and unverifi
   assert.equal(stagingSession.incrementalBudgetUSD,1);
   assert.equal(stagingSession.syntheticDataOnly,true);
   assert.equal(stagingSession.deploymentAuthorized,false);
+  assert.equal(stagingSession.applicationRevision,'bfc29f500af08e0e2cc4676b8950b5b17f26007a');
 });
 test('image review rejects tags, other repositories, missing evidence and findings', () => {
   assert.equal(reviewedPostgresImage(imageFixture),imageFixture.reference);
@@ -63,7 +66,7 @@ test('all application source, Dockerfiles, ports and private network boundaries 
     assert.equal(resource.source.branch, 'main');
     assert.equal(resource.build.builder, 'DOCKERFILE');
     assert.ok(existsSync(new URL('../'+resource.build.dockerfilePath, import.meta.url)));
-    assert.equal(resource.deploy.numReplicas, 1);
+    assert.equal(resource.deploy.numReplicas, resource === worker ? 0 : 1);
     assert.ok(resource.deploy.healthcheckPath);
   }
   for (const resource of resources) {
@@ -75,6 +78,9 @@ test('all application source, Dockerfiles, ports and private network boundaries 
   assert.equal(worker.variables.PORT.value, '8081');
 });
 test('worker remains disabled and offline; API scheduler and wallets remain disabled', () => {
+  assert.equal(stagingSession.workerReplicas,0);
+  assert.equal(worker.deploy.numReplicas,0);
+  assert.deepEqual(worker.deploy.multiRegionConfig,{'europe-west4-drams3a':{numReplicas:0}});
   assert.equal(worker.variables.SUPA_WORKER_ENABLED.value, 'false');
   for(const resource of [api,worker]) {
     assert.equal(resource.variables.SUPA_PROVIDER.value, 'offline');
