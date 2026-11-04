@@ -339,3 +339,127 @@ responsibility or independent safeguard; read-only GHCR PAT creation/installatio
 fresh synthetic identity/runtime/migration credentials; exact provisioning and
 authenticated hostname/source-freeze settings; six-hour deployment/monitoring/stop;
 and final volume/resource cleanup. No authorization is combined or assumed.
+
+## Financial feasibility decision — three-service alternative
+
+**NO-GO for the six-hour $1 policy with the evidence currently available.** This
+does not establish a $4 minimum bill: consumption billing and the meaning of the
+plan's minimum-cap fields are separate questions. The frozen application revision
+remains `bfc29f500af08e0e2cc4676b8950b5b17f26007a`.
+
+### What is confirmed, and what is not
+
+The fresh read-only Pro entitlement still reports `minReplicaCpu=4` and
+`minReplicaMemoryBytes=4000000000`. These are plan metadata, not measurements or
+proof of reserved/charged service allocations. The API describes
+`serviceInstanceLimits` as merged limits including plan defaults. Its update input
+accepts Float CPU and decimal-GB memory values, but its schema supplies no lower
+bounds. A Float type is not proof that every positive fraction will be accepted.
+Official documentation establishes actual-consumption billing and hard maximum
+resource limits; it does not explain these exact minimum fields. Inspection of
+publicly served dashboard modules did not establish authoritative minimum-cap
+validation. No settings mutation was used as a probe.
+
+Therefore the proposed frontend 512 MiB/0.5 vCPU, API 256 MiB/0.25 vCPU, PostgreSQL
+512 MiB/0.5 vCPU and optional worker 128 MiB/0.125 vCPU remain **unconfirmed caps**.
+The 24 GB/24 vCPU per-replica default ceiling is confirmed in live metadata and the
+[official right-sizing guide](https://railway.com/guides/right-size-cpu-memory).
+Neither successful startup nor peak consumption at the small targets has been
+measured. Do not describe any of them as a supported, stable deployed configuration.
+
+### Worker treatment
+
+The cheaper alternative is one frontend, one restricted API, one private PostgreSQL
+instance and **zero running worker replicas**. The
+[official scale command](https://docs.railway.com/cli/scale) accepts non-negative
+replica counts and explicitly supports removing all replicas from a region with
+`REGION=0`. This differs from a running process with `SUPA_WORKER_ENABLED=false`,
+which still consumes memory and maintains health heartbeats.
+
+Source inspection confirms frontend/API startup does not call the worker's health
+endpoint. API scheduling remains false; no scheduler cycles or agent activation
+are included. The operator UI must show the worker absent/stopped, not healthy.
+Initial rehearsal coverage would exclude Railway worker startup/heartbeat tests;
+retain their prior CI evidence without claiming they ran on Railway. Keep the
+worker definition dormant with zero in **every** region, or omit its provisioning
+until separately approved. No worker was provisioned or scaled. The current IaC
+still declares one worker replica; it must not be applied unchanged for this
+alternative. A zero-replica alternative requires its own reviewed configuration.
+
+### Six-hour costs, with explicit assumptions
+
+Fresh workspace usage is **$18.428253594249323**, forecast **$33.57914204794395**,
+unchanged hard limit **$40**, forecast headroom **$6.42085795205605**.
+The compute hard limit remains workspace-wide and includes unrelated projects.
+
+Use `360 * (GB_RAM * 0.000231 + vCPU * 0.000463)` for six-hour compute,
+plus used-volume GB-minutes and $0.05 per GB egress. The clock begins with the first
+billable rehearsal workload; startup is included, not an additional free interval.
+
+| Three running services, worker at zero | Six-hour compute | With 1 GB used volume and 1 GB egress |
+| --- | ---: | ---: |
+| Earlier small caps, only if accepted and stable | $0.319965 | $0.371215 |
+| 4 GB/4 vCPU each, sustained usage scenario | $2.998080 | $3.049330 |
+| Confirmed 24 GB/24 vCPU default ceilings, sustained | $17.988480 | $18.039730 |
+
+The table is not a predicted consumption range or an enforced spend cap. The
+first row is conditional; the second is not a minimum charge; the third bounds
+compute only for three replicas over exactly six hours at those default ceilings.
+Public traffic/egress is not capped by these assumptions. Private API/database
+networking avoids inter-service public egress. Service builds have no Railway
+build-resource charge; independent watchdog hosting/CI costs need separate review.
+An allocated 1-GB volume with up to 1 GB used adds $0.00125 for six hours; its
+acceptance must be confirmed before provisioning. Retained used storage continues
+at approximately $0.15/GB per 30-day month after compute shutdown.
+
+Replica maxima, zero worker replicas, private networking, limited authenticated
+traffic and prompt shutdown meaningfully reduce costs. They do not enforce a
+$1 session allowance. [Usage-limit documentation](https://docs.railway.com/cli/usage)
+specifies whole-dollar workspace hard limits from $10, not project/session limits;
+soft alerts do not stop workloads. Lowering the existing shared limit would affect
+unrelated services and is not proposed. Serverless is not a fixed deadline: database
+connections/polling can prevent sleep and incoming requests can wake services.
+
+### Shutdown without a second administrator
+
+Retain the authenticated owner as proposed primary and obtain explicit availability
+for the window. No independently verified second operator is currently available.
+Before reconsidering GO, require a separately approved deadline watchdog on a
+trusted runner independent of the owner's Ubuntu machine and of these Railway
+workloads. A manually dispatched private-infrastructure CI job is a candidate, not
+an already configured safeguard. Confirm runner availability, maximum job duration
+and incremental hosting/Actions charges before choosing it; delayed cron alone is
+not a reliable six-hour cutoff.
+
+The watchdog must be armed and observable **before** any billable workload starts,
+bind one absolute deadline and exact project/environment/service IDs, and initiate
+shutdown early (proposed T0+5h30m, leaving recovery time before six hours). Use a
+separately approved environment-scoped project token; it has broader authority than
+stop-only and needs explicit acceptance. Cancel queued/building deployments, stop
+all active deployments, remove worker replicas and verify no replacement compute
+appears. Disable automatic source/image deployments through separately approved
+settings. Signal success only after read-back verifies stopped state, and alert the
+primary on any failure. No token, CI job, timer or setting was created. Volume
+deletion remains a separate action and is not part of watchdog authority.
+
+### Exact approvals and missing evidence
+
+1. Obtain authoritative Railway confirmation of the minimum allowed CPU/RAM maxima
+   for this Pro workspace, whether the four small targets above are accepted, their
+   units/enforcement and whether a 1000-MB volume is accepted. Ask specifically
+   whether `minReplicaCpu`/`minReplicaMemoryBytes` constrain configurable ceilings.
+   No support message has been sent. If a mutating probe is the only way to verify
+   acceptance, it needs separate approval; it is not covered by this review.
+2. Approve a revised three-running-service/zero-worker graph, supported limits,
+   authenticated traffic allowance, monitoring triggers and total cost envelope.
+   If the supported minimum ceilings prevent a sufficiently bounded $1 run, retain
+   NO-GO or separately review a shorter session; do not silently raise the budget.
+3. Approve and test independent watchdog credentials, trusted runner, costs and
+   exact stop/cancel/scale authority; confirm primary operator availability.
+4. Only then consider separate GHCR pull/runtime credential setup, synthetic-only
+   provisioning, frozen-source builds, deployment and final storage cleanup.
+
+No resources, credentials, DNS, limits or runtime state changed in this feasibility
+review. No paid inference or primary-database operation occurred. Only read-only
+queries, source/documentation inspection and local cost arithmetic were needed;
+the prior functional test results are unchanged.
