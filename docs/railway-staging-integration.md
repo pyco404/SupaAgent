@@ -1,10 +1,133 @@
 # Railway staging integration review — 4 November 2026
 
-Preparation only. **NO-GO for provisioning/deployment under the current $1
-incremental monitoring policy until replica-limit and shutdown prerequisites are
-resolved.** No Railway resource, variable, credential, domain or billing limit was
+Preparation only. **NO-GO to execute now; recommend a separately approved ten-minute
+smoke test instead of the six-hour rehearsal.** This support-free proposal and its
+approvals below supersede the earlier six-hour decision. No Railway resource,
+variable, credential, domain or billing limit was
 changed. The protected primary PostgreSQL remains stopped and historical accounting
 holds remain untouched.
+
+## Current decision — support-free smoke test
+
+Do not contact Railway Support. The frozen application remains
+`bfc29f500af08e0e2cc4676b8950b5b17f26007a`; this is infrastructure preparation only.
+One frontend, one restricted API and one PostgreSQL replica remain the proposed
+running stack; the worker is zero globally and in Amsterdam. Keep the verified
+private PostgreSQL digest below, synthetic data, private API/database networking,
+authenticated frontend and all paid/financial/publishing operations disabled.
+
+### What can be validated without provisioning
+
+The installed CLI 5.71.0's documented
+[`railway config plan`](https://docs.railway.com/cli/config) previews changes without
+applying them. A temporary proposal with exact binary-byte RAM limits and CPU
+ceilings (frontend 536870912/0.5, API 268435456/0.25, PostgreSQL 536870912/0.5)
+passed the read-only graph/diff preview with no diagnostics. It did not provision
+anything, call the resource-update mutation or prove runtime enforcement/stability.
+No documented resource-free server-side acceptance/enforcement test was established.
+The exact small maxima and minimum-field semantics remain unverified, but no longer
+need to block proposing a short test at the confirmed default ceilings.
+
+The initial preview revealed a real safety defect: the whole-project graph omitted
+the existing bucket and proposed deleting it. Nothing was applied. The IaC now
+includes the existing `supa-agent-backups` bucket in `ams`; preservation has a focused
+regression. The corrected read-only preview succeeded with zero destructive changes
+and no diagnostics, preserving the bucket, 1000-MB volume request and zero worker
+replicas in the rendered graph. Do not use the earlier destructive preview as an
+apply artifact. Temporary proposal files were removed; original variables were not
+decrypted and
+no CLI link, credential or remote setting was changed. The SDK initially mistook
+the parent Python executable for the CLI via `_`; the preview was corrected by
+pointing that process-local executable hint at the genuine installed CLI, not by
+spoofing a version or bypassing its compatibility check.
+
+### Proposed single attempt and cost scenarios
+
+Prepare a **10-minute** smoke scope, starting at the first billable resource
+(including volume allocation), not the first successful health check:
+begin shutdown at minute 5, target verified stopped compute by minute 10, and allow
+only emergency cleanup through minute 15. The emergency authority is not permission
+to operate for 15 minutes normally. If startup/builds are incomplete at minute 5,
+cancel them and retain diagnostics; do not extend or automatically retry the test.
+Cold builds may consume the useful window, so this is a technical startup probe,
+not a promised full browser journey. Railway builds have no separate build charge;
+any already running database/application is still billed during other builds.
+Approve no automatic source/image updates, PR previews or overlapping rollout.
+
+Use the confirmed Pro default 24-GB/24-vCPU per-replica ceilings for conservative
+arithmetic rather than assuming the small settings are enforceable:
+
+| Scenario: three replicas, worker zero | Compute | With 1 GB used storage + 1 GB egress |
+| --- | ---: | ---: |
+| 10 minutes at proposed small caps, conditional | $0.008888 | $0.058923 |
+| 10 minutes at confirmed default ceilings | $0.499680 | $0.549715 |
+| 15 minutes at confirmed default ceilings, emergency scenario | $0.749520 | $0.799572 |
+| Six hours at confirmed default ceilings | $17.988480 | $18.039730 |
+
+These are rate scenarios, **not an enforced $1 cap or measured usage predictions**.
+The default-ceiling calculation assumes exactly three replicas, no overlap and
+shutdown within the stated time. Egress and stored-byte allowances are not platform
+caps. Keep traffic controlled and record actual volume allocation/used bytes before
+approval; never silently substitute a larger retained volume. Independent runner/CI
+charges need review and must not be assumed free. API outages or a lost watchdog can
+extend billing. Storage survives compute shutdown and needs a separately approved
+retention/deletion decision. The existing shared $40 limit is not changed.
+
+One candidate independent host is a manually dispatched job in the existing private
+infrastructure repository, on a standard Linux 2-core runner with a proposed
+20-minute job timeout. GitHub's [current runner pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing)
+is $0.006/minute: budget $0.12 for 20 billable minutes without assuming any remaining
+included allowance. Rounding, setup/cleanup overhead, evidence storage, notifier
+hosting and any private-registry transfer charges still need review. Such a runner
+must be running and armed before T0; queued/cron-only execution is not adequate.
+No workflow was created, pushed or dispatched. This proposes an independently hosted
+shutdown controller, not a move of Supa Agent off Railway.
+
+Latest read-only workspace usage: **$18.483313516963086**, forecast
+**$33.57650728003991**, forecast headroom **$6.42349271996009** below $40.
+Recheck immediately before any paid resource approval. The $1 amount stays an
+incremental monitoring/approval policy, not a project hard limit.
+
+### Shutdown and failure-alert verification
+
+`scripts/railway-shutdown.py` now accepts a separate **version 2** manifest with
+`profile: "smoke-10m"`, T0+300 shutdown and T0+600 deadline. Version 1 six-hour
+scopes retain their original rules; no existing approved scope is renewed or
+converted. A smoke scope gets its own exact-byte SHA-256, service inventory and
+human approval. No real scope timestamps/service IDs have been fabricated.
+
+The protected runner now requires a **distinct** owner-only `--failure-alert-file`
+in addition to its private audit file. On failure it writes a durable, sanitized
+operator-alert record, emits structured stderr, emits an error annotation under
+GitHub Actions and exits nonzero. The host must connect that interface to an
+approved notifier; no email, webhook, external recipient or schedule is configured
+or contacted here. An isolated local child process was actually terminated with
+SIGTERM and produced the expected record/annotation/nonzero exit. Tests also cover
+interruptions, API/auth failures, missing/broken alert storage, disk errors, secret
+exclusion and absence of false alerts on verified success. All **31** synthetic
+watchdog tests and **14** IaC tests passed, with the focused TypeScript check.
+
+SIGKILL, runner loss and loss of all notification channels cannot be handled by the
+dying process. The independently hosted runner therefore needs an external job-loss
+monitor, tested human alert delivery and an available primary operator before launch.
+No independent runner has been installed or armed. Cleanup never deletes the backup
+bucket or volume automatically; no financial/provider operations are implemented.
+
+### One deployment decision and separate approvals
+
+**NO-GO to provision or deploy now.** The recommended next review is one ten-minute,
+synthetic-only smoke attempt using known default ceilings, without waiting for support.
+Remaining approvals are:
+
+1. Exact three-service/zero-worker smoke plan and one attempt, acceptance of monitored
+   spending/egress/shutdown risk, and the volume's confirmed allocation/retention.
+2. An independent trusted runner, its assessed costs, scoped shutdown credentials,
+   failure notifier/job-loss monitor and tested primary-operator alert coverage.
+3. Private GHCR pull credentials and separate synthetic runtime/migration accounts;
+   an authenticated temporary Railway hostname, with no official-domain DNS change.
+4. Additive provisioning, exact frozen-source builds, the actual service IDs/start
+   time and smoke-scope digest, deployment and arming; then separately scoped cleanup.
+5. Any source push or CI dispatch. Neither is authorized or performed in this review.
 
 ## Verified target and image
 
@@ -523,7 +646,8 @@ The protected future action, **not authorized or executed here**, is:
 python3 scripts/railway-shutdown.py run \
   --scope /PRIVATE/PATH/rehearsal-scope.json \
   --scope-sha256 REVIEWED_SHA256 --authorize-shutdown \
-  --audit-file /PRIVATE/PATH/shutdown-audit.jsonl
+  --audit-file /PRIVATE/PATH/shutdown-audit.jsonl \
+  --failure-alert-file /PRIVATE/PATH/shutdown-alerts.jsonl
 ```
 
 It reads only an explicitly installed `SUPA_SHUTDOWN_PROJECT_TOKEN`, never local
