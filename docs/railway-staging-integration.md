@@ -223,3 +223,119 @@ or startup. That fixture was not restarted. This is an unavailable local runtime
 check, not new container-execution evidence. The prior successful CI validation is
 preserved. Live Railway startup, custom resource-limit acceptance and end-to-end
 shutdown remain unperformed pending separate approval.
+
+## GO/NO-GO follow-up after authorized source synchronization
+
+The five approved commits were pushed without rewriting history. Remote main was
+independently checked at `bfc29f500af08e0e2cc4676b8950b5b17f26007a`.
+The pre-push audit passed all 1,574 commits and the targeted secrets scan found no
+matches. This follow-up is a separate local documentation commit, not authorization
+to push additional changes or run CI.
+
+### Resource and cost findings
+
+Official [replica-limit documentation](https://docs.railway.com/pricing/cost-control)
+describes CPU/RAM limits as maximum resources available to each replica, rather
+than advisory requests or reserved billable allocations. Exceeding available
+memory can crash the application. The live workspace entitlement still reports
+`minReplicaCpu: 4` and `minReplicaMemoryBytes: 4000000000`; its scalar has no schema
+description explaining the minimums. Neither public documentation nor read-only
+schema inspection establishes acceptance of the earlier 0.125–0.5 vCPU and
+128–512 MiB values. No mutation was used to test them. Their acceptance and
+workload stability remain unresolved; do not approve the $0.403 estimate as a bound.
+
+The refreshed read-only usage query succeeded after a transient DNS failure:
+current usage **$18.41912976945389**, forecast **$33.57974022494188**, unchanged hard
+limit **$40**, current headroom **$21.58087023054611**, forecast headroom
+**$6.42025977505812**. The earlier conditional compute scenarios remain valid:
+small targets approximately $0.352, four sustained 4-GB/4-vCPU replicas $3.99744,
+and the four default 24-GB/24-vCPU maxima $23.98464, all for six hours.
+The latter two are scenarios, not minimum charges. Costs remain insufficiently
+bounded for the $1 monitoring policy, despite adequate headroom for a low-usage run.
+
+[Volume documentation](https://docs.railway.com/volumes/reference) clarifies billing
+is for used bytes, including approximately 2–3% filesystem metadata, not the whole
+allocated capacity. The Pro default allocation is 50 GB; paid volumes can grow but
+cannot shrink. The explicit 1000-MB authoring request remains subject to provider
+plan confirmation. At most 1 GB used costs about $0.00125 for six hours or $0.15
+for 30 days. A default 50-GB empty volume can already use roughly 1–1.5 GB of
+metadata. Stopping compute does not delete storage; do not silently accept the
+default or claim immediate elimination of all charges on deployment removal.
+
+### Frozen application source and authenticated access
+
+The intended application SHA is exactly
+`bfc29f500af08e0e2cc4676b8950b5b17f26007a`, independently of subsequent documentation
+commits. Frontend, API and worker must use that revision; automatic source/image
+updates must be disabled by separate approval. The authoring graph's `main` source
+is not an immutable pin. Before launch, the approved deployment procedure must
+select this revision and prove the resulting deployment source matches it; stop
+if the chosen Railway deployment method cannot do that. No live source setting was
+changed here.
+
+The successful full-stack CI at
+[run 41679768139](https://github.com/pyco404/SupaAgent/actions/runs/41679768139)
+used `d43289535d80a864a3f9f132cdb4b42be77a6f2e`. Rust crates, migrations, dependency
+locks, API/worker Dockerfiles, frontend auth/proxy and application contracts have
+not changed since that run. The subsequent frontend changes are official-domain
+metadata and links. Thus existing runtime compatibility evidence remains relevant,
+but it does not certify new image bytes. The current GitHub-source proposal needs
+three fresh application builds and startup checks at the frozen revision; do not
+rebuild PostgreSQL. Railway service builds have no separate build-resource charge
+under [current pricing](https://docs.railway.com/pricing/plans); running workloads,
+storage and egress still consume the rehearsal envelope. No build was dispatched.
+
+The existing frontend staging proxy rejects unauthenticated pages and API requests,
+enforces the configured HTTPS origin/host and maps each named operator to a distinct
+server-side Rust credential. Staging visitor credentials cannot become operator
+credentials. Only minimal `/healthz` is intentionally unauthenticated; static bundles
+contain no private records. An eventual Railway-generated HTTPS hostname can be
+used without touching trysupaagent.xyz DNS, but hostname creation and matching
+`SUPA_SITE_ORIGIN`/credential installation require separate approval. Keep API and
+PostgreSQL private. Ten network-free assertions against the actual auth/proxy modules
+passed using synthetic credentials: missing authentication, visitor/operator
+separation, cross-origin rejection and missing-origin fail-closed behavior. All 13
+Railway authoring tests also passed. No new live browser/container claim is made.
+
+### Operators, automatic safeguard and cleanup
+
+Read-only workspace membership shows exactly one member, the authenticated current
+user, with ADMIN role. Propose this workspace owner as primary shutdown operator;
+explicit availability/acceptance for the launch window remains pending. No separate
+authorized workspace member is currently available as backup. Do not invent a backup
+or invite/grant access automatically.
+
+An independently hosted deadline watchdog is technically feasible using Railway's
+supported deployment APIs, but no built-in six-hour TTL for ordinary services was
+established. A separately approved implementation would need an absolute deadline,
+the exact four service IDs/project/environment allowlist, an environment-scoped
+project token held by a separate trusted runner, and stop/cancel-state verification.
+Project credentials are broader than a stop-only capability; disclose and approve
+that scope. It must not delete volumes, touch the bucket or unrelated services,
+restart workloads or infer success after an API failure. A local laptop timer is
+not independent protection against loss of that laptop or its network. GitHub cron
+can be delayed and is not a strict deadline guarantee. No timer, token, workflow or
+schedule was created. Without a verified backup operator or separately approved,
+tested independent safeguard, shutdown responsibility remains NO-GO.
+
+Live read-only schema inspection confirms `deploymentStop(id: String!): Boolean!`
+and deployment cancellation support. Prefer stopping compute explicitly and retaining
+its audit history; list every service's deployments and cancel every pending build
+or queued replacement as well. Do not confuse history removal with proof of stopped
+compute. The [deployment API](https://docs.railway.com/integrations/api/manage-deployments)
+documents stop/cancel operations. No stop or cancellation mutation was executed.
+Begin by T0+5h50m and verify no running or pending deployment remains by T0+6h.
+
+Inventory volumes/backups after compute shutdown and separately approve deletion
+of only the disposable rehearsal volume/resources. Volume deletion has a documented
+48-hour recovery window; check residual inventory and delayed usage rather than
+promising immediate zero charges. Preserve the existing independent-backup bucket.
+Its presence still does not establish encrypted recovery; sensitive state remains
+prohibited until key verification, off-machine recovery storage, encrypted upload
+and disposable restoration are complete.
+
+Separate approvals remain: supported resource/cost envelope; named shutdown
+responsibility or independent safeguard; read-only GHCR PAT creation/installation;
+fresh synthetic identity/runtime/migration credentials; exact provisioning and
+authenticated hostname/source-freeze settings; six-hour deployment/monitoring/stop;
+and final volume/resource cleanup. No authorization is combined or assumed.
