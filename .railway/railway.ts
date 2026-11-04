@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { database, defineRailway, github, project, service, volume, type RailwayContext } from "railway/iac";
+import { bucket, database, defineRailway, github, project, service, volume, type RailwayContext } from "railway/iac";
 
 export const stagingSession = Object.freeze({
   projectId: "99648d2a-69a1-4d8c-98d0-7f2a26543c9c",
@@ -58,6 +58,8 @@ export function stagingDefinition(ctx: RailwayContext, imageApproval: unknown) {
     region, output: "DATABASE_URL", defaultMountPath: "/var/lib/postgresql/data",
   });
   const storage = volume("supa-postgres-data", { sizeMB: stagingSession.proposedVolumeSizeMB, region });
+  // Whole-project plans must retain this existing independent-backup resource.
+  const backups = bucket("supa-agent-backups", { region: "ams" });
   db.volumeAttachments = { data: { volume: storage.address,
     mountPath: "/var/lib/postgresql/data", backupSchedules: [], volumeConfig: storage.config } };
   db.deploy = { ...db.deploy, drainingSeconds: 120, requiredMountPath: "/var/lib/postgresql/data" };
@@ -124,7 +126,7 @@ export function stagingDefinition(ctx: RailwayContext, imageApproval: unknown) {
   });
   // Authoring label only: bind to the existing project/environment IDs before
   // an approved plan. Never apply with an unreviewed delete/resource inventory.
-  return project("Supa Agent", { resources: [db, api, worker, frontend, storage] });
+  return project("Supa Agent", { resources: [db, api, worker, frontend, storage, backups] });
 }
 
 export default defineRailway((ctx) => stagingDefinition(ctx, JSON.parse(
