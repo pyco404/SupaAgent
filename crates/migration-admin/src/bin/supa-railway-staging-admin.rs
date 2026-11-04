@@ -25,7 +25,7 @@ const HOST: &str = "supa-postgres.railway.internal";
 const ADMIN: &str = "supa_staging_admin";
 const MIGRATOR: &str = "supa_staging_migration";
 const RUNTIME: &str = "supa_staging_runtime";
-const CERT: &str = "/var/lib/postgresql/data/supa-tls/server.crt";
+const CERT: &str = "/var/lib/postgresql/data/supa-tls/ca.crt";
 static MIGRATIONS: Migrator = sqlx::migrate!("../../migrations");
 const CHECKSUMS: &[(i64, &str)] = &[
     (
