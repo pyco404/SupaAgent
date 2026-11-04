@@ -1,4 +1,100 @@
-# Normal Railway staging — current plan, 4 November 2026
+# Normal Railway staging — current plan, 5 November 2026
+
+## First Rust API deployment prerequisites — 5 November 2026 (WAT)
+
+**Configuration/TLS: ready. API image: pending. Deployment: NO-GO until artifact
+validation/publication and explicit deployment approval.** No API/frontend workload,
+DNS change, image build/scan/publication or protected-database operation was started
+in this preparation. The six existing unpublished application commits are preserved.
+
+### Artifact recovery and one prepared build
+
+Private run `41892549731`, artifact `13353244312`, retains seven JSON/text report
+files (approximately 34 KB compressed), **no image archive**. The old API build
+configuration ID was
+`sha256:6cf3eca5ec95d391c3373973ab4ad63cbe49cb05998c592cb388c48f0d474f66`.
+Its Linux/amd64 non-root identity, frozen application revision and Dockerfile SHA-256
+were verified against the retained evidence and frozen source. That build-export
+value is also the configuration ID: do not represent it as a verified registry
+manifest or usable deployment reference. The old archive hash is evidence, not a
+recoverable image. Previously accepted findings remain 36 MEDIUM, eight LOW,
+zero HIGH/CRITICAL and zero secrets; those counts do not describe a future build.
+
+Three local one-file commits in private `pyco404/supa-agent-infra` prepare an
+API-only manual build/scan at infrastructure HEAD
+`a845015b0d5e1246bc2d371c7001220a741b8f70`. The new workflow
+`.github/workflows/api-staging-build.yml` builds **once** from frozen application
+`bfc29f500af08e0e2cc4676b8950b5b17f26007a`, uses only contents:read job-token
+permissions, checks source/runtime identity, scans all vulnerability severities
+and embedded secrets, and rejects HIGH/CRITICAL or secrets without suppression.
+It retains `validated-api-image.tar` only after gates pass, verifies the exact
+archive SHA-256 after copying, and never rebuilds for retention. Private reports
+and the exact validated archive have seven-day artifact retention. Failed gates
+retain reports/stage evidence without exporting the image. No frontend/PostgreSQL
+rebuild, registry publication, Railway access or automatic trigger/retry is present.
+
+After separate private-infrastructure push approval and registration verification,
+the proposed **single** execution is:
+
+```sh
+gh workflow run api-staging-build.yml --repo pyco404/supa-agent-infra --ref main   -f expected_source_sha=a845015b0d5e1246bc2d371c7001220a741b8f70
+```
+
+This command has **not** been run. Once it passes, review actual findings and
+separately authorize publishing the same retained archive to a private API package,
+verify its registry digest/privacy/integrity, and authorize API-service-scoped pull
+credential installation. Existing GHCR credential installation was PostgreSQL-only;
+do not silently reuse or retrieve it for the API. Do not substitute an unscanned
+Railway source build or a configuration ID for the final manifest digest.
+
+### TLS, restricted access and authentication
+
+Only `PGSSLROOTCERT` was installed into undeployed `supa-api`
+`9996e351-d7a5-482e-9f14-5f863eb9b45f`, using `skipDeploys:true` and `replace:false`.
+Its inline **public CA** fingerprint matches
+`4ce9c08b0d0ec90bcddb7aa990eb47133f73195453fe1aefb9fab37deb4de2c3`.
+Private keys were not read/exported; all other variables/settings are unchanged.
+Source remains unset and deployment count remains zero. A read-only SQLx probe
+matched the actual configured API DATABASE_URL without logging it and verified
+inline PGSSLROOTCERT, exact runtime login/database/host, TLSv1.3, hostname verification
+and all 13 migration checksums using the frozen API's SQLx URL parsing behavior.
+A separate read-only catalog comparison proves staging schema, roles/grants,
+checksums and every table row count equal the completed-bootstrap snapshot.
+
+The existing named viewer/operator credentials and private service token are present;
+named sessions remain valid until **5 November 2026, 21:30:04 WAT** (20:30:04 UTC).
+Do not silently renew them. Live HTTP acceptance is pending deployment. The frozen
+routing contract is `/ready` with minimal unauthenticated database readiness,
+`/health` requiring bearer authentication, private agent reads requiring named
+principal authorization, expired-token rejection and no data mutation via readiness.
+The synthetic fixture remains unowned; no access grant was added.
+
+API/persistence source and Dockerfile are byte-identical to the frozen revision.
+`SUPA_PRIVATE_STAGING=true` selects checksum/schema verification, not migrations;
+preDeployCommand and startCommand are unset. Runtime DDL/history/financial writes
+remain denied. Offline provider and disabled worker, scheduler, controlled work,
+paid inference and wallet flags were confirmed; provider keys are absent. No trading,
+token launch, signing or X credentials/capabilities were installed.
+
+### Limits, validation and approvals
+
+API settings: 0.25 vCPU, 268435456 bytes (256 MiB), `/ready` timeout 120 seconds,
+ON_FAILURE with three retries, private network only, no public domain/TCP proxy.
+Actual startup memory/latency and HTTP authentication must be measured during the
+separately authorized first deployment; no live API is claimed here. Existing
+PostgreSQL is the only active service. Workspace usage is **$18.85174274**, shared
+Compute hard limit **$60**, current-use headroom **$41.14825726**; this is not forecast
+headroom or a guaranteed $10–$20 monthly staging bill. No resource limits changed.
+
+Validation: 35 network-free infrastructure regressions, 44 staging contract tests,
+eight Rust diagnostic tests, Clippy, formatting, Actionlint and workflow shell syntax
+passed. No current image scan is claimed. Private evidence is in Git-ignored
+`artifacts/railway-staging-phase1/`. PostgreSQL certificate renewal remains due
+**before 3 January 2027, 22:27:52 UTC**. Protected primary PostgreSQL remains stopped,
+and historical accounting was not accessed or changed. The next approval is the
+three-commit private infrastructure push plus exactly one API-only build/scan;
+image publication/pull credentials and the private API deployment remain separately
+reviewable actions. Frontend deployment remains excluded.
 
 ## Staging database initialization verified — 4 November 2026
 
