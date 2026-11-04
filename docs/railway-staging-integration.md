@@ -1,5 +1,57 @@
 # Normal Railway staging — current plan, 4 November 2026
 
+## Staging TLS repair verified — 4 November 2026
+
+**TLS blocker resolved; bootstrap remains unexecuted.** The explicitly authorized
+repair ran only on staging service `77352ca9-435e-4870-b092-58365310c0f3`, database
+`supa_staging`, cluster `7704432314739101731`. PostgreSQL deployment
+`db546a74-4038-4536-b450-d93e78362808` and its approved image digest remain unchanged.
+The repair used a configuration reload, not a restart or new deployment. Postmaster
+start time remains 4 November 2026, 21:32:16.818595 UTC.
+
+A separate RSA-3072/SHA-256 CA and server identity were generated **inside the
+staging volume**. The CA has critical `CA:TRUE,pathlen:0` and signing-only key usage;
+the leaf has critical `CA:FALSE`, serverAuth EKU, digitalSignature/keyEncipherment,
+and SANs `supa-postgres.railway.internal` and `supa-postgres`. The server presents
+leaf plus CA. Original certificate/key and HBA/auto-configuration copies are
+retained in the owner-only volume directory
+`/var/lib/postgresql/data/supa-tls-repair-XXT6ELfp/original`; their integrity checks
+pass. Both CA and server private keys have mode 0600; TLS/recovery directories have
+mode 0700. No private key or password was exported, printed or committed.
+
+| Public certificate | SHA-256 fingerprint | Expires UTC |
+| --- | --- | --- |
+| Server leaf | `F18DC26652BB3823E4C48355DF66C7349D051735F8E692C0D73D790B9BB012DD` | 2 February 2027, 22:27:52 |
+| CA | `4CE9C08B0D0EC90BCDDB7AA990EB47133F73195453FE1AEFB9FAB37DEB4DE2C3` | 4 November 2027, 22:27:52 |
+
+Both libpq `sslmode=verify-full` and the actual Rust SQLx/rustls read-only client
+pass with `/var/lib/postgresql/data/supa-tls/ca.crt` as the trust anchor. The live
+presented leaf fingerprint matches the installed candidate; strict chain, hostname
+and server-purpose verification pass. TLS minimum is now **TLSv1.3**. TCP HBA rules
+require TLS with SCRAM-SHA-256, with explicit non-TLS rejection; Unix-socket rules
+are unchanged. Non-TLS, TLS 1.2 and incorrect-hostname connections were rejected.
+All HBA rules parse without error and the sole login has a SCRAM password verifier.
+There are still zero application tables, one original administrator login, no
+bootstrap mutation marker, no added roles/grants and no seed records.
+
+Seven Rust tests, Clippy, formatting, shell syntax, synthetic certificate-chain /
+wrong-host / wrong-chain tests and key-permission tests pass. Full private execution
+and verification receipts are in Git-ignored `artifacts/railway-staging-phase1/`.
+The repair script is single-use and exact-target guarded; on failure after install
+it restores the preserved certificate/key, HBA and auto-configuration, reloads and
+checks the old verified connection. That recovery branch was not needed live.
+
+**Maintenance boundary:** the unchanged pinned image still contains legacy
+self-signed renewal logic when fewer than 30 days remain on the leaf. Perform a
+reviewed CA-signed renewal **before 3 January 2027, 22:27:52 UTC**, or separately
+approve a corrected image build/scan/publication before that boundary. This repair
+did not modify the image. Independent encrypted recovery remains mandatory before
+sensitive persistent state. API CA trust installation belongs to the later API
+configuration phase; the API and frontend remain undeployed, worker absent, public
+endpoints absent, resource limits unchanged. Protected local PostgreSQL and
+historical accounting were untouched. Wait for instruction to resume the previously
+authorized roles/migrations/synthetic bootstrap; this TLS task does not execute it.
+
 ## Database bootstrap stopped at Rust TLS verification — 4 November 2026
 
 The owner authorized staging-only roles, the 13 frozen migrations and synthetic
