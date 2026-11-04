@@ -7,6 +7,101 @@ variable, credential, domain or billing limit was
 changed. The protected primary PostgreSQL remains stopped and historical accounting
 holds remain untouched.
 
+## Smoke-test safety preparation and approved synchronization
+
+The five approved commits were pushed without rewriting history; `origin/main`
+was verified at `82095682e1da58a432245cfe9311af43fcee5d95`.
+The frozen application revision and private PostgreSQL digest remain unchanged.
+No CI was dispatched. The additional safety changes described here are local only.
+
+**Primary operator:** the authenticated workspace owner confirmed availability on
+Thursday **5 November 2026, 19:00–19:15 WAT (18:00–18:15 UTC)** and will acknowledge
+failure alerts. This is availability, not deployment or shutdown-arming approval.
+There is no separately verified backup administrator.
+
+**Human alert test:** one non-sensitive test issue mentioning `@pyco404` was
+successfully created in the verified private infrastructure repository:
+https://github.com/pyco404/supa-agent-infra/issues/1 . Human notification receipt is
+pending confirmation; issue creation does not prove notification delivery.
+No secrets, database records or private operational output were included.
+
+**Independent runner preparation:** the inert templates
+`deployment/railway-smoke-runner.yml` and
+`deployment/railway-smoke-failure-monitor.yml` are for the private infrastructure
+repository only. They are not installed under `.github/workflows`, scheduled or
+armed. The manual runner downloads exact hash-checked controller/test bytes from
+an explicitly selected immutable application commit, runs offline regressions,
+and verifies the exact separately approved ten-minute scope before accessing the
+future project-scoped shutdown token. The application commit containing these new
+bytes must be separately approved for synchronization before the runner can use it.
+It checks current Railway inventory and writes durable audit evidence before
+emitting its `armed` readiness event. No billable resource may begin before that
+event. Provisioning IDs, scope timestamps and authorization must be reviewed
+separately; do not silently set the scope's runner-verification claim to true.
+
+The completion listener runs independently of the shutdown job and posts one
+private issue on failure, cancellation, timeout or runner startup failure. It uses
+only job-scoped `issues: write` and `contents: read`, never Railway credentials,
+and rejects foreign/public/untrusted events. It does not retry issue creation.
+GitHub notification preferences and an attending human remain essential: a
+GitHub-wide outage could prevent both runner and monitor. Runner-loss scenarios
+are tested using offline event fixtures, not an installed cloud runner.
+Private job logs retain bounded sanitized audit output when the runner survives;
+runner loss can prevent final flushing. No private environment reviewer protection
+is assumed available on this account.
+
+**Timing and manual fallback:** if separately authorized to start at 19:00 WAT,
+start shutdown by **19:05**, verify stopped compute and canceled pending builds by
+**19:10**, and keep the owner available for emergency verification through
+**19:15**. The scope's T0 must cover the first billable allocation, including the
+volume; time is not extended for build queues or cold startup. Do not provision
+before the runner is ready. If it cannot become ready within the approved window,
+abort. A stopped deployment is verified from Railway state, not a successful
+mutation acknowledgement. Check frontend/API first, then PostgreSQL, every pending
+build/replacement and the zero-replica worker. If the runner fails, the attending
+owner uses Railway's deployment Stop/Cancel operations and verifies terminal
+states manually. Do not alter unrelated workspace services. Retained volume and
+other storage continue to need separate cleanup approval; this runner never
+deletes resources. Obtain that approval before starting if immediate deletion is
+needed for the spending policy. No automatic deletion or live cleanup was tested.
+
+**Refreshed read-only cost snapshot:** current usage $18.49482742, forecast
+$33.57587601, shared hard limit $40, forecast headroom **$6.42412399**. The workspace
+contains one verified administrator. These are a point-in-time snapshot and do not
+reserve headroom against other workloads.
+
+Using three 24-GB/24-vCPU default ceilings as a conservative compute scenario:
+ten minutes costs $0.499680 compute; fifteen minutes costs $0.749520 compute.
+Adding 1 GB used volume for the same interval and a **1-GB egress allowance** gives
+**$0.549715 / $0.799572** Railway estimates. Proposed private Linux runner bounds
+add up to $0.120 for twenty runner minutes and $0.018 for three notifier minutes
+at $0.006/minute, giving approximately **$0.687715 / $0.937572** across providers.
+No free GitHub allowance is assumed. Actual usage, billing rounding, registry
+transfers, egress beyond 1 GB, retained storage, or workloads surviving minute 15
+can increase charges. GitHub runs are not deployed/charged by this preparation.
+The small proposed CPU/RAM limits remain unverified; do not base a guaranteed
+estimate on them. The $1 policy is monitoring and approval, not an enforced cap.
+There is insufficient margin to promise a hard $1 outcome. Recheck usage before
+arming; abort if the conservative bound plus known extra costs exceeds approval.
+
+**Local evidence:** 32 synthetic shutdown tests pass, including minute-five stop,
+restart deadlines, minute-fifteen expiry, SIGTERM, failed mutation and no automatic
+mutation retry. Four inert-workflow tests pass, including failure/cancellation/
+timeout events, malformed/foreign-event rejection, restrictive file permissions,
+immutable source hashes and Python/Bash syntax. These do not establish real
+credential validity or live shutdown/notification reliability.
+
+**Decision: NO-GO to start now.** Still required separately: human notification
+acknowledgement; approval to push/install these additional templates in the private
+infrastructure repository; scoped shutdown-token and GHCR read-only credential
+provisioning/installation; exact service/volume provisioning approval; exact
+shutdown-scope authorization and verified armed runner; synthetic smoke deployment
+and spending approval; and retained-resource deletion approval if desired. Refresh
+headroom and confirm owner attendance immediately beforehand. No primary database,
+historical accounting hold, application source, frontend, Railway setting, DNS,
+credential or live workload was changed. Independent encrypted recovery remains
+mandatory before introducing sensitive or irreplaceable persistent data.
+
 ## Current decision — support-free smoke test
 
 Do not contact Railway Support. The frozen application remains
