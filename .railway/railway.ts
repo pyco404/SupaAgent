@@ -9,6 +9,8 @@ export const stagingSession = Object.freeze({
   syntheticDataOnly: true,
   proposedVolumeSizeMB: 1000,
   customReplicaLimitsVerified: false,
+  applicationRevision: "bfc29f500af08e0e2cc4676b8950b5b17f26007a",
+  workerReplicas: 0,
   // These are approval/monitoring policies, not Railway TTL or spending controls.
   deploymentAuthorized: false,
 });
@@ -93,8 +95,8 @@ export function stagingDefinition(ctx: RailwayContext, imageApproval: unknown) {
   const worker = service("supa-worker", {
     source,
     build: { builder: "DOCKERFILE", dockerfilePath: "deployment/worker.Dockerfile" },
-    deploy,
-    healthcheck: "/ready", healthcheckTimeout: 120, replicas: 1,
+    deploy: { ...deploy, multiRegionConfig: { [region]: { numReplicas: stagingSession.workerReplicas } } },
+    healthcheck: "/ready", healthcheckTimeout: 120, replicas: stagingSession.workerReplicas,
     domains: [], tcp: [],
     env: {
       ...backend,
