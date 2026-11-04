@@ -1,5 +1,56 @@
 # Normal Railway staging — current plan, 4 November 2026
 
+## Database bootstrap stopped at Rust TLS verification — 4 November 2026
+
+The owner authorized staging-only roles, the 13 frozen migrations and synthetic
+bootstrap. The execution stopped **before any database mutation**. Authenticated
+read-only libpq inspection still finds zero application tables, one login
+(`supa_staging_admin`), and cluster identifier `7704432314739101731` in
+`supa_staging`. No migration/runtime roles, application epoch, grants or synthetic
+records were created. PostgreSQL deployment remains
+`db546a74-4038-4536-b450-d93e78362808`; frontend/API remain undeployed and no worker
+exists. The approved image digest and frozen application revision are unchanged.
+
+The volume-local certificate has critical basic constraint `CA:TRUE`. libpq accepts
+it as configured, but the frozen Rust SQLx/rustls stack rejects its use as the server
+leaf with `CaUsedAsEndEntity`. A read-only diagnostic reproduced the specific error
+`tls_ca_used_as_server_certificate`; a second libpq check confirmed the database
+remained empty and the bootstrap mutation marker absent. TLS verification was not
+weakened and migration SQL was not applied through another client.
+
+The existing CI bootstrap accepts only CI database names. The separate
+`crates/migration-admin/src/bin/supa-railway-staging-admin.rs` entry point prepares
+an owner-executed fresh-staging bootstrap without modifying that CI guard, protected
+primary migration tools, API revision or migration files. It binds the exact
+project/environment/service/database/cluster, 15-minute invocation scope, and all
+13 frozen SHA-384 migration checksums; runtime operations cannot invoke it. It
+uses verified TLS and stops before mutations on a connection failure. Its read-only
+TLS mode uses the same connection stack. Seven network-free tests, formatting and
+Clippy pass; live role/privilege/migration/seed tests remain **blocked, not passed**.
+The existing runtime grant plan remains SELECT plus worker-health INSERT/UPDATE
+and live-session UPDATE, without schema/history/accounting writes or owner grants.
+
+Next approval: a narrowly scoped volume-local TLS repair with a proper `CA:FALSE`
+server certificate, private-hostname SAN, trusted CA chain, protected private key
+and certificate backup/rollback, followed by TLS reload and both Rust and libpq
+verify-full checks. Do not generate or replace certificate/key material without
+that approval. Resume the already authorized database bootstrap only after those
+checks pass; no application deployment is authorized. The public CA can subsequently
+be installed through `PGSSLROOTCERT` (SQLx supports inline PEM in this environment
+variable), without distributing its private key or weakening `sslmode=verify-full`.
+Do not put inline PEM in SQLx's URL `sslrootcert` option: that setter treats it as
+a file path.
+
+Private Git-ignored evidence and the uninstalled, zero-balance paused-agent fixture
+are under `artifacts/railway-staging-phase1/`. Workspace usage refreshed to
+$18.78793353 against unchanged shared $60 Compute limit ($41.21206647 current-use
+headroom). This is not forecast headroom or reserved staging credit. No full-stack
+monthly cost has been demonstrated; the $10–$20 planning allowance is not a cap.
+Existing daily native backups remain planned protection; independent encrypted
+recovery is still required before sensitive persistent state. Frontend/API image
+availability, finite session validity and authenticated origin remain deployment
+prerequisites after bootstrap. Protected local PostgreSQL was not started or written.
+
 ## Owner-accepted residual risk — 4 November 2026
 
 The owner explicitly accepted the following unsuppressed findings for restricted,
