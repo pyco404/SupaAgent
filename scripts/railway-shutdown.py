@@ -5,7 +5,9 @@ import fcntl
 import hashlib
 import json
 import os
+import signal
 import stat
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -50,12 +52,15 @@ def load_scope(raw):
         scope = json.loads(raw, object_pairs_hook=unique_fields)
     except (ValueError, UnicodeError):
         raise GuardError('invalid_scope_json') from None
-    require(isinstance(scope, dict) and set(scope) == {
+    require(isinstance(scope, dict), 'scope_fields')
+    smoke = type(scope.get('version')) is int and scope['version'] == 2
+    expected = {
         'version', 'project_id', 'environment_id', 'application_revision',
         'postgres_image', 'services', 'started_at_unix', 'shutdown_at_unix',
         'deadline_unix', 'independent_runner_verified', 'autodeploy_disabled',
-        'synthetic_only', 'worker_replicas'}, 'scope_fields')
-    require(type(scope['version']) is int and scope['version'] == 1 and scope['project_id'] == PROJECT
+        'synthetic_only', 'worker_replicas'}
+    require(set(scope) == expected | ({'profile'} if smoke else set()), 'scope_fields')
+    require(type(scope['version']) is int and scope['version'] in (1, 2) and scope['project_id'] == PROJECT
             and scope['environment_id'] == ENVIRONMENT, 'wrong_target')
     require(scope['application_revision'] == REVISION
             and scope['postgres_image'] == IMAGE, 'wrong_revision_or_image')
@@ -72,9 +77,15 @@ def load_scope(raw):
     require(len(set(ids)) == len(ids), 'duplicate_service')
     for key in ('started_at_unix', 'shutdown_at_unix', 'deadline_unix'):
         require(type(scope[key]) is int and scope[key] > 0, 'invalid_deadline')
-    require(scope['shutdown_at_unix'] == scope['started_at_unix'] + 19800
-            and scope['deadline_unix'] == scope['started_at_unix'] + 21600,
-            'six_hour_deadline_required')
+    if smoke:
+        require(scope['profile'] == 'smoke-10m'
+                and scope['shutdown_at_unix'] == scope['started_at_unix'] + 300
+                and scope['deadline_unix'] == scope['started_at_unix'] + 600,
+                'ten_minute_smoke_deadline_required')
+    else:
+        require(scope['shutdown_at_unix'] == scope['started_at_unix'] + 19800
+                and scope['deadline_unix'] == scope['started_at_unix'] + 21600,
+                'six_hour_deadline_required')
     return scope, hashlib.sha256(raw).hexdigest()
 
 
@@ -206,13 +217,14 @@ class Railway:
 
 def watch(scope, digest, provider, audit, wall=time.time, monotonic=time.monotonic, sleep=time.sleep):
     started_wall, started_mono = wall(), monotonic()
-    require(started_wall <= scope['deadline_unix'] + 1800, 'cleanup_authorization_expired')
+    cleanup_seconds = 300 if scope.get('profile') == 'smoke-10m' else 1800
+    require(started_wall <= scope['deadline_unix'] + cleanup_seconds, 'cleanup_authorization_expired')
     require(started_wall >= scope['started_at_unix'] - 300, 'start_time_too_far_ahead')
     effective_now = lambda: max(wall(), started_wall + monotonic() - started_mono)
     sent, stable, initial = set(), 0, True
     while True:
         now = effective_now()
-        require(now <= scope['deadline_unix'] + 1800, 'shutdown_unverified_by_cleanup_deadline')
+        require(now <= scope['deadline_unix'] + cleanup_seconds, 'shutdown_unverified_by_cleanup_deadline')
         rows = provider.snapshot(scope)
         check_rows(scope, rows)
         now = effective_now()
@@ -241,6 +253,34 @@ def watch(scope, digest, provider, audit, wall=time.time, monotonic=time.monoton
         sleep(10)
 
 
+def failure_alert(code, digest, sink=None):
+    """Local runner interface only. No webhook, email, subprocess or network send."""
+    event = {'code': code, 'scope_sha256': digest, 'operator_action_required': True,
+             'compute_may_still_be_running': True}
+    durable = False
+    if sink:
+        try:
+            sink.write('operator_alert', **event)
+            durable = True
+        except Exception:
+            pass
+    # A second channel remains available when an audit disk or sink fails.
+    try:
+        print(json.dumps({'event': 'operator_alert', **event,
+                          'durable_alert_written': durable}), file=sys.stderr, flush=True)
+        if os.environ.get('GITHUB_ACTIONS') == 'true':
+            print('::error title=Supa shutdown requires operator::Compute shutdown '
+                  'is not verified. Inspect the private alert record immediately.',
+                  file=sys.stderr, flush=True)
+    except OSError:
+        pass
+    return durable
+
+
+def terminated(_signal, _frame):
+    raise GuardError('watchdog_terminated')
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['validate', 'run'])
@@ -248,8 +288,9 @@ def main(argv=None):
     parser.add_argument('--scope-sha256')
     parser.add_argument('--authorize-shutdown', action='store_true')
     parser.add_argument('--audit-file')
+    parser.add_argument('--failure-alert-file', help='Private local queue consumed by an approved independent notifier')
     args = parser.parse_args(argv)
-    audit = None
+    audit, alerts, digest, old_term = None, None, None, None
     try:
         with Path(args.scope).open('rb') as source:
             scope, digest = load_scope(source.read(16385))
@@ -259,22 +300,33 @@ def main(argv=None):
         require(args.authorize_shutdown and args.scope_sha256 == digest,
                 'exact_scope_shutdown_approval_required')
         require(args.audit_file is not None, 'audit_file_required')
+        require(args.failure_alert_file is not None, 'failure_alert_file_required')
+        require(Path(args.audit_file).resolve() != Path(args.failure_alert_file).resolve(),
+                'distinct_alert_file_required')
+        alerts = Audit(args.failure_alert_file)
         audit = Audit(args.audit_file)
         provider = Railway(os.environ.get('SUPA_SHUTDOWN_PROJECT_TOKEN'))
+        old_term = signal.signal(signal.SIGTERM, terminated)
         print(json.dumps(watch(scope, digest, provider, audit)))
         return 0
-    except Exception as error:
-        code = str(error) if isinstance(error, GuardError) else 'local_or_provider_protocol_failure'
+    except (Exception, KeyboardInterrupt) as error:
+        code = ('watchdog_interrupted' if isinstance(error, KeyboardInterrupt) else
+                str(error) if isinstance(error, GuardError) else 'local_or_provider_protocol_failure')
         if audit:
             try:
                 audit.write('shutdown_failed_requires_operator', code=code)
             except Exception:
                 pass
+        failure_alert(code, digest, alerts)
         print(json.dumps({'ok': False, 'code': code, 'operator_action_required': True}))
         return 1
     finally:
+        if old_term is not None:
+            signal.signal(signal.SIGTERM, old_term)
         if audit:
             audit.close()
+        if alerts:
+            alerts.close()
 
 
 if __name__ == '__main__':
