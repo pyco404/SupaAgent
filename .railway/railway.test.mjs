@@ -37,8 +37,11 @@ test('reviewed actual configuration pins the image while deployment and unverifi
   for (const change of [{projectId:'different'}, {environmentId:'different'}, {projectId:undefined}]) {
     assert.throws(()=>stagingDefinition(createRailwayContext({...target,...change}),imageFixture), /exact existing/);
   }
-  assert.equal(stagingSession.maximumHours,6);
-  assert.equal(stagingSession.incrementalBudgetUSD,1);
+  assert.equal(stagingSession.operationMode,'normal-staging');
+  assert.deepEqual(stagingSession.monthlyUsagePlanningUSD,{minimum:10,maximum:20});
+  assert.equal(stagingSession.deadlineAutomationRequired,false);
+  assert.equal('maximumHours' in stagingSession,false);
+  assert.equal('incrementalBudgetUSD' in stagingSession,false);
   assert.equal(stagingSession.syntheticDataOnly,true);
   assert.equal(stagingSession.deploymentAuthorized,false);
   assert.equal(stagingSession.applicationRevision,'bfc29f500af08e0e2cc4676b8950b5b17f26007a');
@@ -64,6 +67,7 @@ test('all application source, Dockerfiles, ports and private network boundaries 
   for (const resource of [api,worker,frontend]) {
     assert.equal(resource.source.repo, 'pyco404/SupaAgent');
     assert.equal(resource.source.branch, 'main');
+    assert.equal(resource.source.commitSha,stagingSession.applicationRevision);
     assert.equal(resource.build.builder, 'DOCKERFILE');
     assert.ok(existsSync(new URL('../'+resource.build.dockerfilePath, import.meta.url)));
     assert.equal(resource.deploy.numReplicas, resource === worker ? 0 : 1);
@@ -205,8 +209,12 @@ test('persistent storage is explicit and graceful shutdown time is reserved with
   assert.equal(storage.config.region,'europe-west4-drams3a');
   assert.equal(database.volumeAttachments.data.volume,storage.address);
   assert.equal(database.volumeAttachments.data.mountPath,'/var/lib/postgresql/data');
-  assert.deepEqual(database.volumeAttachments.data.backupSchedules,[]);
+  assert.deepEqual(database.volumeAttachments.data.backupSchedules,['DAILY']);
   assert.equal(database.deploy.drainingSeconds,120);
   for(const resource of [api,worker,frontend])assert.equal(resource.deploy.drainingSeconds,60);
-  for(const resource of [api,worker,frontend,database])assert.equal(resource.deploy.limitOverride,undefined);
+  for(const resource of [api,worker,frontend,database]) {
+    assert.equal(resource.deploy.limitOverride,undefined);
+    assert.equal(resource.deploy.restartPolicyType,'ON_FAILURE');
+    assert.equal(resource.deploy.restartPolicyMaxRetries,3);
+  }
 });
