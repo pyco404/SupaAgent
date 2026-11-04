@@ -1,5 +1,12 @@
 # Six-hour private synthetic staging preparation
 
+Latest review (4 November 2026): [Railway staging integration](railway-staging-integration.md)
+supersedes the earlier pending-image, cost and unspecified-volume proposals below.
+The private image now passes independent read-only verification and is pinned in
+the proposed graph. Provisioning/deployment remain unauthorized and NO-GO under
+the current unresolved replica-limit/$1 monitoring assessment. This document's
+earlier publication approvals do not authorize a further publication attempt.
+
 Status: local preparation only. No publication, CI dispatch, registry access,
 credential installation, resource creation or deployment is authorized by this
 document. Existing functional evidence is CI run
