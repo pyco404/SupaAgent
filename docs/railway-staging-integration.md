@@ -5,6 +5,82 @@ This section supersedes all $1, ten-minute and six-hour rehearsal planning below
 are separately approved.** No deadline workflow installation, credential creation,
 resource provisioning, billing-limit change or application deployment is authorized.
 
+## Authorized Compute-limit update — verified 4 November 2026
+
+The owner separately authorized only the workspace Compute hard-limit change.
+Verified exact workspace `e319f68a-9897-49ed-b119-743f1f846aa0`, displayed as
+**Daniel 's Projects**. Before mutation: Compute hard **$40**, soft alert **$20**,
+Agent hard **$20**. One `railway usage limit update --hard 60 --workspace
+ e319f68a-9897-49ed-b119-743f1f846aa0 --json` invocation succeeded, followed by an
+independent `usage limit status` read confirming Compute **$60**, unchanged soft
+**$20** and unchanged Agent hard **$20** (Agent soft setting also unchanged).
+No resource allocation, service, project, credential, DNS or other billing setting
+was changed. No provisioning, deployment, additional paid service or inference is
+implied. The older proposed-limit assessments below are retained historical snapshots.
+
+After-change usage read: **$18.55633452980352**, forecast **$33.57361016554333**;
+headroom against current usage **$41.44366547019648** and against forecast
+**$26.42638983445667**. Adding the planned $10–$20 additional monthly staging usage
+would give approximately **$43.57–$53.57**, leaving **$6.43–$16.43** against $60,
+subject to actual consumption and other workloads. The limit remains shared; it
+is not a reserved per-project staging allowance. No workload availability guarantee
+follows from forecast arithmetic. Existing soft alerts were deliberately preserved.
+
+### Current container security scan scope — prepared, not executed
+
+Separate approval is still required for the scanning operation and any necessary
+read-only registry authentication. No CI was dispatched and no fresh scan results
+are claimed. The retained MEDIUM/LOW/UNKNOWN findings below remain visible pending
+current-database scans of the exact intended artifacts:
+
+| Component | Artifact identity to scan | Preparation boundary |
+| --- | --- | --- |
+| PostgreSQL 18 | `ghcr.io/pyco404/supa-agent-postgres-infra-98c1006fcb1d@sha256:9409009a40c0929052306d068c14bef92f3ecc67662c453540e2c9b95ae18fc8` | Pull/read only after separate approval; do not rebuild, republish or substitute |
+| Frontend | Retained validated image/archive built from `bfc29f500af08e0e2cc4676b8950b5b17f26007a`, if available and integrity verified | Record actual manifest/config/layer identities; if archive cannot be recovered, separately approve a build at the frozen SHA and scan that exact resulting image |
+| Restricted API | Same frozen-source requirement as frontend | No primary database, financial records, real credentials or deployment needed for scanning |
+| Worker | Zero replicas, disabled | No worker deployment; retain prior worker findings without claiming a fresh scan |
+
+Prepared scanner settings: Trivy vulnerability **and secret** scanning, current
+vulnerability database with recorded update time/version, every severity including
+UNKNOWN, no ignore file (`--ignorefile /dev/null`), complete JSON reports and
+sanitized package/CVE/installed/fixed-version summaries. Use the existing reviewed
+checksum-pinned scanner installation unless separately updated/reviewed. Preserve
+all findings and fail closed on scanner/identity errors. Secrets findings must not
+be printed verbatim. Keep detailed evidence private/access-controlled.
+
+For an already loaded approved archive, the scan command shape is:
+
+```sh
+trivy image --input /PRIVATE/APPROVED-IMAGE.tar \
+  --scanners vuln,secret --ignorefile /dev/null \
+  --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
+  --format json --output /PRIVATE/IMAGE-scan.json
+```
+
+Placeholder paths are deliberate; actual artifact identities/archive hashes and
+execution environment must be reviewed before running. The current
+`staging-validation.yml` is full runtime validation or PostgreSQL-candidate build;
+it is **not** an exact-image scan-only workflow and would rebuild PostgreSQL.
+Do not dispatch it blindly for this scope. An approved scan-only execution must
+reuse the verified PostgreSQL artifact, with no image publication or Railway
+operations. There is no need to repeat all 200 PostgreSQL functional tests simply
+to refresh the vulnerability database. Comparing frozen/current source confirmed
+no changes in Rust crates, frontend/reference frontend or the application and
+PostgreSQL Dockerfiles; only the two inert workflow templates differ under
+`deployment/`. This supports source continuity, not proof of identical new builds.
+
+Review current HIGH/CRITICAL, MEDIUM/LOW and UNKNOWN results before the new
+normal-staging risk decision. The prior short-rehearsal acceptance is not renewed
+by this spending-limit change. If findings or image content change, stop for review;
+no blanket exception, automatic remediation rebuild or silent digest replacement.
+
+Next separate approvals remain scan execution/read-only access as needed,
+normal-staging risk disposition, secure staging credentials, additive provisioning,
+and synthetic bootstrap/deployment/backup verification. Source documentation
+synchronization needs its own push approval. Frozen application revision, private
+PostgreSQL digest, zero worker, stopped protected primary PostgreSQL and historical
+accounting holds remain unchanged.
+
 ## Proposed $60 limit and final approval handoff
 
 Fresh read-only usage verification on 4 November 2026: current usage
