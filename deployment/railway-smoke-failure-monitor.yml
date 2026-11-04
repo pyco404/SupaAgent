@@ -1,0 +1,47 @@
+# INERT TEMPLATE: separate completion listener survives failure/loss of the runner job.
+name: Railway smoke failure notification
+on:
+  workflow_run:
+    workflows: [Railway smoke shutdown]
+    types: [completed]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  notify:
+    if: github.repository == 'pyco404/supa-agent-infra' && github.event.repository.private == true && github.event.workflow_run.conclusion != 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Validate event and prepare non-sensitive alert
+        shell: python
+        run: |
+          import json, os, pathlib, re
+          event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          repo, run = event['repository'], event['workflow_run']
+          assert repo['full_name'] == 'pyco404/supa-agent-infra' and repo['private'] is True
+          assert run['head_repository']['full_name'] == repo['full_name']
+          assert run['head_branch'] == 'main'
+          assert run['event'] == 'workflow_dispatch'
+          assert run['name'] == 'Railway smoke shutdown'
+          assert run['path'] == '.github/workflows/railway-smoke-runner.yml'
+          assert run['actor']['login'] == 'pyco404'
+          assert run['conclusion'] in {'failure', 'cancelled', 'timed_out', 'startup_failure', 'action_required', 'stale', 'skipped', 'neutral'}
+          url = run['html_url']
+          assert re.fullmatch(r'https://github\.com/pyco404/supa-agent-infra/actions/runs/[0-9]+', url)
+          os.umask(0o077)
+          body = '@pyco404 — Shutdown verification requires immediate human attention.\n\n'
+          body += 'Do not assume Railway compute has stopped. Inspect deployments and cancel pending builds; verify all three services.\n\n'
+          body += 'Private runner evidence: ' + url + '\n'
+          pathlib.Path(os.environ['RUNNER_TEMP'], 'supa-alert.txt').write_text(body)
+      - name: Send one private human alert without retries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh issue create --repo pyco404/supa-agent-infra \
+            --title 'Supa smoke shutdown requires operator verification' \
+            --body-file "$RUNNER_TEMP/supa-alert.txt"
+# GitHub-wide outages can prevent both jobs and notifications: the attending owner
+# remains the manual fallback. Do not install until separately approved.
