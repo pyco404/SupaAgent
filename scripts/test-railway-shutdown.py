@@ -129,6 +129,22 @@ class ScopeTests(unittest.TestCase):
 
 
 class ControllerTests(unittest.TestCase):
+    def test_readiness_is_announced_only_after_inventory_and_durable_audit(self):
+        scope=fixture(); clock=Clock(scope['deadline_unix']-5); log=Log(); events=[]
+        def ready(event):
+            self.assertEqual(log.events[-1]['event'],'armed')
+            events.append(event)
+        m.watch(scope,'a'*64,Provider([]),log,lambda:clock.now,
+                lambda:clock.ticks,clock.sleep,on_armed=ready)
+        self.assertEqual(len(events),1)
+        self.assertEqual(events[0]['deadline_unix'],scope['deadline_unix'])
+        failed=Provider([])
+        failed.snapshot=lambda scope: (_ for _ in ()).throw(m.GuardError('provider_connection_failure'))
+        with self.assertRaises(m.GuardError):
+            m.watch(scope,'a'*64,failed,Log(),lambda:clock.now,
+                    lambda:clock.ticks,clock.sleep,on_armed=ready)
+        self.assertEqual(len(events),1)
+
     def test_cancels_pending_and_stops_apps_before_database(self):
         provider = Provider([row(11), row(12, 2), row(13, 3), row(14, 2, 'QUEUED')])
         log = Log(); result = drive(provider, log=log)
