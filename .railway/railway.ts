@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { database, defineRailway, github, project, service, type RailwayContext } from "railway/iac";
+import { database, defineRailway, github, project, service, volume, type RailwayContext } from "railway/iac";
 
 export const stagingSession = Object.freeze({
   projectId: "99648d2a-69a1-4d8c-98d0-7f2a26543c9c",
@@ -7,9 +7,13 @@ export const stagingSession = Object.freeze({
   maximumHours: 6,
   incrementalBudgetUSD: 1,
   syntheticDataOnly: true,
+  proposedVolumeSizeMB: 1000,
+  customReplicaLimitsVerified: false,
   // These are approval/monitoring policies, not Railway TTL or spending controls.
   deploymentAuthorized: false,
 });
+
+export const verifiedPostgresReference = "ghcr.io/pyco404/supa-agent-postgres-infra-98c1006fcb1d@sha256:9409009a40c0929052306d068c14bef92f3ecc67662c453540e2c9b95ae18fc8";
 
 export function reviewedPostgresImage(value: unknown): string {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -19,13 +23,20 @@ export function reviewedPostgresImage(value: unknown): string {
   const reference = record.reference;
   if (record.approved !== true || record.private !== true ||
       typeof reference !== "string" ||
-      !/^ghcr\.io\/pyco404\/supa-agent-postgres@sha256:[a-f0-9]{64}$/.test(reference) ||
+      reference !== verifiedPostgresReference ||
       /@sha256:0{64}$/.test(reference) ||
       typeof record.source_revision !== "string" || !/^[a-f0-9]{40}$/.test(record.source_revision) ||
       /^0{40}$/.test(record.source_revision) ||
       typeof record.scan_run_url !== "string" ||
       !/^https:\/\/github\.com\/pyco404\/SupaAgent\/actions\/runs\/[1-9][0-9]*$/.test(record.scan_run_url) ||
-      record.high_critical_findings !== 0 || record.secret_findings !== 0) {
+      record.high_critical_findings !== 0 || record.secret_findings !== 0 ||
+      record.integrity_verified !== true || record.anonymous_access_denied !== true ||
+      record.package_repository !== "pyco404/supa-agent-infra" ||
+      record.configuration_digest !== "sha256:0228d9646b8387201f20918ea903474f1b283d43c9a049e29ccda88701771abd" ||
+      record.verified_layers !== 16 || record.platform !== "linux/amd64" ||
+      typeof record.verification_evidence_sha256 !== "string" ||
+      !/^[a-f0-9]{64}$/.test(record.verification_evidence_sha256) ||
+      record.deployment_authorized !== false) {
     throw new Error("reviewed private PostgreSQL digest and clean scan evidence required");
   }
   return reference;
@@ -44,10 +55,14 @@ export function stagingDefinition(ctx: RailwayContext, imageApproval: unknown) {
     image: reviewedPostgresImage(imageApproval),
     region, output: "DATABASE_URL", defaultMountPath: "/var/lib/postgresql/data",
   });
+  const storage = volume("supa-postgres-data", { sizeMB: stagingSession.proposedVolumeSizeMB, region });
+  db.volumeAttachments = { data: { volume: storage.address,
+    mountPath: "/var/lib/postgresql/data", backupSchedules: [], volumeConfig: storage.config } };
+  db.deploy = { ...db.deploy, drainingSeconds: 120, requiredMountPath: "/var/lib/postgresql/data" };
   // No generated/custom domains or public TCP proxy, including for PostgreSQL.
   db.networking = { serviceDomains: {}, customDomains: {}, tcpProxies: {} };
   const source = github("pyco404/SupaAgent", { branch: "main", rootDirectory: "/" });
-  const deploy = { restartPolicyType: "ON_FAILURE" as const, restartPolicyMaxRetries: 3, region };
+  const deploy = { restartPolicyType: "ON_FAILURE" as const, restartPolicyMaxRetries: 3, region, drainingSeconds: 60 };
   const backend = {
     SUPA_PRIVATE_STAGING: "true",
     SUPA_PROVIDER: "offline",
@@ -107,7 +122,7 @@ export function stagingDefinition(ctx: RailwayContext, imageApproval: unknown) {
   });
   // Authoring label only: bind to the existing project/environment IDs before
   // an approved plan. Never apply with an unreviewed delete/resource inventory.
-  return project("Supa Agent", { resources: [db, api, worker, frontend] });
+  return project("Supa Agent", { resources: [db, api, worker, frontend, storage] });
 }
 
 export default defineRailway((ctx) => stagingDefinition(ctx, JSON.parse(
