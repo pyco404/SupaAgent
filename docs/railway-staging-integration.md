@@ -5,6 +5,123 @@ This section supersedes all $1, ten-minute and six-hour rehearsal planning below
 are separately approved.** No deadline workflow installation, credential creation,
 resource provisioning, billing-limit change or application deployment is authorized.
 
+## Proposed $60 limit and final approval handoff
+
+Fresh read-only usage verification on 4 November 2026: current usage
+**$18.540155185361854**, forecast **$33.57538163245182**, unchanged hard limit **$40**
+and soft alert **$20**. Raising only the workspace Compute hard limit to **$60**
+would leave **$26.42461836754818** forecast headroom. At an additional $10–$20/month,
+planning totals are **$43.57538163–$53.57538163**, leaving **$6.42461837–$16.42461837**.
+This supports the requested budget under current forecast assumptions; it is not
+reserved credit or a guarantee of future consumption. The present forecast covers
+the billing period ending 18 November, not a verified next-month baseline.
+
+[Railway's shared hard-limit behavior](https://docs.railway.com/pricing/cost-control)
+is material: raising it does not itself change replicas, restart services or reduce
+other projects' allocations. It increases maximum permitted workspace exposure.
+All projects still share the Compute ceiling; hitting $60 could take all workloads
+offline. No per-project reserved $20 allowance or guarantee of other-project
+availability is established. Keep the existing Agent limit and soft-alert settings
+unchanged unless separately approved. No limit was changed during this assessment.
+
+### Normal-staging security disposition — proposed, not accepted
+
+Retained scan evidence: frontend **41 MEDIUM / 8 LOW**, API and worker each
+**36 MEDIUM / 8 LOW**, all with zero reported HIGH/CRITICAL at those scan dates.
+PostgreSQL: zero HIGH/CRITICAL/MEDIUM/LOW and **one UNKNOWN**. These are retained
+reports, not fresh scans. Preserve all findings; repeated package associations do
+not imply distinct CVEs. The exact package/version/CVE table remains in
+[`staging-six-hour-rehearsal.md`](staging-six-hour-rehearsal.md#residual-security-disposition-limited-operator-acceptance).
+
+- PostgreSQL Gosu 1.20 embeds `golang.org/x/sys v0.1.0`:
+  **CVE-2026-39824 / GO-2026-5024**, reported fixed at v0.44.0. The
+  [official Go advisory](https://pkg.go.dev/vuln/GO-2026-5024) names
+  `golang.org/x/sys/windows.NewNTUnicodeString`; the verified image is linux/amd64.
+  This supports low reachability of that specific Windows function in this
+  artifact, not removal of the UNKNOWN scanner result or a guarantee of Gosu
+  safety. Protect its root-startup/privilege-dropping paths, immutable binaries,
+  user/group configuration and volume permissions. Do not rebuild or replace the
+  approved image merely to remove a metadata finding.
+- Application GCC-family libraries `14.2.0-19`, glibc
+  `2.41-12+deb13u4` and zlib `1:1.3.dfsg+really1.3.1-1+b1` remain the documented
+  MEDIUM/LOW exposure. Runtime libraries are genuinely used; specific vulnerable
+  symbol reachability is not established. Non-root operation, authenticated
+  frontend, private API/database, bounded inputs, no arbitrary native plugins or
+  archive-processing jobs, offline inference and resource monitoring reduce but
+  do not eliminate corruption/denial-of-service risk. No compatible fixed version
+  was supplied by the retained scans; that is not a fresh remediation search or
+  proof no fix exists today.
+
+Recommended disposition: conditional acceptance for authenticated, synthetic-only
+normal staging, after current scans of the exact deployment artifacts and explicit
+operator acceptance of lower-severity findings and remaining recovery limitations.
+New HIGH/CRITICAL findings, secret leakage or scope drift require remediation and
+review; no gate bypass or automatic acceptance. The old six-hour risk decision
+cannot authorize this longer-lived staging. Fresh scan/build execution, if needed,
+requires its own approved scope; avoid another full functional-CI campaign merely
+to duplicate previously passed evidence. Do not claim application image identity
+from a Git SHA alone: record actual deployed image identities and source SHA.
+
+### Minimum credential and database configuration — prepare only
+
+| Boundary | Proposed minimum | Explicitly excluded |
+| --- | --- | --- |
+| PostgreSQL image pull | Expiring classic PAT with `read:packages`, owner already permitted to read the private package; install only in Railway registry credential settings | `write:packages`, deletion scopes, broad local CLI token, public image fallback |
+| Migration/bootstrap | Separate administrator login for only the new synthetic staging database; run the existing migration administrator once with disposable-schema guard and verify all 13 checksums | Primary database URL, automatic migrations on API startup, historical imports |
+| API database runtime | Dedicated LOGIN with NOINHERIT, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION, NOBYPASSRLS; schema USAGE/approved SELECT and only the CI-tested maintenance writes | Schema CREATE, migration-table UPDATE, simulated-balance UPDATE, epoch-approval deletion and general treasury writes |
+| Frontend visitor | Separate username/password (24+ characters), exact HTTPS origin, server-side authentication | Public unauthenticated agent records, exposed secret values or NEXT_PUBLIC credentials |
+| Named synthetic reader/operator | Distinct 32–256-character service and principal tokens, approved synthetic UUID/role mapping and matching frontend binding; finite session deadlines, at most 24 hours under current preflight | Real owner grants, shared visitor/operator credentials, silently permanent sessions |
+
+The CI-tested maintenance grants are INSERT/UPDATE on `worker_health` and UPDATE
+on `live_sessions`, separate from SELECT; they are not general agent/treasury write
+permission. Actual grants must match the chosen supported staging endpoints, and
+negative permission tests must pass before exposure. Set credentials in appropriate
+private/sealed service settings after approval. Frontend receives only its private
+backend URL/service and account mappings, never a database/admin credential.
+Database URLs must use the private hostname and reviewed TLS configuration. Verify
+connection behavior against the pinned image; do not weaken TLS merely to connect.
+Worker remains zero and needs no live worker credential installation initially.
+No OpenAI/Anthropic, wallet, X, shutdown-runner or backup-storage credentials are
+needed for this read-only synthetic launch. Do not copy local evaluation secrets.
+
+### Short path to online staging — separate approvals
+
+1. **Source synchronization:** approve the application repository's pending
+   one-file IaC/test/documentation commits at its final reported HEAD. Do not push
+   the two superseded smoke workflows in the private infrastructure repository.
+2. **Budget:** explicitly approve changing only this workspace's Compute hard limit
+   **$40 → $60**, keeping other limits and projects unchanged, and approve
+   $10–$20/month additional staging usage with monitoring. This is not authorized yet.
+3. **Security and credentials:** approve normal-staging residual-risk disposition
+   after reviewing current exact-artifact scans; separately approve creation and
+   installation of the minimum staging/GHCR credentials and synthetic principals.
+   No real ownership or agent activation is implied.
+4. **Provisioning:** approve additive frontend/API/PostgreSQL services, initial
+   1000-MB volume request and daily native backups in the existing Amsterdam staging
+   target. Preserve the backup bucket and unrelated projects. Keep worker zero,
+   APIs private, automatic deployment/image updates disabled and exact source/image
+   pinning. Review the final graph/diff; prevent creation from auto-deploying before
+   deployment consent, or stop and review the inseparable operation explicitly.
+5. **Bootstrap/deployment:** approve synthetic-only migrations/seed, application
+   deployment at `bfc29f500af08e0e2cc4676b8950b5b17f26007a`, a Railway-generated
+   authenticated HTTPS frontend endpoint (no custom DNS), and native backup/isolated
+   restoration validation. Verify health/authentication/role and DB permission
+   checks, actual source/image identity, worker zero and disabled paid/financial
+   switches; then record actual costs. Test manual Stop/Cancel and restart only
+   within that approved staging scope, without touching unrelated workloads.
+
+Native backups are not an independent encrypted recovery copy. Continue only with
+rebuildable synthetic fixtures and explicit data-loss tolerance until encryption
+and manifest-signing identities, independent key custody, encrypted upload and a
+successful restoration drill are complete. Actual limits, storage sizing and TLS
+connection behavior must be checked at approved provisioning/deployment time.
+
+**Verdict:** proposed $60 limit is financially sufficient for the stated forecast
+plus planned $10–$20 staging, conditionally on measured usage; no availability
+isolation is promised. **NO-GO to execute** until the separate approvals above.
+No service, credential, billing limit, DNS, primary database or historical accounting
+was modified. No new runtime component or smoke-test automation is required.
+
 ## Minimal staging architecture
 
 Use existing Supa Agent project `99648d2a-69a1-4d8c-98d0-7f2a26543c9c`, staging
