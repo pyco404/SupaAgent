@@ -254,6 +254,41 @@ async fn history(c: &mut PgConnection) -> Result<()> {
     }
     Ok(())
 }
+fn runtime_options_allowed(options: &PgConnectOptions) -> Result<()> {
+    check(
+        options.get_host() == HOST
+            && options.get_port() == 5432
+            && options.get_database() == Some(DATABASE)
+            && options.get_username() == RUNTIME
+            && matches!(options.get_ssl_mode(), PgSslMode::VerifyFull),
+        "runtime_connection_scope_mismatch",
+    )
+}
+async fn verify_runtime_environment() -> Result<()> {
+    let url = env::var("DATABASE_URL").map_err(|_| "runtime_url_missing")?;
+    let ca = env::var("PGSSLROOTCERT").map_err(|_| "public_ca_environment_missing")?;
+    check(
+        ca.starts_with("-----BEGIN CERTIFICATE-----") && ca.len() < 4096,
+        "public_ca_pem_required",
+    )?;
+    // The frozen API also uses SQLx's URL parser, including inline PGSSLROOTCERT.
+    let options: PgConnectOptions = url.parse().map_err(|_| "runtime_url_invalid")?;
+    runtime_options_allowed(&options)?;
+    let mut connection = PgConnection::connect_with(&options)
+        .await
+        .map_err(connection_failure)?;
+    sql(&mut connection, "SET default_transaction_read_only=on").await?;
+    let row=sqlx::query("SELECT current_database() AS db,current_user AS login,(SELECT version FROM pg_stat_ssl WHERE pid=pg_backend_pid()) AS tls").fetch_one(&mut connection).await.map_err(|_|"runtime_identity_read")?;
+    check(
+        row.get::<String, _>("db") == DATABASE
+            && row.get::<String, _>("login") == RUNTIME
+            && row.get::<String, _>("tls") == "TLSv1.3",
+        "runtime_identity_or_tls_mismatch",
+    )?;
+    history(&mut connection).await?;
+    println!("staging_runtime_url_inline_ca_verified_readonly");
+    Ok(())
+}
 async fn execute(scope: &Scope) -> Result<()> {
     validate(scope, Utc::now().timestamp())?;
     let mut admin = connect(ADMIN, "POSTGRES_PASSWORD").await?;
@@ -367,12 +402,16 @@ async fn main() {
             args.len() == 3
                 && matches!(
                     args[0].as_str(),
-                    "--authorize-fresh-staging-bootstrap" | "--verify-staging-tls"
+                    "--authorize-fresh-staging-bootstrap"
+                        | "--verify-staging-tls"
+                        | "--verify-runtime-environment"
                 ),
             "explicit_scope_required",
         )?;
         let scope = load(Path::new(&args[1]), &args[2])?;
-        if args[0] == "--verify-staging-tls" {
+        if args[0] == "--verify-runtime-environment" {
+            verify_runtime_environment().await
+        } else if args[0] == "--verify-staging-tls" {
             let mut connection = connect(ADMIN, "POSTGRES_PASSWORD").await?;
             sql(&mut connection, "SET default_transaction_read_only=on").await?;
             println!("staging_readonly_tls_verified");
@@ -488,5 +527,25 @@ mod tests {
         assert!(load(&link, &hash).is_err());
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
         assert!(load(&path, &hash).is_err());
+    }
+    #[test]
+    fn runtime_url_requires_exact_restricted_target_and_verify_full() {
+        let base = PgConnectOptions::new()
+            .host(HOST)
+            .database(DATABASE)
+            .username(RUNTIME)
+            .port(5432)
+            .ssl_mode(PgSslMode::VerifyFull);
+        assert!(runtime_options_allowed(&base).is_ok());
+        for changed in [
+            base.clone().host("localhost"),
+            base.clone().database("primary"),
+            base.clone().username(ADMIN),
+            base.clone().port(6543),
+            base.clone().ssl_mode(PgSslMode::Require),
+            base.ssl_mode(PgSslMode::VerifyCa),
+        ] {
+            assert!(runtime_options_allowed(&changed).is_err());
+        }
     }
 }
