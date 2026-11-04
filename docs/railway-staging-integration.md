@@ -1,3 +1,161 @@
+# Normal Railway staging — current plan, 4 November 2026
+
+This section supersedes all $1, ten-minute and six-hour rehearsal planning below.
+**Planning only: NO-GO to provision/deploy until budget and protected operations
+are separately approved.** No deadline workflow installation, credential creation,
+resource provisioning, billing-limit change or application deployment is authorized.
+
+## Minimal staging architecture
+
+Use existing Supa Agent project `99648d2a-69a1-4d8c-98d0-7f2a26543c9c`, staging
+`ff0b2092-e42b-4a89-ae25-441ab95d92d8`, Amsterdam. One Next.js frontend, one restricted
+Rust API and one PostgreSQL 18 instance; worker stays at zero global/regional
+replicas and disabled. No extra running infrastructure. The two deadline workflows
+remain only in the private infrastructure checkout's two unpublished commits;
+do not push or dispatch them for normal staging. Preserve their history and leave
+application-side templates inert. No new watchdog token is needed for this plan.
+
+The local Railway authoring now proposes normal staging, a **$10–$20 monthly
+additional-usage planning range**, no mandatory deadline automation, and daily
+volume backups. Its GitHub source explicitly includes frozen application SHA
+`bfc29f500af08e0e2cc4676b8950b5b17f26007a`. This is not proof of the remote source
+selection: disable automatic source/image updates and require the actual deployed
+SHA before accepting the deployment. Application functionality is unchanged.
+PostgreSQL remains pinned to:
+
+`ghcr.io/pyco404/supa-agent-postgres-infra-98c1006fcb1d@sha256:9409009a40c0929052306d068c14bef92f3ecc67662c453540e2c9b95ae18fc8`
+
+Public access is only via the existing authenticated frontend flow on a separately
+approved Railway-generated HTTPS address; no custom DNS changes. Set its exact
+`SUPA_SITE_ORIGIN`. API and PostgreSQL use private networking and have no public
+TCP proxies or generated domains. Keep all model keys absent and all paid inference,
+worker/scheduler, wallet-signing, trading, launches and X publishing disabled.
+
+Health checks: frontend `/healthz`, API `/ready`; verify PostgreSQL with authenticated
+`pg_isready`/SQL and its actual restart state. Proposed ON_FAILURE application/database
+restart policies allow three retries; confirm their actual settings at provisioning. Preserve 60-second app and 120-second database drain allowances.
+Monitor CPU, RSS, restarts, disk usage, backup success and costs in Railway. The
+owner checks usage after startup and daily until baseline consumption is measured,
+then weekly; alerts are supplementary. Manual shutdown cancels pending builds and
+stops frontend/API before PostgreSQL, verifies terminal/stopped state and leaves
+worker at zero. Storage/backups remain billable; deletion needs separate approval.
+No second administrator or hard per-project spending ceiling is assumed.
+
+## Cost decision
+
+Fresh read-only workspace snapshot: Daniel 's Projects
+`e319f68a-9897-49ed-b119-743f1f846aa0`, current usage **$18.54015519**, forecast
+**$33.57494066**, shared hard limit **$40**, forecast headroom **$6.42505934**.
+The current billing period ends 18 November 2026, 16:34:07 UTC. The forecast is not
+reserved capacity or a guarantee of next period's baseline.
+
+Official [Railway pricing](https://docs.railway.com/pricing/plans): actual RAM
+$10/decimal GB-month, CPU $20/vCPU-month, egress $0.05/GB and used volume/backup
+storage $0.15/GB-month. Builds are free; existing services still consume resources
+while builds run. Existing Pro plan fees are excluded from incremental estimates.
+
+Illustrative full-month aggregate averages across all three running services:
+
+| Scenario | RAM | CPU | Volume | Incremental backup data | Egress | Approximate monthly usage |
+| --- | --- | --- | --- | --- | --- | --- |
+| Lean | 0.75 GB | 0.05 vCPU | 1 GB | 1 GB | 10 GB | $9.30 |
+| Baseline | 1 GB | 0.10 vCPU | 1 GB | 2 GB | 10 GB | $12.95 |
+| More headroom | 1.25 GB | 0.15 vCPU | 1 GB | 2 GB | 20 GB | $16.95 |
+| Higher usage | 1.5 GB | 0.20 vCPU | 1 GB | 2 GB | 20 GB | $20.45 |
+
+These are workload assumptions, not verified application measurements or installed
+resource ceilings. The three-service stack may require more memory/CPU during
+startup, migrations or load. Small per-service caps remain unverified; no silent
+limit changes or guarantees. Private GHCR transfer/storage charges, if any, are
+separate from Railway. Volume and retained backups continue charging while compute
+is stopped; private networking avoids public inter-service egress.
+
+**Always-on staging at an additional $10–$20 does not fit the existing forecast
+headroom.** Planning against the same baseline gives about $43.57–$53.57 combined
+monthly usage, above $40. Do not raise the limit or stop other workloads. Partial
+current-period costs might be lower but are not proof the recurring budget fits.
+Before deployment choose explicitly: authorize an appropriate workspace limit with
+margin after reviewing all workloads; approve a smaller measured usage envelope;
+or approve part-time manual staging. For example, 8 hours/day on 20 days/month
+(160/720 hours) scales assumed compute to about $2–$4.22 plus always-retained storage,
+backups and actual egress, roughly **$3–$6/month** under these assumptions. This
+option requires dependable manual Stop/Cancel and does not promise a hard cap.
+No operating schedule or budget-limit change is selected automatically.
+
+## Credentials, storage and recovery
+
+After separate approval: expiry-bound GHCR classic PAT with `read:packages` and
+existing private-package read access, installed only in PostgreSQL Source → Registry
+Credentials; a separate migration/admin database credential and restricted runtime
+login; synthetic viewer/operator accounts with explicit principal bindings; distinct
+frontend visitor authentication; private service tokens and exact HTTPS origin.
+Use Railway sealed/private settings where supported. Do not reuse local evaluation
+credentials or the owner's broad interactive GitHub token. No watchdog credential
+is needed. Preserve existing finite operator-session deadlines (maximum 24 hours);
+renew through the authorized process without making permissions permanent.
+
+Propose the existing 1000-MB volume request at `/var/lib/postgresql/data` and daily
+Railway-native backups (six-day retention). Confirm actual capacity/permissions
+before starting; monitor free space. Keep migrations separate from normal API
+startup and verify all 13 checksums. Do not import the protected local database or
+historical accounting. Seed only reviewed synthetic records through a separately
+approved migration/bootstrap action. Runtime credentials never get schema-admin
+or blanket financial write permissions.
+
+[Native backups](https://docs.railway.com/volumes/backups) are incremental, billed
+like volumes and limited to restoration in the same project/environment. Wiping
+the volume deletes its backups; manual backups have a documented 50%-of-volume
+size limit. Confirm backup success and demonstrate restoration using approved
+isolated synthetic state; a configured schedule is not recovery evidence.
+Independent encrypted recovery remains incomplete: verified encryption/signing
+fingerprints, independent recovery-key custody, encrypted upload and restoration
+rehearsal are still required before sensitive or irreplaceable state. A private
+bucket alone is not a backup. Synthetic-only staging must remain reproducible and
+explicitly tolerate data loss; no weakened production recovery requirement.
+
+Prior residual-vulnerability acceptance applied only to the short rehearsal.
+Obtain a **new normal-staging security decision** after reviewing current scan age,
+MEDIUM/LOW/UNKNOWN findings (including the recorded Gosu UNKNOWN advisory), private
+exposure, package credential scope and recovery limitations. Do not reuse the
+six-hour exception or claim the old zero HIGH/CRITICAL scan is a fresh scan.
+Do not change the verified PostgreSQL digest without separate review.
+
+## Actionable deployment sequence and separate approvals
+
+1. Approve the operating schedule and a recurring budget that fits the shared limit;
+   any limit increase is a separate explicit decision. Current financial verdict:
+   **NO-GO for always-on $10–$20 additional usage under the unchanged $40 limit**.
+2. Review this small IaC/test/doc change and separately approve synchronization.
+   Reconfirm repository/project/environment, frozen SHA, exact image, authenticated
+   frontend/private backend boundaries and residual-risk/recovery decision.
+3. Separately approve secure credential provisioning/installation, then additive
+   creation of three services and the volume/backup schedule. Preserve the existing
+   bucket, zero worker and unrelated resources. Review the exact graph/diff first.
+   Do not apply while any destructive change, image substitution or source drift
+   appears. Service creation can auto-deploy: explicitly prevent that until the
+   next approval. If it cannot be prevented, stop and review the exact combined
+   operation rather than treating deployment as incidental provisioning.
+4. Separately approve synthetic migrations/bootstrap, deployment at the frozen
+   SHA, a generated authenticated HTTPS frontend address, and backup/restore drill.
+   Verify health, authentication/role boundaries, restricted DB access, zero worker,
+   XML/TLS, restart and source/image identity. No full rebuild/test campaign is
+   needed merely to re-prove prior functional CI, but actual Railway operation must
+   be checked. Do not deploy on the assumption that IaC preview proves runtime.
+5. Record actual resource costs and backup success; use manual Stop/Cancel on unsafe
+   behavior or excessive spend. Any credential revocation, resource deletion or
+   subsequent source/image change follows its separately approved scope.
+
+Local validation: 14 focused Railway SDK/IaC tests pass, including the normal
+planning policy, immutable application-source field, daily backups, private image,
+restricted credentials and zero worker. No application/backend code was changed.
+No credentials, resources, DNS, billing limits, deployments or database records
+were changed. The historical smoke-test sections below are retained as evidence,
+not active operating instructions.
+
+---
+
+# Historical rehearsal planning — superseded
+
 # Railway staging integration review — 4 November 2026
 
 Preparation only. **NO-GO to execute now; recommend a separately approved ten-minute
