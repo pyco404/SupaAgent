@@ -1,5 +1,68 @@
 # Normal Railway staging — current plan, 4 November 2026
 
+## Staging database initialization verified — 4 November 2026
+
+**Database bootstrap passed. API/frontend deployment remains unauthorized.** The
+owner resumed bootstrap after the TLS repair. Exact project, staging environment,
+service, private image/deployment and cluster `7704432314739101731` were rechecked;
+only `supa_staging` was initialized. Protected local PostgreSQL remained stopped
+and excluded. The five previously unpublished commits remain intact.
+
+The dedicated migration role applied all **13** frozen SQLx migrations. Every
+stored SHA-384 checksum and success flag matches application revision
+`bfc29f500af08e0e2cc4676b8950b5b17f26007a`. Catalog verification found all **50**
+expected tables, **548** validated constraints, **127** enabled user triggers and
+**22** schema functions. Tables/functions belong to `supa_staging_migration`.
+No migration history was edited and no application epoch/authority was installed.
+
+| Role | Verified privileges |
+| --- | --- |
+| `supa_staging_migration` | Dedicated login, CONNECT/CREATE only on staging database, USAGE/CREATE on public schema, ownership of migrated objects; no superuser, CREATEDB, CREATEROLE, replication, BYPASSRLS or inherited role privileges |
+| `supa_staging_runtime` | SELECT on public tables; INSERT/UPDATE only on worker_health; UPDATE only on live_sessions; no schema/temporary DDL, migration-history writes, owner grants, financial/accounting writes, DELETE/TRUNCATE or elevated role flags |
+
+**26** expected SQLSTATE 42501 denials passed: seven guarded-bootstrap probes,
+17 independent runtime probes, and two trigger/replication bypass probes. These
+cover schemas/history, accounting/budgets/holds, owner grants, role membership,
+superuser escalation, role/session impersonation, authority issuance, missing
+operational authorization and disabling enforcement. Runtime health INSERT/UPDATE
+and session UPDATE tests passed in rolled-back transactions, leaving no health or
+session rows. Fake epoch and operation verification returned false. The exact
+per-table runtime grant matrix was independently checked.
+
+Only the approved synthetic agent
+`894ec18a-bb53-4f82-955f-7eff9f92d8a1` was seeded, with original JSON SHA-256
+`54ea20d3e35b3221c84d37a8d7a3a9f1f2860df6667746504165749f494d65d7`.
+It is paused, has zero balance, empty capabilities/memory, one incomplete synthetic
+goal, scheduling disabled and no ownership/access grant. Exact removal was rehearsed
+and rolled back. All tables other than agents (one row) and migration history
+(13 rows) are empty: no wallets, balances, ledger/history imports, budgets,
+sessions, jobs, cycles, activity, authorities or operational permits.
+
+Rust SQLx connections for admin/migration/runtime and libpq runtime checks passed
+`verify-full` over TLSv1.3 using the repaired CA. PostgreSQL remains healthy,
+private-only and on the same deployment/image, with the existing resource settings.
+Certificate renewal remains required **before 3 January 2027, 22:27:52 UTC**.
+No additional restart or application execution occurred during bootstrap.
+
+Workspace usage refreshed to **$18.81340467**, unchanged shared Compute hard limit
+**$60**, current-use headroom **$41.18659533**. Recent PostgreSQL metrics: peak
+0.07993 vCPU against 0.5 limit; latest memory 0.080384 GB against 512 MiB limit.
+Only PostgreSQL is deployed. These measurements do not establish full-stack monthly
+cost or reserve the $10–$20 planning allowance; metering/forecast uncertainty remains.
+
+**API database readiness: GO. API deployment: pending.** The existing API database
+URL targets only the restricted staging role/database with verify-full. Offline
+provider, disabled scheduler/worker/wallet/controlled inference/work flags and absent
+provider keys were confirmed without persisting secrets. Named viewer/operator
+sessions currently remain valid until **5 November 2026, 20:30:04 UTC**; recheck
+before deployment. Public CA trust is not yet installed in the API configuration.
+Frozen-revision deployable image availability and separate deployment authorization
+remain required. The unowned fixture has no access grants; authorize any future
+synthetic viewer binding explicitly rather than silently assigning an owner.
+Private evidence is retained under Git-ignored `artifacts/railway-staging-phase1/`.
+No source push, API/frontend deployment, DNS change, paid inference, autonomous
+execution or real financial activity occurred.
+
 ## Staging TLS repair verified — 4 November 2026
 
 **TLS blocker resolved; bootstrap remains unexecuted.** The explicitly authorized
