@@ -23,7 +23,7 @@ const worker = resources.find(r=>r.name === 'supa-worker');
 const frontend = resources.find(r=>r.name === 'supa-web');
 
 test('official SDK validates three running replicas, a dormant worker and explicit storage', () => {
-  assert.equal(resources.length, 5);
+  assert.equal(resources.length, 6);
   assert.equal(resources.find(r=>r.type === 'database').engine, 'postgres');
   assert.equal(resources.filter(r=>r.type==='service' || r.type==='database')
     .reduce((sum,r)=>sum+(r.type==='database'?1:r.deploy.numReplicas),0),3);
@@ -98,10 +98,18 @@ test('worker remains disabled and offline; API scheduler and wallets remain disa
 });
 test('authoring names and Amsterdam region match the dedicated staging proposal',()=>{
   assert.equal(definition.name,'Supa Agent');
-  assert.deepEqual(resources.map(r=>r.name).sort(),['supa-api','supa-postgres','supa-postgres-data','supa-web','supa-worker']);
+  assert.deepEqual(resources.map(r=>r.name).sort(),['supa-agent-backups','supa-api','supa-postgres','supa-postgres-data','supa-web','supa-worker']);
   for(const resource of [api,worker,frontend])assert.equal(resource.deploy.region,'europe-west4-drams3a');
   assert.deepEqual(resources.find(r=>r.type==='database').deploy.multiRegionConfig,{'europe-west4-drams3a':{numReplicas:1}});
   assert.deepEqual(api.variables.SUPA_OPERATOR_SESSION_DEADLINES,{type:'sharedReference',name:'SUPA_OPERATOR_SESSION_DEADLINES'});
+});
+test('whole-project authoring preserves the existing Amsterdam backup bucket',()=>{
+  const backup=resources.find(r=>r.type==='bucket');
+  assert.equal(backup.name,'supa-agent-backups');
+  assert.equal(backup.address,'bucket.supa-agent-backups');
+  assert.equal(backup.config.region,'ams');
+  assert.ok(!backup.config.isDeleted);
+  assert.ok(!backup.variables);
 });
 test('credentials and exact origin are references, never embedded or read from local evaluation files', () => {
   for(const name of ['SUPA_SITE_ORIGIN','SUPA_STAGING_USERNAME','SUPA_STAGING_PASSWORD','SUPA_WEB_OPERATORS','SUPA_API_TOKEN']) {
