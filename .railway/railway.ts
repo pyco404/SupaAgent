@@ -4,14 +4,15 @@ import { bucket, database, defineRailway, github, project, service, volume, type
 export const stagingSession = Object.freeze({
   projectId: "99648d2a-69a1-4d8c-98d0-7f2a26543c9c",
   environmentId: "ff0b2092-e42b-4a89-ae25-441ab95d92d8",
-  maximumHours: 6,
-  incrementalBudgetUSD: 1,
+  operationMode: "normal-staging",
+  monthlyUsagePlanningUSD: { minimum: 10, maximum: 20 },
+  deadlineAutomationRequired: false,
   syntheticDataOnly: true,
   proposedVolumeSizeMB: 1000,
   customReplicaLimitsVerified: false,
   applicationRevision: "bfc29f500af08e0e2cc4676b8950b5b17f26007a",
   workerReplicas: 0,
-  // These are approval/monitoring policies, not Railway TTL or spending controls.
+  // Planning only: no resource creation, billing-limit change or runtime authorization.
   deploymentAuthorized: false,
 });
 
@@ -61,11 +62,15 @@ export function stagingDefinition(ctx: RailwayContext, imageApproval: unknown) {
   // Whole-project plans must retain this existing independent-backup resource.
   const backups = bucket("supa-agent-backups", { region: "ams" });
   db.volumeAttachments = { data: { volume: storage.address,
-    mountPath: "/var/lib/postgresql/data", backupSchedules: [], volumeConfig: storage.config } };
-  db.deploy = { ...db.deploy, drainingSeconds: 120, requiredMountPath: "/var/lib/postgresql/data" };
+    mountPath: "/var/lib/postgresql/data", backupSchedules: ["DAILY"], volumeConfig: storage.config } };
+  db.deploy = { ...db.deploy, restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 3,
+    drainingSeconds: 120, requiredMountPath: "/var/lib/postgresql/data" };
   // No generated/custom domains or public TCP proxy, including for PostgreSQL.
   db.networking = { serviceDomains: {}, customDomains: {}, tcpProxies: {} };
-  const source = github("pyco404/SupaAgent", { branch: "main", rootDirectory: "/" });
+  // The source SHA is frozen; verify the deployed SHA and disable automatic deploys
+  // separately in Railway before enabling the services.
+  const source = github("pyco404/SupaAgent", { branch: "main",
+    commitSha: stagingSession.applicationRevision, rootDirectory: "/" });
   const deploy = { restartPolicyType: "ON_FAILURE" as const, restartPolicyMaxRetries: 3, region, drainingSeconds: 60 };
   const backend = {
     SUPA_PRIVATE_STAGING: "true",
