@@ -1,0 +1,95 @@
+# INERT TEMPLATE: install only with separate approval in the private infra repository.
+name: Railway smoke shutdown
+on:
+  workflow_dispatch:
+    inputs:
+      controller_revision:
+        description: Approved immutable SupaAgent controller commit
+        required: true
+      scope_json:
+        description: Exact separately approved synthetic-only scope JSON
+        required: true
+      scope_sha256:
+        description: Approved raw scope SHA-256
+        required: true
+      approval:
+        description: Enter authorize-reviewed-smoke-shutdown after separate authorization
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: railway-smoke-shutdown
+  cancel-in-progress: false
+jobs:
+  shutdown:
+    if: github.repository == 'pyco404/supa-agent-infra' && github.event.repository.private == true && github.ref == 'refs/heads/main' && github.actor == 'pyco404' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Verify approved controller and offline scope
+        env:
+          CONTROLLER_REVISION: ${{ inputs.controller_revision }}
+          SCOPE_JSON: ${{ inputs.scope_json }}
+          SCOPE_SHA256: ${{ inputs.scope_sha256 }}
+          APPROVAL: ${{ inputs.approval }}
+        shell: python
+        run: |
+          import hashlib, importlib.util, os, pathlib, re, subprocess, time, urllib.request
+          os.umask(0o077)
+          assert os.environ['APPROVAL'] == 'authorize-reviewed-smoke-shutdown'
+          revision = os.environ['CONTROLLER_REVISION']
+          assert re.fullmatch('[0-9a-f]{40}', revision)
+          root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'supa-smoke'
+          root.mkdir(mode=0o700)
+          files = {
+              'railway-shutdown.py': 'df144e4d75554e8ddf2850dd0e86adf8b7822aa73104df9602853c3d2e151d76',
+              'test-railway-shutdown.py': 'fc0cfdb317a651029fd10d0b8a5a3c6f45c8d4994f3523e66ce0f33b548f7ef7',
+          }
+          for name, digest in files.items():
+              url = f'https://raw.githubusercontent.com/pyco404/SupaAgent/{revision}/scripts/{name}'
+              with urllib.request.urlopen(url, timeout=30) as response:
+                  data = response.read(262145)
+              assert len(data) <= 262144 and hashlib.sha256(data).hexdigest() == digest
+              (root / name).write_bytes(data)
+          subprocess.run(['python3', str(root / 'test-railway-shutdown.py')], check=True, cwd=root)
+          spec = importlib.util.spec_from_file_location('guard', root / 'railway-shutdown.py')
+          guard = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(guard)
+          raw = os.environ['SCOPE_JSON'].encode()
+          scope, digest = guard.load_scope(raw)
+          assert digest == os.environ['SCOPE_SHA256']
+          assert scope['version'] == 2 and scope['profile'] == 'smoke-10m'
+          assert time.time() < scope['started_at_unix'] <= time.time() + 300
+          (root / 'scope.json').write_bytes(raw)
+      - name: Watch approved environment only
+        env:
+          SUPA_SHUTDOWN_PROJECT_TOKEN: ${{ secrets.SUPA_SHUTDOWN_PROJECT_TOKEN }}
+          SCOPE_SHA256: ${{ inputs.scope_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          root="$RUNNER_TEMP/supa-smoke"
+          python3 "$root/railway-shutdown.py" run \
+            --scope "$root/scope.json" --scope-sha256 "$SCOPE_SHA256" \
+            --authorize-shutdown --audit-file "$root/audit.jsonl" \
+            --failure-alert-file "$root/failure-alert.jsonl"
+      - name: Retain bounded sanitized audit in private job logs
+        if: always()
+        shell: python
+        run: |
+          import json, os, pathlib
+          root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'supa-smoke'
+          allowed = {'event', 'time_unix', 'scope_sha256', 'deadline_unix',
+                     'operation', 'deployment_id', 'storage_cleanup_authorized',
+                     'operator_action_required', 'compute_may_still_be_running', 'code'}
+          for name in ('audit.jsonl', 'failure-alert.jsonl'):
+              path = root / name
+              if path.is_file():
+                  raw = path.read_bytes()
+                  assert len(raw) <= 262144
+                  for line in raw.splitlines()[:1000]:
+                      row = json.loads(line)
+                      print(json.dumps({k: v for k, v in row.items() if k in allowed}))
+# Wait for the controller's verified armed event before the first billable resource.
+# Private workflow logs retain bounded audit evidence; runner loss may prevent final flushing.
