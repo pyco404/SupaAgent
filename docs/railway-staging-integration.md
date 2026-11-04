@@ -7,6 +7,107 @@ variable, credential, domain or billing limit was
 changed. The protected primary PostgreSQL remains stopped and historical accounting
 holds remain untouched.
 
+## Final operational checklist — 5 November 2026 window
+
+**NO-GO until the separate approvals below are satisfied.** GitHub notification
+receipt remains **UNVERIFIED**, but is supplementary and no longer a startup
+prerequisite. Do not implement or execute another notification test. Shutdown has
+no notification-delivery or acknowledgement dependency.
+
+Read-only billing refresh on 4 November: current $18.517429869918455; forecast
+$33.574423859042895; unchanged workspace hard limit $40 and soft limit $20;
+forecast headroom **$6.425576140957105**. The separate Railway Agent spending setting
+is not a staging-service spending cap. Recheck immediately before the session.
+Conservative ten/fifteen-minute totals including the prepared GitHub runner bounds,
+1-GB egress allowance and interval volume usage remain approximately **$0.69/$0.94**.
+The $1 incremental monitoring policy is not enforced; extra egress, private-registry
+transfer, retained storage, delayed cancellation or surviving workloads can exceed
+it. Other workspace services can consume the shared headroom independently.
+
+1. **Before the window — obtain separate permissions.** Approve synchronization
+   and installation of the inert runner templates into the private infrastructure
+   repository; project/environment-scoped watchdog authentication; GHCR read-only
+   pull authentication; synthetic runtime/migration/visitor credentials; additive
+   service provisioning; the exact shutdown scope; smoke deployment/spending; and
+   any resource deletion. No such action is authorized by this checklist. Do not
+   expand personal GitHub scopes or reuse broad interactive credentials.
+2. **Prepare exact inventory without starting billable resources.** Target project
+   `99648d2a-69a1-4d8c-98d0-7f2a26543c9c`, staging
+   `ff0b2092-e42b-4a89-ae25-441ab95d92d8`. Allow only frontend/API/PostgreSQL service
+   UUIDs, plus an explicitly declared dormant worker UUID if that service exists;
+   worker replicas must be zero. IDs are deliberately unassigned until separately
+   approved provisioning. Do not invent IDs or claim an executable scope digest.
+   Preserve the existing backup bucket. If services cannot be created without
+   automatic deployment or billable allocation, stop: revise the bootstrap order
+   and obtain approval before proceeding. Volume allocation must not precede
+   verified runner readiness.
+3. **Freeze the actual deployment.** Require application commit
+   `bfc29f500af08e0e2cc4676b8950b5b17f26007a`, one frontend, one restricted API and
+   one PostgreSQL replica, zero worker replicas, Amsterdam, a proposed 1000-MB
+   volume, authenticated visitor access and private API/database networking. Keep
+   offline provider and all inference, wallet, publishing and scheduler switches
+   disabled. Migration administration is separate from the restricted runtime.
+   Do not blindly apply `.railway/railway.ts`: it remains authoring material with
+   a legacy six-hour policy label and a `main` source. Verify the actual deployment
+   source SHA, disable automatic GitHub/image redeployment and review the exact
+   ten-minute plan before applying anything. Small CPU/RAM ceilings remain
+   unverified. No DNS changes or generic PostgreSQL substitution.
+4. **Private image pull — prepare only.** Use exactly
+   `ghcr.io/pyco404/supa-agent-postgres-infra-98c1006fcb1d@sha256:9409009a40c0929052306d068c14bef92f3ecc67662c453540e2c9b95ae18fc8`.
+   After separate approval, the owner supplies an expiry-bound classic PAT with
+   `read:packages` and existing package-read access through Railway PostgreSQL
+   Settings → Source → Registry Credentials, never ordinary variables/chat/Git.
+   Railway Pro supports this flow and handles the GHCR username. Classic scopes
+   can reach other packages accessible to that owner; they are not per-package.
+   Do not retrieve or install a credential now.
+5. **Exact shutdown authorization.** The prepared runner is independent of the
+   local Ubuntu host and uses only the separately installed staging project token.
+   Scope binds the IDs above, frozen application/image, synthetic-only state,
+   zero worker replicas and raw-byte SHA-256. For the proposed 19:00 WAT T0:
+   first allocation at 18:00 UTC, stop at 18:05 UTC, verification deadline
+   18:10 UTC, emergency authority expires at **18:15 UTC / 19:15 WAT**.
+   Install/start only with explicit approval. The controller enforces expiry on
+   every polling iteration; this does not establish a native token expiration.
+   Verify provider-supported credential expiry separately, or explicitly approve
+   manual revocation after the window. The project token is broader than stop-only.
+   The owner must authorize the exact final scope; no silent time renewal. Run the
+   offline scope validator, then the approved runner and wait for its inventory-
+   checked, durably audited `armed` event before any billable allocation. Abort on
+   queue delay, stale scope, token failure or inventory mismatch.
+6. **19:00–19:05 WAT — approved synthetic smoke only.** Confirm owner attendance
+   through 19:15, refreshed costs, runner health and exact deployed source/digest.
+   If readiness takes the whole window, abort rather than extending it. Check
+   frontend authentication/health, API authorization, migrations and database
+   health using synthetic records only. No historical records or real identities.
+7. **19:05 WAT — shutdown begins automatically.** Cancel pending/replacement
+   deployments, stop frontend/API, observe them stopped, then stop PostgreSQL.
+   Operator checks progress directly; GitHub alerts require no acknowledgement and
+   never gate stop/cancel. An ambiguous mutation is not automatically retried.
+8. **19:10 WAT — verify compute stopped.** Require repeated terminal deployment
+   state with `deploymentStopped: true`, no queued builds/replacements and worker
+   zero. A stop acknowledgement or stopped watchdog process is not evidence that
+   workloads stopped. Record sanitized state and audit evidence.
+9. **Through 19:15 WAT — emergency human fallback.** If shutdown is unconfirmed,
+   the attending workspace owner uses Railway Stop/Cancel and directly verifies
+   state without waiting for an alert. No second administrator is available.
+   A GitHub outage, Railway outage, lost runner or revoked token cannot be fully
+   mitigated automatically. Minute 15 ends controller authority, not billing:
+   surviving resources require human intervention and fresh authority if necessary.
+10. **Afterward — approved cleanup and costs.** Separately approved deletion may
+    remove only the rehearsal volume/services. Stopping compute does not delete
+    storage or guarantee zero charges. Preserve the backup bucket and unrelated
+    services, revoke approved temporary credentials, inspect residual resource
+    inventory and delayed charges. Do not introduce sensitive persistent state
+    until independent encrypted recovery and a restoration drill are complete.
+
+The primary operator's minimum oversight is verified runner readiness/startup,
+direct minute-five and minute-ten checks, and emergency availability through minute
+fifteen. No repeated manual notification checks are required. Local workflow tests
+remain passing (four); the watchdog's previously passing 32 offline cases do not
+prove live project-token permission or remote shutdown. No runner was installed,
+credential created, service/volume provisioned, watchdog armed, deployment started,
+DNS changed or protected database/accounting record touched during this preparation.
+
 ## Smoke-test safety preparation and approved synchronization
 
 The five approved commits were pushed without rewriting history; `origin/main`
