@@ -215,7 +215,8 @@ class Railway:
         require(data.get(operation) is True, 'shutdown_not_acknowledged')
 
 
-def watch(scope, digest, provider, audit, wall=time.time, monotonic=time.monotonic, sleep=time.sleep):
+def watch(scope, digest, provider, audit, wall=time.time, monotonic=time.monotonic,
+          sleep=time.sleep, on_armed=None):
     started_wall, started_mono = wall(), monotonic()
     cleanup_seconds = 300 if scope.get('profile') == 'smoke-10m' else 1800
     require(started_wall <= scope['deadline_unix'] + cleanup_seconds, 'cleanup_authorization_expired')
@@ -234,6 +235,10 @@ def watch(scope, digest, provider, audit, wall=time.time, monotonic=time.monoton
                     for r in rows if r['serviceId'] == worker), 'worker_not_at_zero')
         if initial:
             audit.write('armed', scope_sha256=digest, deadline_unix=scope['deadline_unix'])
+            if on_armed:
+                on_armed({'event': 'armed', 'scope_sha256': digest,
+                          'shutdown_at_unix': scope['shutdown_at_unix'],
+                          'deadline_unix': scope['deadline_unix']})
             initial = False
         if now >= scope['shutdown_at_unix']:
             for operation, deployment_id in actions(scope, rows):
@@ -307,7 +312,8 @@ def main(argv=None):
         audit = Audit(args.audit_file)
         provider = Railway(os.environ.get('SUPA_SHUTDOWN_PROJECT_TOKEN'))
         old_term = signal.signal(signal.SIGTERM, terminated)
-        print(json.dumps(watch(scope, digest, provider, audit)))
+        print(json.dumps(watch(scope, digest, provider, audit,
+              on_armed=lambda event: print(json.dumps(event), flush=True))))
         return 0
     except (Exception, KeyboardInterrupt) as error:
         code = ('watchdog_interrupted' if isinstance(error, KeyboardInterrupt) else
