@@ -463,3 +463,130 @@ No resources, credentials, DNS, limits or runtime state changed in this feasibil
 review. No paid inference or primary-database operation occurred. Only read-only
 queries, source/documentation inspection and local cost arithmetic were needed;
 the prior functional test results are unchanged.
+
+## Final readiness implementation — shutdown preparation, not activation
+
+The frozen application revision is still
+`bfc29f500af08e0e2cc4676b8950b5b17f26007a`. Subsequent changes are infrastructure
+preparation only; frontend, Rust application code, database and historical ledgers
+were not modified. There is still no authoritative support clarification accepting
+the small caps. Rechecking current official pricing/scaling documentation does not
+resolve their minimums; the 4-vCPU/4-GB metadata must not be guessed into a conclusion.
+The owner confirmed that no support reply has arrived; limits remain unverified.
+
+The local IaC now actually specifies one frontend, one API, one PostgreSQL and a
+dormant worker definition with **zero replicas**, both globally and in its explicit
+Amsterdam region. Deployment remains unauthorized and replica-cap verification
+remains false. This supersedes the earlier one-worker graph and its warning above.
+The source-revision authoring field is a review constraint, not proof that a future
+Railway checkout selects it: the exact deployed source must still be verified.
+All 13 focused graph/security tests and the TypeScript check passed.
+
+The configured PostgreSQL image remains exactly:
+
+```text
+ghcr.io/pyco404/supa-agent-postgres-infra-98c1006fcb1d@sha256:9409009a40c0929052306d068c14bef92f3ecc67662c453540e2c9b95ae18fc8
+```
+
+Its retained independent-verification evidence hash still matches
+`config/railway-staging-image.json`. This check did not retrieve registry credentials,
+pull/rebuild/publish an image or claim a fresh vulnerability scan.
+
+### Prepared watchdog and offline evidence
+
+`scripts/railway-shutdown.py` now implements the deadline controller; its 22 synthetic
+tests are in `scripts/test-railway-shutdown.py`. Run the regression suite without
+credentials, API requests, scheduling or real time delays:
+
+```sh
+python3 scripts/test-railway-shutdown.py
+```
+
+The eventual manifest must contain only the strict fields accepted by `load_scope`:
+version 1, exact project/environment, frozen application SHA, exact PostgreSQL image,
+three service UUIDs keyed `frontend`/`api`/`postgres` and optionally a dormant `worker`,
+first-billable Unix timestamp, shutdown timestamp exactly T0+19800 seconds and
+deadline exactly T0+21600 seconds; worker replicas zero; synthetic-only,
+independent-runner and disabled-autodeploy attestations. No service IDs or launch
+time exist yet. Do not invent real inventory or set attestations true without an
+operator verifying them. Hashing binds the exact manifest bytes for separate review.
+
+Network-free validation, only once that reviewed inventory is available:
+
+```sh
+python3 scripts/railway-shutdown.py validate --scope /PRIVATE/PATH/rehearsal-scope.json
+```
+
+The protected future action, **not authorized or executed here**, is:
+
+```sh
+python3 scripts/railway-shutdown.py run \
+  --scope /PRIVATE/PATH/rehearsal-scope.json \
+  --scope-sha256 REVIEWED_SHA256 --authorize-shutdown \
+  --audit-file /PRIVATE/PATH/shutdown-audit.jsonl
+```
+
+It reads only an explicitly installed `SUPA_SHUTDOWN_PROJECT_TOKEN`, never local
+Railway CLI, GHCR or model credentials. The token must be scoped to this project's
+staging environment. It is broader than stop-only; approval is still required.
+The live transport is not operationally tested with that token; no such token was
+created, retrieved or installed. No watchdog is armed or independently hosted yet.
+The prepared environment/deployment read queries succeeded against the empty staging
+environment using existing CLI authentication after a transient DNS failure. They
+returned zero service instances and deployments. Project-token authentication was
+skipped in that read-only query and remains covered by synthetic tests only.
+
+The controller verifies token target and exact service inventory, paginates
+deployments with bounded reads, rejects unknown states and unexpected targets,
+cancels pending replacements, stops frontend/API before PostgreSQL and requires
+`deploymentStopped=true` in terminal states. A stop acknowledgment alone is not
+success. It watches through the original deadline and requires repeated stopped
+snapshots. Restart never extends the absolute window; monotonic elapsed time
+prevents a backward wall-clock change from extending it. Cleanup authority expires
+30 minutes after the six-hour deadline; no scope is silently renewed.
+
+Audit records use owner-only permissions, exclusive locking and fsync before
+mutations; sensitive response bodies and credentials are not logged. API errors,
+ambiguous stop outcomes, a running worker, inventory drift or audit failure produce
+a nonzero exit requiring operator action. Mutations are not automatically retried.
+Only stop and cancel mutations are implemented: no deletion, scaling, deployment,
+database access or financial operations. No success claim covers retained storage.
+Tests cover scope/target denial, pagination, private logging, clock jumps, restart,
+replacement deployments, timeout/no retry, unconfirmed instance stop and audit faults.
+
+**Operational limitation:** on API/network failure the watchdog cannot guarantee
+remote shutdown; the independent runner must immediately alert the primary operator
+on nonzero exit. Approve and test runner availability, alert delivery, credential
+scope, early shutdown and read-back using separately approved disposable resources
+before treating it as reliable coverage. It must be armed before billable startup,
+on a host independent of Ubuntu and these Railway services, with approved running
+costs. No notification, schedule, runner or credential installation occurred here.
+
+### GHCR installation preparation and refreshed cost decision
+
+After separate credential approval, the owner should:
+
+1. Prepare an expiry-bound classic PAT with `read:packages` only, for an identity
+   already allowed to read the private package. Classic PAT scopes are not
+   per-package restrictions. Do not reuse the broader interactive CLI credential.
+2. Enter it privately in the PostgreSQL service's Source → Registry Credentials
+   → GitHub Access Token. Railway handles the GHCR username. Keep it out of ordinary
+   variables, prompts, logs, Git and images. No token value belongs in this document.
+3. Select the exact approved digest, verify an authenticated pull and record
+   ownership/expiry/revocation. Do not install this token in API, frontend or worker.
+
+[Railway private registries](https://docs.railway.com/builds/private-registries)
+require Pro, already confirmed; no plan upgrade is proposed. These instructions
+do not authorize credential creation/installation or an image pull/deployment.
+
+Refreshed usage: **$18.471422088903395**, forecast **$33.57639385405126** and
+forecast headroom **$6.42360614594874** below the unchanged $40 hard limit. For
+three running replicas and zero worker, prior rate arithmetic still gives the
+conditional small-cap total **$0.371215** (six-hour compute plus 1 GB used volume and
+1 GB egress). The confirmed default-ceiling scenario is **$18.039730** with those
+same storage/egress assumptions. Neither scenario is an enforced spending cap.
+No supported $1 project/session hard limit was established, nor a zero-cost
+independent runner. The final decision remains **NO-GO** until supported small caps,
+stable startup, bounded traffic/costs and independently tested shutdown coverage
+are established. No provisioning, credentials, DNS, paid inference, primary
+database changes, protected accounting changes, push or CI dispatch occurred.
