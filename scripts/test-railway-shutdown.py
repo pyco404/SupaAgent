@@ -6,6 +6,10 @@ import importlib.util
 import io
 import json
 import os
+import selectors
+import signal
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -120,7 +124,7 @@ class ScopeTests(unittest.TestCase):
                     self.assertEqual(m.main(['validate', '--scope', str(path)]), 0)
                 self.assertEqual(json.loads(output.getvalue())['network_requests'], 0)
                 for extra in ([], ['--authorize-shutdown', '--scope-sha256', 'b' * 64]):
-                    with contextlib.redirect_stdout(io.StringIO()):
+                    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                         self.assertEqual(m.main(['run', '--scope', str(path), *extra]), 1)
 
 
@@ -289,6 +293,140 @@ class AdapterTests(unittest.TestCase):
             link = Path(directory) / 'link'; link.symlink_to(path)
             with self.assertRaises(OSError):
                 m.Audit(link)
+
+
+class SmokeAndAlertTests(unittest.TestCase):
+    def smoke(self):
+        return {**fixture(), 'version': 2, 'profile': 'smoke-10m',
+                'shutdown_at_unix': START + 300, 'deadline_unix': START + 600}
+
+    def test_smoke_requires_separately_reviewed_hash_and_exact_deadlines(self):
+        _, old_hash = m.load_scope(json.dumps(fixture()).encode())
+        _, new_hash = m.load_scope(json.dumps(self.smoke()).encode())
+        self.assertNotEqual(old_hash, new_hash)
+        for change in ({'profile': 'arbitrary'}, {'deadline_unix': START + 601},
+                       {'shutdown_at_unix': START + 301}, {'version': 1}):
+            with self.subTest(change=change), self.assertRaises(m.GuardError):
+                m.load_scope(json.dumps({**self.smoke(), **change}).encode())
+
+    def test_smoke_shutdown_and_restart_keep_original_ten_minute_deadline(self):
+        clock = Clock(START + 299); provider = Provider([row(11), row(12, 2), row(13, 3)])
+        result = drive(provider, scope=self.smoke(), clock=clock)
+        self.assertTrue(result['compute_stopped_verified'])
+        self.assertLessEqual(clock.ticks, 320)
+        self.assertEqual(provider.calls[-1], ('deploymentStop', uid(13)))
+        with self.assertRaisesRegex(m.GuardError, 'cleanup_authorization_expired'):
+            drive(Provider([]), scope=self.smoke(), now=START + 901)
+
+    def invoke(self, error=None, break_audit=False, missing_alert=False):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory); scope_path = directory / 'scope.json'
+            raw = json.dumps(self.smoke()).encode(); scope_path.write_bytes(raw)
+            _, digest = m.load_scope(raw)
+            audit_path, alert_path = directory/'audit.jsonl', directory/'alerts.jsonl'
+            args = ['run', '--scope', str(scope_path), '--scope-sha256', digest,
+                    '--authorize-shutdown', '--audit-file', str(audit_path)]
+            if not missing_alert:
+                args += ['--failure-alert-file', str(alert_path)]
+            original = m.Audit
+            def audit(path):
+                if break_audit and str(path) == str(audit_path):
+                    raise OSError('synthetic-sensitive-canary')
+                return original(path)
+            with patch.object(m, 'Railway', return_value=Provider([])) as client, \
+                 patch.object(m, 'watch', side_effect=error,
+                              return_value={'compute_stopped_verified': True}), \
+                 patch.object(m, 'Audit', side_effect=audit), \
+                 patch.dict(os.environ, {'SUPA_SHUTDOWN_PROJECT_TOKEN': 'synthetic-sensitive-canary',
+                                         'GITHUB_ACTIONS': 'true'}), \
+                 contextlib.redirect_stdout(io.StringIO()) as out, \
+                 contextlib.redirect_stderr(io.StringIO()) as err:
+                result = m.main(args)
+            alerts = [json.loads(line) for line in alert_path.read_text().splitlines()] if alert_path.exists() else []
+            text = out.getvalue()+err.getvalue()+json.dumps(alerts)
+            self.assertNotIn('synthetic-sensitive-canary', text)
+            return result, err.getvalue(), alerts, client.call_count
+
+    def test_connection_auth_and_protocol_failures_emit_private_alert_and_nonzero_exit(self):
+        for code in ('provider_connection_failure', 'project_token_target_mismatch',
+                     'provider_schema_error', 'shutdown_not_acknowledged'):
+            with self.subTest(code=code):
+                status, stderr, alerts, _ = self.invoke(m.GuardError(code))
+                self.assertEqual(status, 1)
+                self.assertEqual(alerts[0]['code'], code)
+                self.assertTrue(alerts[0]['compute_may_still_be_running'])
+                self.assertTrue(alerts[0]['operator_action_required'])
+                self.assertIn('::error title=Supa shutdown', stderr)
+
+    def test_audit_failure_still_produces_durable_failure_alert(self):
+        status, stderr, alerts, clients = self.invoke(break_audit=True)
+        self.assertEqual(status, 1); self.assertEqual(clients, 0)
+        self.assertEqual(alerts[0]['event'], 'operator_alert')
+        self.assertIn('operator_alert', stderr)
+
+    def test_signal_interruption_is_not_a_silent_exit(self):
+        for error in (KeyboardInterrupt(), m.GuardError('watchdog_terminated')):
+            status, _, alerts, _ = self.invoke(error)
+            self.assertEqual(status, 1)
+            self.assertIn(alerts[0]['code'], ('watchdog_interrupted', 'watchdog_terminated'))
+        with self.assertRaisesRegex(m.GuardError, 'watchdog_terminated'):
+            m.terminated(None, None)
+
+    def test_missing_alert_sink_blocks_before_any_network_client(self):
+        status, _, _, clients = self.invoke(missing_alert=True)
+        self.assertEqual(status, 1); self.assertEqual(clients, 0)
+
+    def test_alert_storage_failure_falls_back_to_stderr(self):
+        class Broken:
+            def write(self, *args, **kwargs):
+                raise OSError('synthetic-sensitive-canary')
+        with contextlib.redirect_stderr(io.StringIO()) as out:
+            self.assertFalse(m.failure_alert('provider_connection_failure', 'a'*64, Broken()))
+        self.assertIn('"durable_alert_written": false', out.getvalue())
+        self.assertNotIn('synthetic-sensitive-canary', out.getvalue())
+
+    def test_verified_completion_does_not_create_a_false_failure_alert(self):
+        status, stderr, alerts, _ = self.invoke()
+        self.assertEqual(status, 0); self.assertEqual(stderr, ''); self.assertEqual(alerts, [])
+
+    def test_real_local_sigterm_emits_alert_without_network(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            source = Path(__file__).with_name('railway-shutdown.py').resolve()
+            raw = json.dumps(self.smoke()).encode(); _, digest = m.load_scope(raw)
+            scope = directory/'scope.json'; scope.write_bytes(raw)
+            audit, alert = directory/'audit.jsonl', directory/'alert.jsonl'
+            code = '''import importlib.util,sys,time
+spec=importlib.util.spec_from_file_location('shutdown',sys.argv[1])
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+m.Railway=lambda token: object()
+def wait(*args,**kwargs):
+ print('synthetic-watch-ready',flush=True)
+ time.sleep(30)
+m.watch=wait
+raise SystemExit(m.main(sys.argv[2:]))
+'''
+            child = subprocess.Popen([sys.executable, '-c', code, str(source), 'run',
+                '--scope', str(scope), '--scope-sha256', digest, '--authorize-shutdown',
+                '--audit-file', str(audit), '--failure-alert-file', str(alert)],
+                env={**os.environ, 'GITHUB_ACTIONS': 'true',
+                     'SUPA_SHUTDOWN_PROJECT_TOKEN': 'synthetic-sensitive-canary'},
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                with selectors.DefaultSelector() as ready:
+                    ready.register(child.stdout, selectors.EVENT_READ)
+                    self.assertTrue(ready.select(timeout=5), 'local child startup timed out')
+                self.assertEqual(child.stdout.readline().strip(), 'synthetic-watch-ready')
+                child.send_signal(signal.SIGTERM)
+                stdout, stderr = child.communicate(timeout=5)
+                self.assertEqual(child.returncode, 1)
+                self.assertIn('watchdog_terminated', stderr)
+                self.assertIn('::error title=Supa shutdown', stderr)
+                self.assertEqual(json.loads(alert.read_text())['code'], 'watchdog_terminated')
+                self.assertNotIn('synthetic-sensitive-canary', stdout+stderr+alert.read_text())
+            finally:
+                if child.poll() is None:
+                    child.kill(); child.communicate(timeout=5)
 
 
 if __name__ == '__main__':
