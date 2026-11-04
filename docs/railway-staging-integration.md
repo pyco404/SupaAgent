@@ -1,5 +1,87 @@
 # Normal Railway staging — current plan, 4 November 2026
 
+## Owner-accepted residual risk — 4 November 2026
+
+The owner explicitly accepted the following unsuppressed findings for restricted,
+authenticated, synthetic-data-only **normal staging**, superseding the older
+proposed/not-accepted security disposition below. This is not production acceptance,
+a deployment grant, a permanent security exception or permission to change images.
+
+| Component | Accepted findings | Evidence |
+| --- | --- | --- |
+| Frontend | 41 MEDIUM, 8 LOW; zero HIGH/CRITICAL and secrets | [41892549731](https://github.com/pyco404/supa-agent-infra/actions/runs/41892549731) |
+| Restricted API | 36 MEDIUM, 8 LOW; zero HIGH/CRITICAL and secrets | Same frozen-source scan run |
+| PostgreSQL | One UNKNOWN: CVE-2026-39824, golang.org/x/sys v0.1.0 in gosu, scanner fixed version 0.44.0; zero other severities and secrets | [41904471442](https://github.com/pyco404/supa-agent-infra/actions/runs/41904471442) |
+
+The PostgreSQL scan succeeded at infrastructure revision
+`d28101ad6fe4177935862ecdbed2f868705ade16`. Owner receipt association proof,
+live explicit Private visibility, anonymous HTTP 401 before/after retrieval,
+manifest/configuration and all 16 compressed layer hashes/sizes were verified.
+The job-token repository field was missing; it was not treated as proof. Full
+unsuppressed reports, receipt and integrity evidence were retained privately.
+GitHub artifacts have seven-day retention. Access-controlled local copies of all
+three scan reports and a SHA-256 manifest are retained under Git-ignored
+`artifacts/security/staging-acceptance-2026-11-04/`; no credentials were copied. This record preserves counts and
+provenance, not raw private scan contents or secrets.
+
+Acceptance conditions remain mandatory: authenticated frontend, private API and
+PostgreSQL without public TCP exposure, zero worker replicas in every region,
+synthetic disposable identities/data only, no paid inference or financial execution,
+no wallet signing, trading, token launches or X publishing. Preserve the exact
+PostgreSQL digest below. Scope drift, exposed secrets, new HIGH/CRITICAL findings
+or changed image contents require review; no scanner suppression is authorized.
+No protected local database/evaluation records or historical holds are imported.
+Independent encrypted recovery remains mandatory before sensitive persistent
+identities, memories, customer or financial data can be introduced. Native volume
+backups alone do not satisfy that independent recovery requirement.
+
+### Minimum remaining execution approvals
+
+1. **Credentials:** authorize an expiry-bound classic GHCR PAT with only
+   `read:packages` for an identity already permitted to read the approved private
+   package. Install privately in PostgreSQL Source → Registry Credentials → GitHub
+   Access Token, once the service exists. Do not reuse the broader CLI token.
+   Separately authorize fresh staging-only database administrator/runtime logins,
+   visitor authentication and finite named synthetic viewer/operator credentials;
+   keep all secrets out of Git, logs and chat. Frontend gets no database/admin
+   credentials, API gets only its restricted database URL, and worker gets none.
+2. **Additive provisioning/costs:** authorize only frontend/API/PostgreSQL in existing
+   project `99648d2a-69a1-4d8c-98d0-7f2a26543c9c`, environment
+   `ff0b2092-e42b-4a89-ae25-441ab95d92d8`, Amsterdam, plus the reviewed PostgreSQL
+   volume (initial 1000 MB request) and daily native backups. Keep worker absent
+   or zero; preserve the existing backup bucket. Approve $10–$20/month additional
+   usage after refreshing headroom under the unchanged shared $60 Compute limit.
+   Confirm accepted CPU/RAM/storage values and estimate before billable deployment;
+   previously proposed small caps remain unverified. Disable automatic deployments
+   and image updates. Stop if creation inseparably starts workloads without consent.
+3. **Artifact availability:** the scanner saved frontend/API archives only in an
+   ephemeral runner work directory; its upload step retained reports, not those
+   archives. No deployable frontend/API registry reference or recoverable retained
+   image is established. Recover and verify the exact scanned images first, with
+   separately approved publication if needed. Otherwise request fresh build/scan
+   authorization; do not silently rebuild via the current source-based Railway IaC.
+   Frozen application revision remains
+   `bfc29f500af08e0e2cc4676b8950b5b17f26007a`.
+4. **Bootstrap/deployment:** once artifacts and preceding approvals are resolved,
+   authorize starting the new PostgreSQL only, applying all 13 migrations with
+   separate migration administration, verifying checksums and restricted grants,
+   and seeding rebuildable synthetic fixtures. Configure the exact HTTPS frontend
+   origin and mandatory authentication before allowing access; deploy API privately,
+   then frontend. Use a Railway-generated hostname, with no custom DNS changes.
+   Verify /healthz, private /ready, login/role denials, stopped worker, disabled
+   capabilities, source/image identity, restart/manual stop and synthetic backup/
+   disposable restoration. No primary database startup or migration is involved.
+
+Official credential instructions:
+[Railway private registries](https://docs.railway.com/builds/private-registries),
+[GitHub Container Registry authentication](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
+**Security disposition: GO within the accepted staging boundaries. Execution is
+not authorized yet.** No credentials, resources, deployment or image rebuilds were
+performed while recording this decision. Older planning sections below are
+historical where this acceptance supersedes them.
+
+
 This section supersedes all $1, ten-minute and six-hour rehearsal planning below.
 **Planning only: NO-GO to provision/deploy until budget and protected operations
 are separately approved.** No deadline workflow installation, credential creation,
