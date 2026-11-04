@@ -1,9 +1,17 @@
 {
-  "approved": false,
-  "private": false,
-  "reference": null,
-  "source_revision": null,
-  "scan_run_url": null,
-  "high_critical_findings": null,
-  "secret_findings": null
+  "approved": true,
+  "private": true,
+  "reference": "ghcr.io/pyco404/supa-agent-postgres-infra-98c1006fcb1d@sha256:9409009a40c0929052306d068c14bef92f3ecc67662c453540e2c9b95ae18fc8",
+  "source_revision": "ed1cc9087340874747baeb757f4e88dab2cbbef6",
+  "scan_run_url": "https://github.com/pyco404/SupaAgent/actions/runs/41723686098",
+  "high_critical_findings": 0,
+  "secret_findings": 0,
+  "integrity_verified": true,
+  "anonymous_access_denied": true,
+  "package_repository": "pyco404/supa-agent-infra",
+  "configuration_digest": "sha256:0228d9646b8387201f20918ea903474f1b283d43c9a049e29ccda88701771abd",
+  "verified_layers": 16,
+  "platform": "linux/amd64",
+  "verification_evidence_sha256": "4058136c79eff164ef0e8506d017df8ae8be2b3b13fc7bc78ab078871e3e1674",
+  "deployment_authorized": false
 }
