@@ -1,4 +1,5 @@
 pub mod agent_identity;
+pub mod ecosystem_social;
 mod provider_diagnostics;
 pub use provider_diagnostics::*;
 mod live_work;
