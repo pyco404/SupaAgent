@@ -13,9 +13,25 @@ CREATE TABLE ecosystem_social.consents (
  creator_id uuid NOT NULL, revision bigint NOT NULL CHECK(revision>0), body jsonb NOT NULL,
  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(), UNIQUE(agent_id,revision)
 );
+-- Administrator-provisioned policy only. No HTTP or runtime INSERT grant.
+-- A newer disabled policy version revokes earlier reviewer authority.
+CREATE TABLE ecosystem_social.qualification_policies (
+ id uuid NOT NULL, version integer NOT NULL CHECK(version>0),
+ enabled boolean NOT NULL DEFAULT false,
+ reviewers uuid[] NOT NULL CHECK(cardinality(reviewers)>0 AND array_position(reviewers,NULL) IS NULL
+ AND NOT ('00000000-0000-0000-0000-000000000000'::uuid=ANY(reviewers))),
+ max_validity_seconds integer NOT NULL CHECK(max_validity_seconds BETWEEN 1 AND 604800),
+ PRIMARY KEY(id,version)
+);
+CREATE TABLE ecosystem_social.owner_reviews (
+ id uuid PRIMARY KEY, agent_id uuid NOT NULL REFERENCES public.agents(id),
+ creator_id uuid NOT NULL, kind text NOT NULL CHECK(kind IN ('qualification','achievement')),
+ target_id uuid NOT NULL, body jsonb NOT NULL CHECK(jsonb_typeof(body)='object'),
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
 CREATE TABLE ecosystem_social.sources (
  source_id uuid PRIMARY KEY, agent_id uuid NOT NULL REFERENCES public.agents(id),
- kind text NOT NULL CHECK(kind='agent_created'), snapshot jsonb NOT NULL,
+ kind text NOT NULL CHECK(kind IN ('agent_created','task_completed','task_failed','agent_qualified','achievement')), snapshot jsonb NOT NULL,
  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 CREATE TABLE ecosystem_social.preparations (
@@ -50,4 +66,20 @@ CREATE TRIGGER preparations_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON eco
  FOR EACH STATEMENT EXECUTE FUNCTION ecosystem_social.immutable();
 CREATE TRIGGER prepared_events_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON ecosystem_social.prepared_events
  FOR EACH STATEMENT EXECUTE FUNCTION ecosystem_social.immutable();
+CREATE TRIGGER qualification_policies_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON ecosystem_social.qualification_policies
+ FOR EACH STATEMENT EXECUTE FUNCTION ecosystem_social.immutable();
+CREATE TRIGGER owner_reviews_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON ecosystem_social.owner_reviews
+ FOR EACH STATEMENT EXECUTE FUNCTION ecosystem_social.immutable();
+-- Locks serialize existing ACL mutations without granting UPDATE on agents/ACL.
+-- No mutation, financial access or dynamic SQL. Search path cannot be hijacked.
+CREATE FUNCTION ecosystem_social.lock_agent(target uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN
+ IF EXISTS(SELECT 1 FROM public.application_epoch) THEN
+  RAISE EXCEPTION 'ecosystem_epoch_not_authorized' USING ERRCODE='42501';
+ END IF;
+ PERFORM 1 FROM public.agents WHERE id=target FOR UPDATE;
+END;
+$$;
+REVOKE ALL ON FUNCTION ecosystem_social.lock_agent(uuid) FROM PUBLIC;
 COMMIT;
