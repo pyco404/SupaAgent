@@ -29,7 +29,7 @@ service names, logo, frontend design and running Railway workloads are unchanged
 ## Official platform-token launch requirement
 
 The platform token's name is **Supa Agency**, symbol **SUPA** (display **$SUPA**),
-on Solana. Its single original official mint must end with exact case-sensitive
+on Solana. Its single original official mint must begin with exact case-sensitive uppercase
 `SUPA`, and remain separate from all individual agent-token identities. Launch
 through the owner-restricted interface on `supaagency.xyz`, using Pump.fun with
 explicit wallet/mint signatures and independently verified launch confirmation.
