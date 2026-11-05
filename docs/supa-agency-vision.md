@@ -291,3 +291,84 @@ unchanged. The next code slice is the privacy-filtered typed social-event
 projection, with absent/revoked-consent, unsupported-claim and stale-market-data
 fixtures. New social event kinds must remain rejected by the existing pipeline
 until that projection and its validator are implemented together.
+
+
+## Local ecosystem social projection — not deployed
+
+`crates/domain/src/ecosystem_social.rs` implements a separate, typed projection
+and structural draft validator. It does not widen the legacy `Event` or
+`verified_fact` allowlists, issue provider calls, read databases or enable social
+publishing. The four prior domain commits remain intact.
+
+Supported source categories are creation, qualification, completed tasks, failures,
+reviewed achievements and verified token observations. Creation/qualification
+require recorded purpose/review references. A completed task requires a retained
+validated result and accepted semantic review (or an authoritative determination
+that review is not required); evaluation-only acceptance and incomplete work are
+not completion. Failure reasons use a closed public enum, never raw provider or
+customer errors. Achievements require an accepted semantic review and result ID.
+None of these facts imply payment, revenue, deployment or new execution rights.
+
+Inputs intentionally contain no names, goal prose, customer text, memories,
+credentials, financial ledger data or wallet secrets. Public fact sentences are
+application-generated from the closed types. Approved display names and purpose
+summaries are deliberately deferred until a separately reviewed disclosure and
+redaction path exists. Agent/source/verifier/evidence IDs, event and verification
+timestamps, consent revision and verifier version accompany each projected fact.
+Simulation labels are mandatory in simulated facts. Devnet token observations are
+explicitly labeled as test-network data, distinct from mainnet observations.
+
+Projection requires explicit authorized agent/verifier sets and a unique current
+creator visibility record. Missing, private, revoked, expired, future or
+category-excluded consent yields no candidate. Creator mismatches and ambiguous
+consent records fail closed. Consent is prospective from its recorded start time;
+older events are not automatically disclosed. Evidence must exactly match the
+source snapshot, come from an authorized verifier and meet explicit age limits.
+Receipt/source conflicts are rejected. Identical repeated records are deduplicated,
+and the newest event per topic is selected deterministically. Batch/history sizes
+are bounded; previous event reuse and recent-topic cooldowns are preserved.
+
+Token observations additionally require the exact confirmed association, creator,
+cluster and mint, an approved independent public-market source, non-nil venue,
+quote units, integer quantities, decimal scale and a bounded timestamp window.
+Price comparisons bind before/after values to the same verified source/venue,
+units and window. Missing freshness/window policy, mismatched associations,
+stale data, zero comparison prices, and conflicting comparable observations fail
+closed. Unchanged prices are described as unchanged. Volume/liquidity are observed
+quantities, not earnings or recommendations. This module does not fetch markets
+or independently authenticate remote receipts; only trusted application verifiers
+may construct its non-deserializable evidence/authority contexts.
+
+`PublicEcosystemContext::model_input` exposes only the projected event envelope,
+Supa-style drafting guidance and fixed review/publishing-disabled metadata. It
+excludes prior draft prose and IDs as well as private memory. The existing
+canonical Supa personality remains unchanged and must be supplied by the provider
+adapter at integration. Contexts expire at the earliest applicable consent or
+source-age boundary. Empty/private/repeated inputs permit honest abstention.
+
+`validate_current_ecosystem_decision` rebuilds the projection from current inputs
+before accepting a result. Claims must exactly match eligible fact text and event
+IDs; unsupported source references, duplicate claims, private memory references,
+extra numbers/financial claims, inappropriate achievement/failure styles and
+repetition are rejected. Simulation labels cannot be removed. Generated
+commentary is checked separately from application-owned factual boilerplate so
+original prose is not rejected merely for sharing a verified fact sentence.
+The lexical commentary checks are defense in depth, not a proof of semantic truth
+or a general secret detector. Human semantic review remains mandatory; a passing
+structural check grants no publication, lifecycle or spending authority.
+
+Deterministic tests cover each category, consent revocation between projection
+and acceptance, cross-owner scope, private input exclusion, source/receipt binding,
+evaluation-versus-completion, market freshness/conflicts, exact integer units,
+simulation labels, duplicate records/claims, repetition and abstention. All fixtures
+are synthetic; their events are not claims about real platform achievements.
+
+Remaining integration: authenticated persistence loaders for canonical source
+records and versioned consent; durable semantic event IDs and historical consent
+policy; approved independently verified market adapters; shared OpenAI/Claude
+schema/prompt transport for this context; atomic fresh-state revalidation and
+private draft/review retention. The current providers/runtime do not consume this
+new context. Test the complete future path offline/disposably before enabling it.
+No migration, live retrieval, inference budget, publishing permission or deployment
+is introduced. Current Railway services, protected records and frontend security
+gates remain unchanged.
