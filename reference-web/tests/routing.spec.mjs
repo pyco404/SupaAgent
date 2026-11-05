@@ -57,7 +57,7 @@ test('official metadata and About links preserve planned-token and publishing bo
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content',new URL('/about',page.url()).href);
   await expect(page.locator('meta[name="twitter:site"]')).toHaveAttribute('content','@supa_agency');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content','noindex, nofollow');
-  await expect(page.locator('.buffer')).toContainText('Proposed domain / supaagency.xyz — ownership unconfirmed; not a deployed website.');
+  await expect(page.locator('.buffer')).toContainText('Purchased domain / supaagency.xyz — owner-confirmed; not a deployed website.');
   await expect(page.locator('a[href*="supaagency.xyz"]')).toHaveCount(0);
   await expect(page).toHaveTitle('About / Supa Agency');
   await expect(page.getByRole('link',{name:'Official X / @supa_agency',exact:true})).toHaveAttribute('href','https://x.com/supa_agency');
