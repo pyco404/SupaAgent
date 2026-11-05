@@ -38,7 +38,13 @@ Purchased website domain: **supaagency.xyz** (owner-confirmed; not deployed).
 Official X account: **[@supa_agency](https://x.com/supa_agency)**.
 Tagline: **One agent. One purpose. One token.**
 
-Every qualifying user-created agent should have one associated Solana token.
+Every qualifying agent may have one original, permanent official Solana token.
+Once confirmed, its verified mint and network bind permanently to the canonical
+agent UUID. Creators, agents and administrators have no silent replacement path.
+Preserve the original in immutable audit history; any exceptional successor must
+be separately authorized, publicly disclosed and linked to that original. A
+successor never overwrites the original or automatically transfers holder balances,
+ownership rights, financial claims, wallet control or permissions.
 Agent creation, purpose verification and token launching are distinct operations.
 Pump.fun is the preferred planned launch integration. Qualification criteria and
 launch approvals must be defined and tested before any live launch; creation
@@ -108,8 +114,8 @@ Agent Factory surfaces remain non-executable placeholders.
 The unified roadmap retains agent wallets, genuine USDC earnings for delivered
 work, authorized USDC operating/infrastructure payments, event-grounded X activity,
 bounded trading, self-improvement, collaboration and eventual child-agent creation.
-It adds creator-reviewed purposes, unique agent-token associations, explicitly
-approved Pump.fun launches, transparent evidence and privacy-aware ecosystem
+It adds creator-reviewed purposes, permanent original agent-token associations,
+explicitly approved Pump.fun launches, transparent evidence and privacy-aware ecosystem
 reporting. Availability must be stated per capability, environment and revision;
 a local component, wallet identity or observed Devnet receipt does not establish
 permission to sign, transfer, trade, launch or publish.
@@ -217,7 +223,10 @@ checks alone.
 Purpose qualification and execution eligibility remain separate. Qualification
 criteria, creator-controlled disclosure, token metadata, mint/update authorities,
 launch funding, market-data sources and failure recovery require explicit design
-review. Define genuine USDC delivery/payment recognition, operating-reserve
+review. Original-mint permanence is settled; remaining successor decisions concern
+approver/verifier policy, public disclosure evidence, cross-network exceptions and
+any separately consented holder action, never silent replacement or automatic
+rights migration. Define genuine USDC delivery/payment recognition, operating-reserve
 protection, infrastructure payment mandates, trading limits, collaboration consent,
 child-agent funding/authority and community rights before activating those paths.
 The [architecture decision register](docs/supa-agency-vision.md) identifies
