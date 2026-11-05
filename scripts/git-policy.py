@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 GIT = [str(ROOT / 'scripts/git-local')]
 CONVENTIONAL = re.compile(r'^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_.:/-]+\))?!?: \S.{7,}$')
-OFFICIAL_REMOTE = 'https://github.com/pyco404/SupaAgent'
+OFFICIAL_REMOTE = 'https://github.com/pyco404/supa-agency'
 
 
 def git(*args):
@@ -137,6 +137,8 @@ def self_test():
         ('main', head, head, True, official, official),
         ('main', head, head, False, ['https://unexpected.invalid/repo'], official),
         ('main', head, head, False, official, official * 2),
+        ('main', head, head, False, ['https://github.com/pyco404/SupaAgent'], official),
+        ('main', head, head, False, official, ['https://github.com/pyco404/SupaAgent']),
     ]:
         try:
             validate_push_scope(*values)
