@@ -26,7 +26,7 @@ test.describe('authorized saved records',()=>{
   test.use({httpCredentials:signIn});
   test.beforeEach(async({page})=>{await page.goto(`${connected}/operator`);await expect(page).toHaveURL(/\/agents$/);});
   test('all ten sections use honest data and planned capability labels',async({page})=>{
-    const checks={home:'Born to think. Built to survive.',agents:'Fixture Supa',intelligence:'authorization allowed',memory:'Hypothesis / unverified',economy:'Simulated ledger / hypothetical USD',social:'TEST FIXTURE: My simulated budget',trading:'strict maximum of $5', 'token-launch':'Pump.fun token launching is planned',factory:'Creation requires explicit authorization',about:'six-crate Rust runtime'};
+    const checks={home:'One agent. One purpose. One token.',agents:'Fixture Supa',intelligence:'authorization allowed',memory:'Hypothesis / unverified',economy:'Simulated ledger / hypothetical USD',social:'TEST FIXTURE: My simulated budget',trading:'strict maximum of $5', 'token-launch':'Pump.fun token launching is planned',factory:'Creation requires explicit authorization',about:'six-crate Rust runtime'};
     for(const [section,text]of Object.entries(checks)){
       await go(page,section);await expect(page.locator('.buffer')).toContainText(text);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
