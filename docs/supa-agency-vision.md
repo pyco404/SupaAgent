@@ -12,8 +12,8 @@ integration, mint, market, trading or listing is claimed.
 Supa remains the platform personality: autonomous reasoning, persistent memories,
 humor, sarcasm, curiosity, ambition and occasional drama. The existing personality
 configuration, provider abstraction, factual checks and permissions remain the
-foundation. The official account is **@supa_agency**. **supaagency.xyz** is proposed;
-ownership and deployment are unconfirmed. Local visible branding is updated;
+foundation. The official account is **@supa_agency**. **supaagency.xyz** is purchased,
+as confirmed by the owner; DNS attachment and website deployment remain pending. Local visible branding is updated;
 service names, logo, frontend design and running Railway workloads are unchanged.
 
 ## Agent identity and token association
@@ -372,3 +372,84 @@ new context. Test the complete future path offline/disposably before enabling it
 No migration, live retrieval, inference budget, publishing permission or deployment
 is introduced. Current Railway services, protected records and frontend security
 gates remain unchanged.
+
+
+## Local authenticated preparation and durable receipts
+
+The foundation is synchronized at
+`1b20a482e58e1bb3b0231963e058faabe9e88b97`. The following implementation is local,
+not deployed. Domain purchase is owner-confirmed; `supaagency.xyz` is not attached
+to Railway or configured as an application/DNS origin by this work.
+
+`Store::record_ecosystem_purpose`, `record_ecosystem_consent` and
+`prepare_ecosystem_social` use existing `agent_access` owner/operator roles. Actor
+UUIDs must be supplied by authenticated server identity, never a client field.
+Only the current owner can record a purpose or consent; owners/operators can
+prepare an envelope. Viewers, unrelated principals, nil identities and ambiguous
+owners fail closed. Access is checked before locking, then rechecked under the
+agent/ACL locks. No wallet rows, inference budgets or accounting are involved.
+Application-epoch stores are denied until a separate operational scope is reviewed.
+
+The first authoritative source adapter supports agent creation only. It reads the
+actual `activity` creation record and an immutable owner-recorded purpose reference;
+it never copies the agent name, private goal/criteria, memory, report/customer prose
+or a client-supplied event into the model input. Creation and a recorded purpose
+are stated as separate facts rather than claiming an atomic purpose-at-creation
+operation. Categories without implemented authoritative loaders remain unavailable,
+even when creator preferences include them. Generic completion/evaluation activity
+cannot be converted into a completed-task claim. Qualification, reviewed task
+outcomes, achievements and independent token-market persistence adapters remain
+future work; no placeholder receipt is treated as verification for those categories.
+
+Consent is explicit, versioned, owner-bound and append-only. Requests include an
+expected revision, start/expiry, category list and public/revoked flags. The local
+adapter limits grants to seven days; no missing field defaults to disclosure.
+Creation events outside the explicitly approved interval/category are not loaded.
+Current ownership, consent and ACL are rechecked on every preparation or replay.
+An old request cannot revive revoked, expired or superseded consent.
+
+`deployment/ecosystem-social.sql` is an explicit feature extension, intentionally
+outside the 13 automatic migrations. It creates only a private feature schema,
+immutable purposes, consent revisions, canonical source snapshots, preparation
+records and globally unique source reservations. PUBLIC schema/table/function
+access is revoked; no runtime role is granted new privileges. It has been applied
+only to newly created disposable test databases, never the running staging or
+protected database. Installation, minimum runtime grants and epoch integration
+require their own review before rollout. Existing migration files/checksums remain
+unchanged.
+
+Preparation serializes per agent using its row lock. Source-ID uniqueness is
+unbounded in PostgreSQL rather than limited to recent draft history. Repeated
+requests return their original envelope only while actor, consent, expiry, sources
+and current envelope contract still match. Conflicting source snapshots cannot
+overwrite receipts. Concurrent requests reserve a given event once; later requests
+receive an empty, abstention-capable context. Reservations survive application and
+PostgreSQL restart. They do not authorize a model generation and are not financial
+holds. Expiry does not automatically release an event reservation or retry work;
+future recovery needs an explicit append-only design rather than deleting history.
+
+Stored payloads use the existing deterministic JSON canonicalizer and a
+SQL-enforced SHA-256. They have a 30-second preparation lifetime, a fixed
+`prepared_requires_review` status and `publishing_enabled=false`. They retain the
+projected evidence/timestamps and contain no generated social text. Replay refreshes
+verification against current sources but cannot silently change the saved envelope.
+Passing preparation creates no job completion, revenue, capabilities or activation.
+
+Local validation used PostgreSQL 16.15 in new private Unix-socket-only clusters.
+Tests cover target rejection; owner/operator/viewer boundaries; purpose/consent
+idempotency and conflicts; no private text in payloads; evaluation/completion
+exclusion; source tampering; immutable rows; concurrent event reservation; ACL and
+consent revocation; forged cached-envelope rejection; PostgreSQL restart; and
+unchanged synthetic financial tables, paused agents and empty capabilities.
+The exact protected primary remains stopped and its control/configuration hashes
+are unchanged. System-registered PostgreSQL services were observed read-only and
+left unchanged. Evidence and failed runner diagnostics are retained privately under
+`artifacts/supa-agency-ecosystem-integration/`.
+
+Next integration requirements: PostgreSQL 18 validation of this new extension;
+reviewed runtime grants and operational-epoch scope; remaining authoritative event
+loaders; authenticated HTTP endpoints; shared OpenAI/Claude transport and one-use
+budget/dispatch controls; revalidation and human semantic review of actual generated
+text; and a retention/recovery policy before sensitive persistent state. No paid
+inference, publishing, trading, token launches, autonomous execution, Railway
+configuration or protected accounting changed.
