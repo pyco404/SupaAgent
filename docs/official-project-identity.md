@@ -1,18 +1,32 @@
 # Official project identity and domain preparation
 
-- Project: **Supa Agent**.
-- Tagline: **Born to think. Built to survive.**
+- Platform: **Supa Agency**. Supa remains the autonomous AI personality.
+- Tagline: **One agent. One purpose. One token.**
 - Blockchain: **Solana**.
 - Official website domain: **https://trysupaagent.xyz**.
 - Official X account: **https://x.com/trysupaagent**, handle **@trysupaagent**.
-- Planned token name: **Supa Agent**; planned ticker: **SUPA**.
+- Planned platform token: **$SUPA**, distinct from individual agent tokens.
 
 These are owner-supplied branding decisions. The domain designation does not
 establish a deployed or reachable website. SUPA is not live; no token mint,
 contract address, price, sale or listing is asserted. The platform's planned
-ability to launch other tokens is separate from the planned SUPA token.
+one-token-per-qualifying-agent direction is separate from the planned SUPA token.
+Pump.fun is the preferred planned integration. No launch, mint authority, token
+rights or publishing activation is authorized. See the
+[vision and roadmap](supa-agency-vision.md).
 
-## Website and social metadata
+## Documentation transition boundaries
+
+The Supa Agency name and new tagline are the approved product direction. Existing
+GitHub repositories, Railway projects/services, domains, logo and frontend remain
+unchanged until separately reviewed. The official X handle remains @trysupaagent.
+Do not bulk-rename historical Supa Agent reports, identifiers or accounting evidence.
+The running private PostgreSQL/API staging deployment is not interrupted.
+
+## Existing website and social metadata
+
+The following describes the existing Supa Agent frontend; this documentation
+change does not update its visible name, tagline, SEO or social-card assets.
 
 The existing Next.js layout and approved terminal experience use the official
 domain and X handle in metadata. Terminal navigation updates canonical and
@@ -29,8 +43,8 @@ autonomous publishing remains disabled.
 ## Future Railway domain checklist — approval required
 
 1. Obtain separate approval for the deployment target, resources, image digests,
-   spending envelope and domain attachment. The existing six-hour synthetic-only
-   rehearsal does not implicitly authorize a public launch or this domain.
+   spending envelope and domain attachment. The current private synthetic-only
+   staging deployment does not implicitly authorize a public launch or this domain.
 2. Attach `trysupaagent.xyz` only to the approved frontend in the existing Supa
    Agent project and approved environment. Keep API, worker and PostgreSQL private.
 3. Read Railway's actual domain-verification and routing records for that service.
