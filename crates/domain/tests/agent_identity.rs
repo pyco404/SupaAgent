@@ -445,3 +445,433 @@ fn rejections_contain_stable_codes_never_customer_prose() {
     assert_eq!(error.to_string(), "invalid_purpose");
     assert!(!format!("{error:?}").contains("private synthetic"));
 }
+
+struct SuccessorFixture {
+    registry: AgentTokenAssociations,
+    agent: Fixture,
+    candidate: AgentTokenSuccessor,
+    policy: AgentTokenSuccessorPolicy,
+    authorization: AgentTokenSuccessorAuthorization,
+    disclosure: AgentTokenSuccessorDisclosure,
+}
+impl SuccessorFixture {
+    fn new() -> Self {
+        let mut agent = Fixture::new();
+        let original = agent.candidate();
+        let mut registry = AgentTokenAssociations::default();
+        registry
+            .try_associate(original.clone(), &agent.context(), &agent.evidence)
+            .unwrap();
+        agent.now += Duration::minutes(1);
+        agent.evidence.id = id(108);
+        agent.evidence.mint = bs58::encode([31u8; 32]).into_string();
+        agent.evidence.transaction = bs58::encode([32u8; 64]).into_string();
+        agent.evidence.observed_at = agent.now - Duration::seconds(20);
+        let mut successor = agent.candidate();
+        successor.id = id(109);
+        let candidate = AgentTokenSuccessor {
+            original,
+            successor,
+            authorization_id: id(113),
+            disclosure_id: id(114),
+        };
+        let policy = AgentTokenSuccessorPolicy {
+            id: id(110),
+            version: 1,
+            authorized_approvers: BTreeSet::from([id(111)]),
+            authorized_disclosure_verifiers: BTreeSet::from([id(112)]),
+            max_authorization_validity_seconds: 300,
+            max_disclosure_age_seconds: 120,
+        };
+        let authorization = AgentTokenSuccessorAuthorization {
+            id: candidate.authorization_id,
+            policy_id: policy.id,
+            policy_version: 1,
+            approver_id: id(111),
+            approved: true,
+            revoked: false,
+            candidate: candidate.clone(),
+            approved_at: agent.now - Duration::seconds(40),
+            expires_at: agent.now + Duration::seconds(60),
+        };
+        let disclosure = AgentTokenSuccessorDisclosure {
+            id: candidate.disclosure_id,
+            source_id: id(115),
+            verifier_id: id(112),
+            state: AgentTokenEvidenceState::Confirmed,
+            publicly_accessible: true,
+            candidate: candidate.clone(),
+            published_at: agent.now - Duration::seconds(10),
+            verified_at: agent.now - Duration::seconds(5),
+        };
+        Self {
+            registry,
+            agent,
+            candidate,
+            policy,
+            authorization,
+            disclosure,
+        }
+    }
+    fn attempt(&mut self) -> Result<(), AgentIdentityRejection> {
+        self.registry.try_record_successor(
+            self.candidate.clone(),
+            &self.agent.context(),
+            &self.agent.evidence,
+            &self.policy,
+            &self.authorization,
+            &self.disclosure,
+        )
+    }
+    fn history(&self) -> serde_json::Value {
+        serde_json::json!({"originals":self.registry.original_history(),"successors":self.registry.successor_history(),"entries":self.registry.entries()})
+    }
+    fn sync_receipts(&mut self) {
+        self.authorization.id = self.candidate.authorization_id;
+        self.authorization.candidate = self.candidate.clone();
+        self.disclosure.id = self.candidate.disclosure_id;
+        self.disclosure.candidate = self.candidate.clone();
+    }
+    fn next_exception(&mut self) {
+        self.agent.now += Duration::minutes(1);
+        self.agent.evidence.id = id(208);
+        self.agent.evidence.mint = bs58::encode([41u8; 32]).into_string();
+        self.agent.evidence.transaction = bs58::encode([42u8; 64]).into_string();
+        self.agent.evidence.observed_at = self.agent.now - Duration::seconds(20);
+        self.candidate.successor = self.agent.candidate();
+        self.candidate.successor.id = id(209);
+        self.candidate.authorization_id = id(213);
+        self.candidate.disclosure_id = id(214);
+        self.sync_receipts();
+        self.authorization.approved_at = self.agent.now - Duration::seconds(40);
+        self.authorization.expires_at = self.agent.now + Duration::seconds(60);
+        self.disclosure.source_id = id(215);
+        self.disclosure.published_at = self.agent.now - Duration::seconds(10);
+        self.disclosure.verified_at = self.agent.now - Duration::seconds(5);
+    }
+}
+#[test]
+fn original_binding_and_confirmation_history_remain_permanent_after_successor() {
+    let mut f = SuccessorFixture::new();
+    let original = f.candidate.original.clone();
+    let before = serde_json::to_value(f.registry.original_history()).unwrap();
+    f.attempt().unwrap();
+    assert!(f.registry.original_token(original.agent_id) == Some(&original));
+    assert!(f.registry.entries() == [original.clone()]);
+    assert_eq!(
+        before,
+        serde_json::to_value(f.registry.original_history()).unwrap()
+    );
+    let record = &f.registry.successor_history()[0];
+    assert!(record.candidate == f.candidate);
+    assert_eq!(record.approved_by, id(111));
+    assert_eq!(record.disclosure_verified_by, id(112));
+    assert_eq!(record.confirmed_at, f.agent.evidence.observed_at);
+    let mut detached = f
+        .registry
+        .original_token(original.agent_id)
+        .unwrap()
+        .clone();
+    detached.mint = f.candidate.successor.mint.clone();
+    assert!(detached != original);
+    assert!(f.registry.original_token(original.agent_id) == Some(&original));
+    // Expiry/termination policy cannot erase an already-confirmed mint identity.
+    f.agent.now += Duration::days(1);
+    f.agent.review.decision = AgentQualificationDecision::Revoked;
+    assert!(f.registry.original_token(original.agent_id) == Some(&original));
+}
+#[test]
+fn creator_or_administrator_cannot_replace_original_or_self_authorize_exception() {
+    for approver in [id(2), id(999)] {
+        let mut f = SuccessorFixture::new();
+        let before = f.history();
+        assert_eq!(
+            f.registry.try_associate(
+                f.candidate.successor.clone(),
+                &f.agent.context(),
+                &f.agent.evidence
+            ),
+            Err(AgentIdentityRejection::DuplicateAgent)
+        );
+        f.authorization.approver_id = approver;
+        assert_eq!(
+            f.attempt(),
+            Err(AgentIdentityRejection::SuccessorAuthorizationRequired)
+        );
+        assert_eq!(before, f.history());
+    }
+}
+#[test]
+fn original_full_snapshot_cannot_be_rewritten_even_with_matching_exception_receipts() {
+    for field in 0..9 {
+        let mut f = SuccessorFixture::new();
+        let before = f.history();
+        let o = &mut f.candidate.original;
+        match field {
+            0 => o.mint = bs58::encode([99u8; 32]).into_string(),
+            1 => o.network = SolanaNetwork::Mainnet,
+            2 => o.creator_id = id(900),
+            3 => o.agent_id = id(900),
+            4 => o.id = id(900),
+            5 => o.purpose_revision_id = id(900),
+            6 => o.qualification_review_id = id(900),
+            7 => o.evidence_id = id(900),
+            _ => o.transaction = bs58::encode([99u8; 64]).into_string(),
+        }
+        f.sync_receipts();
+        assert_eq!(
+            f.attempt(),
+            Err(AgentIdentityRejection::OriginalTokenMismatch)
+        );
+        assert_eq!(before, f.history());
+    }
+}
+#[test]
+fn successor_policy_is_explicit_bounded_and_has_no_role_based_fallback() {
+    for field in 0..8 {
+        let mut f = SuccessorFixture::new();
+        let before = f.history();
+        match field {
+            0 => f.policy.id = Uuid::nil(),
+            1 => f.policy.version = 0,
+            2 => f.policy.authorized_approvers.clear(),
+            3 => {
+                f.policy.authorized_approvers.insert(Uuid::nil());
+            }
+            4 => f.policy.authorized_disclosure_verifiers.clear(),
+            5 => f.policy.max_authorization_validity_seconds = 0,
+            6 => f.policy.max_authorization_validity_seconds = 86401,
+            _ => f.policy.max_disclosure_age_seconds = 0,
+        }
+        assert_eq!(
+            f.attempt(),
+            Err(AgentIdentityRejection::InvalidSuccessorPolicy)
+        );
+        assert_eq!(before, f.history());
+    }
+}
+#[test]
+fn successor_approval_requires_exact_current_expiring_nonrevoked_scope() {
+    for field in 0..12 {
+        let mut f = SuccessorFixture::new();
+        let before = f.history();
+        match field {
+            0 => f.authorization.id = id(900),
+            1 => f.authorization.policy_id = id(900),
+            2 => f.authorization.policy_version += 1,
+            3 => f.authorization.approver_id = id(900),
+            4 => f.authorization.approved = false,
+            5 => f.authorization.revoked = true,
+            6 => f.authorization.candidate.successor.creator_id = id(900),
+            7 => f.authorization.approved_at = f.agent.now - Duration::hours(1),
+            8 => f.authorization.approved_at = f.agent.evidence.observed_at + Duration::seconds(1),
+            9 => f.authorization.expires_at = f.agent.now,
+            10 => f.authorization.expires_at = f.authorization.approved_at,
+            _ => f.authorization.expires_at = f.authorization.approved_at + Duration::seconds(301),
+        }
+        assert_eq!(
+            f.attempt(),
+            Err(AgentIdentityRejection::SuccessorAuthorizationRequired)
+        );
+        assert_eq!(before, f.history());
+    }
+}
+#[test]
+fn public_disclosure_requires_verified_exact_original_and_successor_links() {
+    for field in 0..11 {
+        let mut f = SuccessorFixture::new();
+        let before = f.history();
+        match field {
+            0 => f.disclosure.id = id(900),
+            1 => f.disclosure.source_id = Uuid::nil(),
+            2 => f.disclosure.verifier_id = id(900),
+            3 => f.disclosure.publicly_accessible = false,
+            4 => f.disclosure.candidate.original.mint = "SUPA".into(),
+            5 => f.disclosure.candidate.successor.mint = "SUPA".into(),
+            6 => f.disclosure.published_at = f.agent.evidence.observed_at - Duration::seconds(1),
+            7 => f.disclosure.verified_at = f.disclosure.published_at - Duration::seconds(1),
+            8 => f.disclosure.verified_at = f.agent.now + Duration::seconds(1),
+            9 => f.policy.max_disclosure_age_seconds = 5,
+            _ => f.disclosure.candidate.authorization_id = id(900),
+        }
+        assert_eq!(
+            f.attempt(),
+            Err(AgentIdentityRejection::SuccessorDisclosureRequired)
+        );
+        assert_eq!(before, f.history());
+    }
+    for state in [
+        AgentTokenEvidenceState::Pending,
+        AgentTokenEvidenceState::Failed,
+        AgentTokenEvidenceState::Unknown,
+    ] {
+        let mut f = SuccessorFixture::new();
+        f.disclosure.state = state;
+        assert_eq!(
+            f.attempt(),
+            Err(AgentIdentityRejection::SuccessorDisclosureRequired)
+        );
+        assert!(f.registry.successor_history().is_empty());
+    }
+}
+#[test]
+fn failed_pending_unknown_launches_never_consume_an_original_or_successor_binding() {
+    for state in [
+        AgentTokenEvidenceState::Pending,
+        AgentTokenEvidenceState::Failed,
+        AgentTokenEvidenceState::Unknown,
+    ] {
+        let mut original = Fixture::new();
+        original.evidence.state = state;
+        let mut registry = AgentTokenAssociations::default();
+        assert_eq!(
+            registry.try_associate(
+                original.candidate(),
+                &original.context(),
+                &original.evidence
+            ),
+            Err(AgentIdentityRejection::UnconfirmedEvidence)
+        );
+        assert!(
+            registry.original_history().is_empty()
+                && registry.original_token(original.purpose.agent_id).is_none()
+        );
+        let mut f = SuccessorFixture::new();
+        let before = f.history();
+        f.agent.evidence.state = state;
+        assert_eq!(
+            f.attempt(),
+            Err(AgentIdentityRejection::UnconfirmedEvidence)
+        );
+        assert_eq!(before, f.history());
+        f.agent.evidence.state = AgentTokenEvidenceState::Confirmed;
+        f.attempt().unwrap();
+        assert_eq!(f.registry.successor_history().len(), 1);
+    }
+}
+#[test]
+fn multiple_exception_records_link_to_original_and_preserve_complete_prior_history() {
+    let mut f = SuccessorFixture::new();
+    f.attempt().unwrap();
+    let first = f.registry.successor_history()[0].clone();
+    let original = f.candidate.original.clone();
+    f.next_exception();
+    f.attempt().unwrap();
+    assert_eq!(f.registry.successor_history().len(), 2);
+    assert!(f.registry.successor_history()[0] == first);
+    assert!(
+        f.registry
+            .successor_history()
+            .iter()
+            .all(|r| r.candidate.original == original)
+    );
+    assert!(f.registry.original_token(original.agent_id) == Some(&original));
+    let before = f.history();
+    f.candidate.original = first.candidate.successor;
+    f.sync_receipts();
+    assert_eq!(
+        f.attempt(),
+        Err(AgentIdentityRejection::OriginalTokenMismatch)
+    );
+    assert_eq!(before, f.history());
+}
+#[test]
+fn successor_ids_approval_receipts_and_disclosure_receipts_are_one_use() {
+    for field in 0..4 {
+        let mut f = SuccessorFixture::new();
+        f.attempt().unwrap();
+        let first = f.candidate.clone();
+        f.next_exception();
+        match field {
+            0 => f.candidate.successor.id = first.successor.id,
+            1 => f.candidate.authorization_id = first.authorization_id,
+            2 => f.candidate.disclosure_id = first.disclosure_id,
+            _ => {
+                f.candidate.successor.evidence_id = first.successor.evidence_id;
+                f.agent.evidence.id = first.successor.evidence_id;
+            }
+        }
+        f.sync_receipts();
+        let before = f.history();
+        assert_eq!(f.attempt(), Err(AgentIdentityRejection::DuplicateRecord));
+        assert_eq!(before, f.history());
+    }
+}
+#[test]
+fn duplicate_mints_cannot_be_reclaimed_from_other_originals_or_successor_history() {
+    let mut replay = SuccessorFixture::new();
+    replay.attempt().unwrap();
+    let prior_mint = replay.candidate.successor.mint.clone();
+    replay.next_exception();
+    replay.candidate.successor.mint = prior_mint.clone();
+    replay.agent.evidence.mint = prior_mint;
+    replay.sync_receipts();
+    let before = replay.history();
+    assert_eq!(replay.attempt(), Err(AgentIdentityRejection::DuplicateMint));
+    assert_eq!(before, replay.history());
+    let mut f = SuccessorFixture::new();
+    let mut other = Fixture::new();
+    other.authority.agent_id = id(203);
+    other.purpose.agent_id = id(203);
+    other.review.purpose = other.purpose.clone();
+    other.evidence.id = id(208);
+    other.evidence.mint = bs58::encode([51u8; 32]).into_string();
+    let mut c = other.candidate();
+    c.id = id(209);
+    f.registry
+        .try_associate(c, &other.context(), &other.evidence)
+        .unwrap();
+    f.candidate.successor.mint = other.evidence.mint.clone();
+    f.agent.evidence.mint = other.evidence.mint;
+    f.sync_receipts();
+    let before = f.history();
+    assert_eq!(f.attempt(), Err(AgentIdentityRejection::DuplicateMint));
+    assert_eq!(before, f.history());
+    let mut f = SuccessorFixture::new();
+    f.attempt().unwrap();
+    let before = f.history();
+    let mut other = Fixture::new();
+    other.authority.agent_id = id(303);
+    other.purpose.agent_id = id(303);
+    other.review.purpose = other.purpose.clone();
+    other.evidence.id = id(308);
+    other.evidence.mint = f.candidate.successor.mint.clone();
+    let mut c = other.candidate();
+    c.id = id(309);
+    assert_eq!(
+        f.registry
+            .try_associate(c, &other.context(), &other.evidence),
+        Err(AgentIdentityRejection::DuplicateMint)
+    );
+    assert_eq!(before, f.history());
+}
+#[test]
+fn successor_never_bypasses_qualification_or_silently_crosses_networks() {
+    let mut f = SuccessorFixture::new();
+    f.agent.review.decision = AgentQualificationDecision::Revoked;
+    assert_eq!(f.attempt(), Err(AgentIdentityRejection::NotQualified));
+    assert!(f.registry.successor_history().is_empty());
+    let mut f = SuccessorFixture::new();
+    let before = f.history();
+    f.candidate.successor.network = SolanaNetwork::Mainnet;
+    f.agent.evidence.network = SolanaNetwork::Mainnet;
+    f.sync_receipts();
+    assert_eq!(f.attempt(), Err(AgentIdentityRejection::InvalidSuccessor));
+    assert_eq!(before, f.history());
+}
+#[test]
+fn successor_payloads_cannot_request_balance_rights_or_permission_migration() {
+    let f = SuccessorFixture::new();
+    for field in [
+        "transfer_holder_balances",
+        "ownership_rights",
+        "financial_claims",
+        "wallet_control",
+        "administrator_override",
+        "replace_original",
+    ] {
+        let mut input = serde_json::to_value(&f.candidate).unwrap();
+        input[field] = serde_json::json!(true);
+        assert!(serde_json::from_value::<AgentTokenSuccessor>(input).is_err());
+    }
+}
