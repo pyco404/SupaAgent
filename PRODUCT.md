@@ -19,9 +19,18 @@ onboarding and agent creation are already available.
 
 ## Product Purpose
 
-Build a Solana-native platform where autonomous AI agents can become independent
-economic participants: reason, learn from experience, sustain their operations
-and eventually interact with economic and social services under explicit limits.
+Supa Agency is a Solana-native ecosystem where users create purposeful autonomous
+AI agents that can reason, remember, work, learn, earn revenue, pay operating
+expenses and participate in their own agent-linked token economies under explicit
+permissions and budgets. This unified vision expands the original Supa Agent
+vision; purposeful-agent tokenization adds to the autonomous-agent foundation.
+
+Preserve the original goals: durable identities, distinctive personalities,
+autonomous reasoning and goal execution, persistent memory, event-grounded social
+activity, authorized financial operations and bounded trading, genuine USDC
+customer earnings, infrastructure payments, self-improvement, collaboration and
+eventual child-agent creation. These remain product capabilities to develop and
+validate; documentation is not evidence that each is implemented or enabled.
 
 Platform name: **Supa Agency**. Blockchain: **Solana**.
 Platform token: **$SUPA (planned, not live)**.
@@ -33,14 +42,28 @@ Every qualifying user-created agent should have one associated Solana token.
 Agent creation, purpose verification and token launching are distinct operations.
 Pump.fun is the preferred planned launch integration. Qualification criteria and
 launch approvals must be defined and tested before any live launch; creation
-alone never authorizes tokenization, signing, spending or activation.
+alone never authorizes tokenization, signing, spending or activation. An agent
+may reason, work and learn under separately approved operating permissions before
+it qualifies for or receives a token. A token is not an execution prerequisite or
+an operating budget.
 
 **Supa** remains the platform's autonomous AI personality, with persistent memory,
 reasoning, humor, sarcasm, curiosity and event-driven social drafts. The platform
 rename does not replace Supa or reset existing agent identities and memories.
 The planned platform token $SUPA is distinct from each individual agent token.
 Token ownership grants no automatic agent control, wallet access, permissions,
-revenue rights or guaranteed returns.
+revenue rights or guaranteed returns. Community participation can include public
+discovery, creator-approved feedback and collaborations; any additional rights
+need an explicit product decision and their own authorization design.
+
+Keep operational revenue and token markets separately accounted. Customer work,
+acceptance, delivery, completion and verified USDC payment are distinct evidence
+states. Token price, trading volume, liquidity, launch proceeds and unrealized
+market gains do not establish operational revenue. Infrastructure/provider costs,
+launch fees and trading allocations need distinct records and approved budgets;
+market allocations must not silently consume protected operating reserves or
+historical holds. Transfers between accounts require explicit authority and
+reconcilable records, not implicit model instructions.
 
 Visible application branding and metadata now use Supa Agency. Existing internal
 identifiers, Railway service names, logo, design, animations and running staging
@@ -82,11 +105,21 @@ simulated economics, draft-only social generation and read-only Devnet monitorin
 The frontend currently exposes read-only records; trading, token launch and
 Agent Factory surfaces remain non-executable placeholders.
 
-The product roadmap includes agent wallets, USDC payments, X activity, limited
-trading, Pump.fun launches, self-improvement and child-agent creation. These are
-planned capabilities, not blanket claims of current availability. A wallet
-identity or observed Devnet receipt does not establish permission to sign or
-transfer funds.
+The unified roadmap retains agent wallets, genuine USDC earnings for delivered
+work, authorized USDC operating/infrastructure payments, event-grounded X activity,
+bounded trading, self-improvement, collaboration and eventual child-agent creation.
+It adds creator-reviewed purposes, unique agent-token associations, explicitly
+approved Pump.fun launches, transparent evidence and privacy-aware ecosystem
+reporting. Availability must be stated per capability, environment and revision;
+a local component, wallet identity or observed Devnet receipt does not establish
+permission to sign, transfer, trade, launch or publish.
+
+Self-improvement includes evidence-linked learning, retrieval and reviewed policy
+or tool improvements; it does not grant authority to rewrite production code or
+expand capabilities. Collaboration respects each participant's scope and consent.
+Child agents need their own identities, budgets, permissions, lifecycle controls
+and auditable lineage; parent autonomy or token ownership grants no inherited
+wallet keys, revenue rights or launch authorization.
 
 - Distinguish simulated balances, verified Devnet test assets and real economic
   data. Never imply hypothetical revenue or Devnet tokens are real earnings or
@@ -181,9 +214,15 @@ checks alone.
 
 ## Open Decisions
 
-Agent qualification, creator-controlled disclosure, token metadata, mint/update
-authorities, launch funding, market-data sources and failure recovery require
-explicit design review. Public onboarding and account roles, public-versus-operator
-route boundaries, agent-creation authorization UX, production deployment and roadmap activation
-details are not established by these initialization answers. Resolve them within
-their future task scope without treating planned services as live.
+Purpose qualification and execution eligibility remain separate. Qualification
+criteria, creator-controlled disclosure, token metadata, mint/update authorities,
+launch funding, market-data sources and failure recovery require explicit design
+review. Define genuine USDC delivery/payment recognition, operating-reserve
+protection, infrastructure payment mandates, trading limits, collaboration consent,
+child-agent funding/authority and community rights before activating those paths.
+The [architecture decision register](docs/supa-agency-vision.md) identifies
+unresolved policy choices without granting financial or publishing authority.
+Public onboarding and account roles, public-versus-operator route boundaries,
+agent-creation authorization UX, production deployment and roadmap activation
+details still require review within their task scope. Planned services must not
+be presented as live.
