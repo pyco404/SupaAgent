@@ -15,7 +15,7 @@ ecosystem reporting extend those capabilities. They do not replace the work engi
 or make a token a prerequisite for separately authorized agent operation.
 
 $SUPA is the planned platform token; it is not live and is not an individual
-agent token. Every qualifying user-created agent should have one associated
+agent token. Every qualifying agent may have one original, permanent official
 Solana token. Pump.fun is the preferred planned launch integration; no live
 integration, mint, market, trading or listing is claimed.
 
@@ -37,7 +37,7 @@ service names, logo, frontend design and running Railway workloads are unchanged
 | Financial operations and bounded trading | Separate application-enforced mandates for observation, payment, signing and trading; explicit destinations, expiry, costs, exposure/loss limits, reserves and stop controls |
 | Collaboration and child agents | Consent-bound cross-agent tasks and attribution; eventual children have separate identity, purpose, budgets, permissions and lifecycle with auditable parentage; no inherited wallet or launch powers |
 | Purposeful user-created agents | Creator ownership, versioned purposes, explicit qualification and granular disclosure; creation, activation, qualification and token launch are separate decisions |
-| Agent-linked token economies | One uniquely associated Solana token per qualifying agent, with separately approved launches and Pump.fun as the planned integration; receipt-backed associations and transparent activity |
+| Agent-linked token economies | One original permanent official Solana token per qualifying agent, with separately approved launches and Pump.fun as the planned integration; receipt-backed associations and transparent activity |
 | Community participation | Public discovery, creator-approved feedback, collaboration and verifiable token observations; participation conveys no automatic control, revenue claim or token-holder privilege |
 
 These are product commitments and release targets, not claims of current live
@@ -108,8 +108,26 @@ attempts separate from canonical associations. Reject duplicate concurrent
 launches with application authorization, transaction locking, idempotency and
 spending reservations. Unknown submission outcomes retain their pending state
 and conservative reservations; reconcile against chain/provider evidence before
-any retry. A relaunch, mint replacement or ownership transfer needs a separately
-reviewed policy and append-only history, never a silent reassignment.
+any retry. Once confirmed, the verified original `(network, mint)` binds
+permanently to the canonical agent UUID. No creator, agent or administrator can
+silently replace it. Purpose changes, qualification expiry, lifecycle changes and
+creator transfers do not erase or reassign the original mint.
+
+An exceptional successor requires a separate exact-scope authorization, independent
+confirmation, verified public disclosure and an explicit link to the original
+mint. Keep it as an additional append-only exception record; never update the
+original, promote a successor into the original field or redirect an existing
+mint lookup silently. Later exceptions still link back to the original. Retain
+failed, pending and unknown launch attempts separately from confirmed bindings;
+an unsuccessful attempt cannot reserve an official mint or erase prior history.
+
+No migration automatically transfers holder balances, ownership rights or financial
+claims. It also grants no wallet control, revenue rights or agent permissions.
+Any proposed holder action needs a separate design, explicit consent/authorization
+and verified outcome; a successor association cannot execute it. Public disclosures
+must distinguish the original official mint from exceptional successors and must
+not expose private creator or customer information. X publishing remains disabled;
+this rule grants no permission to publish a disclosure through Supa.
 
 Token-holder status conveys no agent role, wallet signing authority, spending
 permission, creator identity, revenue entitlement or guaranteed return. Token
@@ -216,7 +234,7 @@ contracts that must be decided before live activation:
 | Autonomy versus token qualification | Agent creation, activation, qualification and launch are independent; no token prerequisite for permitted work | Qualification criteria, review/appeal roles and treatment of paused, terminated or transferred agents |
 | Genuine revenue versus evaluations and market flows | Evaluation acceptance does not complete customer work or create revenue; token metrics are not earnings | Real-USDC delivery, receipt/finality, refunds/disputes and proceeds classification while preserving current ledgers |
 | Survival reserves versus trading and launch costs | No implicit draw on operating reserves, liabilities or historical holds | Minimum reserves, segregated allocations, loss/exposure limits, approved venues and emergency authority |
-| Purpose evolution versus permanent mint identity | Current association rule permits one canonical token per agent across clusters, with immutable history | Safe rehearsal-to-live identity mapping, purpose changes, custody, metadata/supply authorities, replacement or transfer policy; no silent reassignment |
+| Permanent original versus exceptional successors | The first confirmed official mint is permanent across the canonical agent identity; exceptions are additional disclosed history, never replacements or automatic holder migrations | Approver/quorum and disclosure-verifier policy, cross-network treatment, rehearsal identities, metadata/custody authority and any separately consented holder actions |
 | Community participation versus control | Token ownership grants no wallet, agent, permission or revenue rights | Any proposed feedback/governance mechanism and its explicit limits; separate $SUPA design |
 | Self-improvement and children versus least privilege | Learning cannot expand tools, modify production automatically or inherit signing authority | Reviewed improvement process, parent/child funding, ownership, consent, independent budgets and coordinated stopping |
 | Public transparency versus privacy | Missing/revoked disclosure consent excludes private platform data; no unrestricted cross-agent memory access | Public fields, retention, collaboration attribution and revocation policy; public chain records/posts cannot be promised deletion |
@@ -251,8 +269,10 @@ migration. Keep the existing agent UUID and owner authorization as the authority
   verification source/time and status. A proposal has no confirmed mint.
 - Enforce one canonical association per agent (across clusters) and one association
   per `(cluster, mint)`. Disposable cluster fixtures are not additional live tokens.
-  Preserve previous associations as immutable history. Replacement/transfer rules
-  require review; do not silently overwrite a mint or infer identity from a ticker.
+  Preserve the original official mint permanently as immutable history. Exceptional
+  successors require independent authorization, confirmation and public disclosure
+  linked to the original; they cannot overwrite it or migrate holder rights or
+  balances automatically. Do not infer identity from a ticker.
 - Launch lifecycle: proposed → independently authorized → submitted → confirmed,
   rejected or unknown. Unknown stays reserved and blocks retries until reconciled.
   Use a unique idempotency key and an agent-row transaction lock; concurrent
@@ -587,3 +607,70 @@ before any separately approved rollout; then connect offline social drafting to
 freshly revalidated envelopes and human semantic review. Independently verified
 agent-token/market ingestion needs its own source-authority and privacy review.
 Paid inference, token launching, financial execution and X publication remain disabled.
+
+
+## Permanent original-token rule — local domain implementation
+
+The product decision is final: every qualifying agent may have one original,
+permanent official Solana token. `AgentTokenAssociations::try_associate` records
+only confirmed evidence and exposes the first binding through `original_token`.
+`original_history` retains the complete association snapshot, chain-observation
+time and recording time. There is no mutating lookup, deletion, replacement or
+administrator override. Qualification expiry/revocation and later purpose or
+ownership decisions do not remove an already-confirmed original.
+
+`AgentTokenSuccessor` is a separate proposal. `try_record_successor` validates its
+full original snapshot against the registry; the successor must identify the same
+canonical agent, have current qualification and exactly matching confirmed chain
+evidence, and use an unused network/mint. The current domain slice permits only
+same-network successors; cross-network exceptions remain unimplemented. Disposable
+Devnet fixtures do not authorize replacing a real agent's original with a Mainnet
+mint. Production bootstrap must distinguish disposable and canonical identities.
+
+There is no default successor policy or role-based fallback. An independently
+supplied current policy allowlists approvers and disclosure verifiers and supplies
+bounded approval/freshness windows (the domain caps each at one day). A non-revoked,
+expiring approval binds the entire candidate and policy version. A separate trusted
+receipt must confirm accessible public disclosure of both network/mint identities,
+the canonical agent link and exceptional status. Approval, chain confirmation,
+publication and verification timestamps must follow the enforced order. Missing,
+failed, pending, unknown, stale, conflicting or unauthorized receipts fail closed.
+Policy, approval, disclosure and chain-evidence contexts cannot be JSON-deserialized
+from a client/model. They require future authenticated, independently verified
+backend loaders; a caller-supplied `public=true` is not public-disclosure evidence.
+
+`successor_history` appends an audit snapshot containing the original/successor
+binding, policy version, approval identity/time, disclosure receipt/verifier/time,
+chain-observation and recording times. Record, evidence, approval and disclosure
+identities are protected against reuse. Original and successor mints share the
+uniqueness checks; another agent cannot reclaim either. Each exception remains
+linked to the first original rather than replacing it with its predecessor.
+`entries()` continues exposing originals only, so existing token-market projection
+cannot silently begin attributing a successor's activity to the original token.
+No holder migration, wallet action, financial claim or permission update exists in
+this domain path; extra client fields requesting them are rejected.
+
+This is an in-memory, I/O-free domain aggregate with read-only history access,
+not proof of durable or administrator-resistant database enforcement. Serialize-only
+audit records are not a trusted restore API. A separately reviewed persistence
+extension must enforce append-only original/successor records, global uniqueness,
+concurrency, trusted recovery and audit retention, with runtime/admin privilege
+separation and detectable exceptional administration. No migration, registry data,
+API, provider, running Railway service or frontend security policy changes here.
+The planned $SUPA token remains separate; no platform mint or holder rights are
+created or inferred by an individual agent association.
+
+Deterministic fixtures test original permanence, exact-snapshot tampering,
+creator/admin authority rejection, duplicate original/successor mints, one-use
+receipts, failed/unknown evidence, approval expiry/revocation, public disclosure,
+complete exception history, qualification and network boundaries, and rejection
+of automatic balance/rights/permission migration fields. These are synthetic
+fixtures, not launches or real disclosures.
+
+Remaining decisions: successor approver roles/quorum and policy administration;
+approved disclosure channels, privacy-safe public fields and verifier evidence;
+cross-network exceptions and canonical rehearsal identity policy; and any voluntary
+holder participation, legal claims or economic treatment as a separate proposal.
+Original-mint permanence and the prohibition on silent or automatic migration are
+not reopened by those decisions. Durable rollout and all live operations need
+separate review and approval.
