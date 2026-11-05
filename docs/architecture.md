@@ -1,4 +1,62 @@
-# Milestone 1 architecture
+# Supa Agency architecture
+
+## Unified product direction and scope
+
+Supa Agency extends the original Supa Agent system into a Solana-native ecosystem
+of purposeful autonomous agents. Reasoning, persistent memory, goals, personality,
+useful work, learning, authorized USDC earnings and operating expenses, bounded
+trading, collaboration and eventual child-agent creation remain first-class
+product goals. Creator-reviewed purposes, one uniquely associated token per
+qualifying agent, approved launches and ecosystem reporting extend that foundation.
+See the [unified product vision and decision register](supa-agency-vision.md).
+
+The dependency graph and milestone notes below describe the original foundation.
+They are retained as historical implementation context, not a claim that the full
+roadmap is enabled or that later backend/staging work has been removed. The vision
+document records the newer local purpose/social implementation and its rollout
+limits. This update changes documentation only; no existing deployment, database,
+capability or authentication boundary changes.
+
+### Architectural contracts for the unified direction
+
+| Existing boundary | Unified responsibility and constraint |
+|---|---|
+| `domain` | Retain lifecycle, goals, memory provenance, work/financial validation and personality rules; add explicit purpose qualification, unique token identity and typed public claims without I/O or permission grants |
+| `capabilities` | Keep the closed registry; separate work, observation, payment, launch, trade, publication and child-creation scopes; token holdings and model recommendations cannot register tools |
+| `providers` | Preserve provider-independent reasoning and metering, Solana verification and custody boundaries; planned Pump.fun/market adapters need independently verified receipts and separate execution authority |
+| `persistence` | Preserve durable operational history and existing ledgers; isolate operational revenue, expenses and market records with conservation-of-funds checks, idempotency, unknown-outcome holds and reviewed grants |
+| `runtime` | Retain bounded planning, work, memory, learning and lifecycle fencing; recheck current identity, permissions, budgets, consent and evidence before effects; no automatic inheritance of child-agent privileges |
+| `api` and frontend | Authenticate creator/owner/operator/viewer actions; distinguish creation, activation, qualification, launch, delivery, payment and review states; retain the approved interface and avoid token-holder role inference |
+| Migration administration | Keep checksummed migrations, restricted runtime credentials, explicit rollout and disposable recovery tests; product direction never grants schema authority |
+
+Purpose and qualification supplement the existing agent UUID and lifecycle. A
+qualified purpose is not a wallet mandate; an associated token is not activation.
+Each child would retain its own UUID, authorization, budget and lineage. A parent
+cannot silently allocate customer liabilities, wallet keys or operating permissions
+to a child. Collaboration requires scoped access and consent from participants.
+
+In the planned real-USDC extension, the operational accounting view must track
+service income and permitted expenses with delivery/payment evidence. Token-market
+accounting must track distinct allocations, launch costs, trades and observations. Neither token prices nor unrealized gains
+increase an operating budget. Transfers between views require authorized paired,
+reconciled records and reserve checks rather than duplicated spendable balances.
+Separate simulated, Devnet and real assets, exact USDC units and estimated provider
+costs. Preserve all existing historical holds and reconciliation rules. The planned
+platform token $SUPA has a separate identity and release decision from agent tokens.
+
+Supa's ecosystem reporting consumes privacy-filtered, evidence-linked projections,
+not unrestricted agent memories or customer records. Retain the canonical witty,
+sarcastic personality, verified/hypothesis distinction, style diversity, repetition
+controls and abstention. Review-only factual claims remain separate from generated
+commentary; draft validation never authorizes X publication or financial execution.
+
+No distributed-agent redesign, automatic token-holder control, new revenue-sharing
+mechanism or live payment/trading/launch service is established here. Concrete
+custody, reserve, purpose-change, child ownership and community-rights decisions
+remain in the vision's decision register. Independent recovery and separately
+approved scopes remain prerequisites for sensitive persistent or live operations.
+
+## Historical Milestone 1 foundation
 
 The application is a single local Rust process backed by PostgreSQL. Six crates form a directed dependency graph:
 
