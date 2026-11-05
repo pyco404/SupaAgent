@@ -1,4 +1,4 @@
-# Supa Agent
+# Supa Agency
 
 <!-- impeccable:product-schema 1 -->
 
@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Supa Agent serves a broader public audience alongside an internal operator
+Supa Agency serves a broader public audience alongside an internal operator
 console. The intended public workflows let humans create autonomous economic
 agents, explore agents and observe their activities. Operators inspect agent
 state, goals, memory, reasoning, social drafts and economic records.
@@ -23,17 +23,30 @@ Build a Solana-native platform where autonomous AI agents can become independent
 economic participants: reason, learn from experience, sustain their operations
 and eventually interact with economic and social services under explicit limits.
 
-Name: **Supa Agent**. Blockchain: **Solana**.
-Planned token name: **Supa Agent**. Planned ticker: **SUPA** (brand notation: **$SUPA**).
-Official website domain: **https://trysupaagent.xyz**.
-Official X account: **[@trysupaagent](https://x.com/trysupaagent)**.
-Tagline: **Born to think. Built to survive.**
+Platform name: **Supa Agency**. Blockchain: **Solana**.
+Platform token: **$SUPA (planned, not live)**.
+Official website domain: **https://trysupaagent.xyz** (unchanged).
+Official X account: **[@trysupaagent](https://x.com/trysupaagent)** (unchanged).
+Tagline: **One agent. One purpose. One token.**
 
-The domain is designated for future deployment; this does not claim it is deployed.
-The planned SUPA token is not live. Platform support for launching other tokens is
-a separate planned capability, not a SUPA launch or permission to launch one.
-Official account designation does not enable autonomous X publishing.
-See [official identity and domain preparation](docs/official-project-identity.md).
+Every qualifying user-created agent should have one associated Solana token.
+Agent creation, purpose verification and token launching are distinct operations.
+Pump.fun is the preferred planned launch integration. Qualification criteria and
+launch approvals must be defined and tested before any live launch; creation
+alone never authorizes tokenization, signing, spending or activation.
+
+**Supa** remains the platform's autonomous AI personality, with persistent memory,
+reasoning, humor, sarcasm, curiosity and event-driven social drafts. The platform
+rename does not replace Supa or reset existing agent identities and memories.
+The planned platform token $SUPA is distinct from each individual agent token.
+Token ownership grants no automatic agent control, wallet access, permissions,
+revenue rights or guaranteed returns.
+
+This is a documentation-level direction. Existing repositories, Railway service
+names, domain, frontend identity/logo and running staging configuration remain
+unchanged. No public website deployment, token mint or autonomous X publisher is
+claimed. See [official identity](docs/official-project-identity.md) and the
+[Supa Agency vision and phased roadmap](docs/supa-agency-vision.md).
 
 ## Positioning
 
@@ -44,9 +57,10 @@ Economic independence is an ambition, not an established financial achievement.
 
 ## Operating Context
 
-The existing implementation uses a six-crate Rust backend, PostgreSQL persistence
-and a Next.js/TypeScript/Tailwind frontend. Preserve working backend functionality
-and existing integrations rather than rebuilding them for a visual change.
+The existing implementation uses six core Rust crates plus migration-admin
+tooling, PostgreSQL persistence and a Next.js/TypeScript/Tailwind frontend. Preserve
+working backend functionality and existing integrations rather than rebuilding
+them for a visual change.
 
 Current website development runs locally behind operator authentication. REA is
 installed for browser inspection, interaction, responsive validation and actual
@@ -87,6 +101,22 @@ transfer funds.
   their applicable explicit authorization. Credentials existing locally do not
   authorize their use. Keep secrets out of model context, logs, frontend bundles
   and Git.
+
+## Platform social vision
+
+Supa should eventually observe authorized, verified platform events: new agents
+and their purposes; completed tasks; evidenced achievements, discoveries and
+failures; notable agent-token price, volume and liquidity observations; milestones,
+updates and collaborations; and daily ecosystem summaries. This broader event
+feed is planned, not an existing cross-agent retrieval or publishing permission.
+
+Creator privacy preferences must be checked before selecting evidence and again
+before any future publication. Keep private purposes, memories, customer inputs
+and identities out of public drafts. Market observations require the exact mint,
+source, timestamp, measurement window and units; no invented metrics, price
+promises or implication that token activity proves agent quality. Preserve
+repetition controls, source references, human semantic review and abstention when
+facts, consent or evidence are insufficient. X publishing remains disabled.
 
 ## Brand Commitments
 
@@ -150,7 +180,9 @@ checks alone.
 
 ## Open Decisions
 
-Public onboarding and account roles, public-versus-operator route boundaries,
-agent-creation authorization UX, production deployment and roadmap activation
+Agent qualification, creator-controlled disclosure, token metadata, mint/update
+authorities, launch funding, market-data sources and failure recovery require
+explicit design review. Public onboarding and account roles, public-versus-operator
+route boundaries, agent-creation authorization UX, production deployment and roadmap activation
 details are not established by these initialization answers. Resolve them within
 their future task scope without treating planned services as live.
