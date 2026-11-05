@@ -248,3 +248,46 @@ restart recovery belong in a later disposable-database migration review.
 No current runtime events, APIs, database permissions, launch integrations or
 publishing behavior are expanded by this contract. The frozen application and
 current security/publication gate remain unchanged.
+
+
+## Local domain implementation — not deployed
+
+`crates/domain/src/agent_identity.rs` now implements purpose, qualification and
+association validation without persistence, network access or capabilities.
+`PurposeRevision` uses the existing closed `ServiceKind` values and bounded
+objectives, success criteria and exclusions. A public summary remains optional;
+its presence is not disclosure consent.
+
+`AgentQualificationContext` requires authenticated current agent/creator identity,
+the current purpose and review IDs, an explicit versioned reviewer policy and a
+finite validity period. A review retains the full purpose snapshot so reuse of a
+revision UUID cannot conceal edits. Evidence references must be nonempty, unique
+and non-nil. Rejected, revoked, expired, future, superseded or mismatched reviews
+fail closed. These checks validate the binding and review state, not the semantic
+merit of a purpose or the authenticity of externally supplied evidence.
+
+`AgentTokenAssociations` is an in-memory domain aggregate. It requires exact
+agent/creator/review/evidence bindings and canonical Solana mint/signature syntax.
+Pending, failed and unknown evidence cannot create an association. It rejects a
+second canonical token for an agent even across clusters, duplicate records and
+reuse of the same `(cluster, mint)` by another agent. Failed operations preserve
+the prior entries; the aggregate exposes no reassignment or deletion method.
+
+Authority, reviewer policy and token-evidence contexts intentionally cannot be
+JSON-deserialized. Future application code must construct them from authenticated,
+verified state rather than user/model assertions. This module does not verify
+chain transactions, authenticate owners/reviewers, provide a launch authorization,
+change lifecycle, expose private data or grant rights to token holders. There is
+no API route, database migration, provider call or live integration attached.
+Durable cross-process uniqueness, idempotency and concurrent launch reservations
+still require separately reviewed database constraints and transactional locking;
+in-memory checks are not proof of production concurrency safety.
+
+Deterministic tests cover accepted associations; creator/reviewer/policy binding;
+all purpose snapshot fields; expiry/revocation; unconfirmed evidence; canonical
+addresses/signatures; duplicate records, agents and mints; failed-write atomicity;
+unknown client fields and safe rejection codes. Existing financial controls are
+unchanged. The next code slice is the privacy-filtered typed social-event
+projection, with absent/revoked-consent, unsupported-claim and stale-market-data
+fixtures. New social event kinds must remain rejected by the existing pipeline
+until that projection and its validator are implemented together.
