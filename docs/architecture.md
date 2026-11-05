@@ -59,6 +59,25 @@ custody, reserve, purpose-change, child ownership and community-rights decisions
 remain in the vision's decision register. Independent recovery and separately
 approved scopes remain prerequisites for sensitive persistent or live operations.
 
+### Official platform mint and vanity signer boundary
+
+The planned platform token is named `Supa Agency`, symbol `SUPA`, with one canonical
+Solana mint ending in exact case-sensitive `SUPA`. Keep the platform registry
+separate from agent token bindings and prevent the same network/mint aliasing both
+identities. Publication and acceptance of `supaagency.xyz` precede an owner-only
+Pump.fun launch intent, explicit wallet/mint signing and independent confirmation.
+Agent-owner roles and token-holder status grant no platform launch authority.
+
+The [platform launch design](supa-platform-token-launch.md) records pinned official
+Pump.fun interface evidence and a proposed local vanity mint co-signer, separate
+from the funded owner wallet. Only public keys, approved message bytes and signatures
+cross the website boundary; private keys must never enter browser/app bundles,
+Railway variables, APIs, databases, CI or model context. Secure generation/custody,
+recovery, message validation, authority loaders and durable singleton enforcement
+require separately reviewed implementation. The current site has no executable
+launch integration; frontend publication remains blocked by its security gate.
+No generator, signer service, migration or token execution is added here.
+
 ### Permanent token identity and successor history
 
 The canonical agent UUID retains one original verified `(network, mint)` forever.
