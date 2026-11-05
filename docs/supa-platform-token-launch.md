@@ -1,6 +1,7 @@
 # Official SUPA vanity mint and owner launch architecture
 
 Owner requirements and read-only compatibility review, **5 November 2026**.
+The current uppercase `SUPA` prefix supersedes the earlier suffix requirement.
 Design only: no key generation/export, secret installation, metadata upload,
 signing, simulation RPC, launch, Mainnet transaction or deployment is authorized.
 
@@ -11,20 +12,20 @@ signing, simulation RPC, launch, Mainnet transaction or deployment is authorized
 | Token name | `Supa Agency` |
 | Symbol | `SUPA` (`$SUPA` is the display notation) |
 | Blockchain | Solana; the exact live cluster requires explicit launch approval |
-| Mint suffix | Exact, case-sensitive ASCII `SUPA` at the end of the canonical Base58 mint public key |
+| Mint prefix | Exact, case-sensitive uppercase ASCII `SUPA` at the beginning of the canonical Base58 mint public key |
 | Launch surface | Owner-restricted interface on verified HTTPS `supaagency.xyz`, after website publication |
 | Launch mechanism | Pump.fun, through a reviewed website-integrated instruction builder |
 | Signing | Explicit owner-wallet approval/signature and the pre-generated mint signer; no autonomous signing |
 | Confirmation | Independently verify successful chain execution and the exact created mint before marking it official |
 | Identity | One canonical official platform mint, separate from every user-created agent token |
 
-No official mint address exists in these requirements. The suffix alone is not an
+No official mint address exists in these requirements. The prefix alone is not an
 address, reservation, signature, security property or evidence of authenticity.
 Do not accept a fee-payer wallet, associated token account or bonding-curve address
-as the mint. The literal predicate is `canonical_mint.ends_with("SUPA")`, after
+as the mint. The literal predicate is `canonical_mint.starts_with("SUPA")`, after
 valid public-key decoding/canonical re-encoding; no trimming, Unicode substitution,
 case folding or fallback to `supa`, `Supa` or `pump`. Agent tokens do not inherit the
-platform's vanity suffix requirement.
+platform's vanity prefix requirement.
 
 ## Compatibility findings and evidence
 
@@ -60,10 +61,11 @@ Raw-source checksums and sanitized account findings are retained privately under
 Generation requires a separate approval after website acceptance. Prepare a
 reviewed, version-pinned local tool using vetted Ed25519/OS-CSPRNG primitives.
 On an isolated owner-controlled device, search independent random candidates and
-retain only a key whose public address satisfies the exact suffix. Bound CPU,
-wall time and cancellation; exhaustion must stop without weakening the suffix.
-A rough uniform-Base58 model gives a mean of `58^4 = 11,316,496` candidates, not a
-maximum, runtime prediction or success guarantee. Do not truncate a key, edit an
+retain only a key whose public address satisfies the exact prefix. Bound CPU,
+wall time and cancellation; exhaustion must stop without weakening the prefix.
+Leading Base58 characters of fixed-width Solana public keys are not uniformly
+distributed. Do not reuse a suffix search estimate for this prefix requirement;
+any performance estimate needs a separately approved generator assessment. Do not truncate a key, edit an
 address, use weak deterministic seeds or purchase a key from a vanity service.
 
 The match must go directly into an authenticated-encrypted local keystore with
@@ -79,7 +81,7 @@ Review core dumps, swap, backups, diagnostic capture and dependency telemetry;
 request best-effort secret-memory clearing without claiming perfect erasure on a
 general-purpose OS. Stock CLI grinding is not an approved substitute: the inspected
 [Agave source](https://github.com/anza-xyz/agave/blob/master/keygen/src/keygen.rs)
-supports suffix/case settings but writes matching keypairs to files in its ordinary
+exposes vanity/case settings but writes matching keypairs to files in its ordinary
 output path. No generator command is supplied or executed here.
 
 Keep the funded owner wallet separate from the mint-creation key. The proposal is
@@ -112,7 +114,7 @@ metadata authority; verify the actual post-launch authorities separately.
    decoded intent and costs to the owner. Use a sign-only wallet API, never an
    automatic sign-and-send path. The owner wallet signs explicitly; the
    local co-signer independently validates the same message, approval, owner
-   signature, suffix and fee bounds before the owner authorizes its mint signature.
+   signature, prefix and fee bounds before the owner authorizes its mint signature.
    Return signatures/signed transaction bytes only, never a key or seed.
 5. Verify all required signatures against identical message bytes before the
    separately authorized submission. Any wallet mutation or expired blockhash
@@ -134,7 +136,7 @@ A submission response, signature string or Pump.fun page is insufficient. Requir
 the approved cluster, successful transaction status at the chosen finality policy
 (proposed: finalized), exact message/signers, expected program instruction and mint,
 and verified mint/program/metadata/bonding-curve state. Recheck name, symbol, URI,
-suffix, supply/decimals/extensions and authority arrangements against the approved
+prefix, supply/decimals/extensions and authority arrangements against the approved
 scope. Retain sanitized receipts and public transaction references with timestamps.
 No live RPC verification is performed during this assessment.
 
@@ -160,7 +162,7 @@ revenue right or other financial claim.
    independent encrypted recovery. Nothing in this review creates a key.
 3. Implement/test inert owner authorization, canonical-mint registry, message
    validation and local co-signing with synthetic public fixtures/mocked signatures.
-   Prove suffix case, wrong keys/bytes, expiry, duplicate requests, unknown outcomes,
+   Prove prefix case, wrong keys/bytes, expiry, duplicate requests, unknown outcomes,
    owner isolation and recovery rejection before any real signing.
 4. Review exact owner wallet, cluster, fees, metadata, authorities, program/package
    identities and no-unapproved-buy/economic-option policy; obtain fresh explicit
