@@ -55,7 +55,7 @@ export async function sectionView(id, state, agentId) {
   }
   add(launchMode?.mode==='disposable_offline'?'Isolated test database / simulated capital only.':epoch?`Development epoch / ${epoch.id}. ${epoch.state==='active_read_only'?'Active, read-only':'Prepared, read-only'}; historical database unrecovered.`:state.status.data?'Epoch unidentified. Historical recovery is not verified.':'Epoch unavailable while the backend is disconnected.','notice');
   if(id==='home') {
-    add('Supa Agent / SUPA','heading');add('Born to think. Built to survive.','heading');
+    add('Supa Agency / SUPA','heading');add('One agent. One purpose. One token.','heading');
     add('Persistent AI agents with bounded reasoning, memory and economic awareness. Explore saved records; this site cannot start paid operations.');
     rows.push({kind:'navigate',id:'agents',text:'Explore saved agents →'});
     if(state.agents.error)add(state.agents.error,'notice');
@@ -78,14 +78,15 @@ export async function sectionView(id, state, agentId) {
     add(id==='trading'?'Trading is not enabled. Planned policy: a strict maximum of $5 per trade, subject to independent authorization and financial controls.':id==='token-launch'?'Pump.fun token launching is planned. No token has been launched through this interface.':'Human and agent-created agents are planned. Creation requires explicit authorization; this interface cannot create agents.');
     add('No action on this page signs, transfers, trades, publishes or launches anything.');
   } else if(id==='about') {
-    add('Supa Agent / SUPA','heading');add('Born to think. Built to survive.');add('Vision: '+description);
+    add('Supa Agency / SUPA','heading');add('One agent. One purpose. One token.');add('Vision: '+description);
     add('Current foundation: six-crate Rust runtime, PostgreSQL persistence, metered LLM abstraction, permissioned tools, simulated economics and read-only Devnet observations.');
     add('The model proposes actions. Application policy decides what is permitted. Personality never grants financial permissions.');
-    add('Mainnet spending, trading, publishing, token launches and child-agent creation remain disabled. The planned Supa Agent token (SUPA) on Solana is not live. Launching other tokens is a separate planned platform capability.');
-    add('Official domain designated for future deployment; this is not a deployment announcement. Official X account; autonomous publishing remains disabled.');
-    rows.push({kind:'link',text:'Official website / trysupaagent.xyz',href:'https://trysupaagent.xyz'});
-    rows.push({kind:'link',text:'Official X / @trysupaagent',href:'https://x.com/trysupaagent'});
-    rows.push({kind:'link',text:'Source / github.com/pyco404/SupaAgent',href:'https://github.com/pyco404/SupaAgent'});
+    add('One associated Solana token per qualifying agent is planned. Creation, purpose review and launch are separate operations. Token ownership grants no agent control.');
+    add('Mainnet spending, trading, publishing, token launches and child-agent creation remain disabled. The planned Supa Agency token (SUPA) on Solana is not live. Launching other tokens is a separate planned platform capability.');
+    add('Domain ownership and deployment remain unconfirmed. Official X account; autonomous publishing remains disabled.');
+    add('Proposed domain / supaagency.xyz — ownership unconfirmed; not a deployed website.');
+    rows.push({kind:'link',text:'Official X / @supa_agency',href:'https://x.com/supa_agency'});
+    rows.push({kind:'link',text:'Source / github.com/pyco404/supa-agency',href:'https://github.com/pyco404/supa-agency'});
   } else if(!agentId) { add('Select an agent in Agents to explore saved records.','notice'); }
   else {
     const agent=agents?.find(a=>a.id===agentId);
