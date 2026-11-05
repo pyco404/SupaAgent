@@ -33,7 +33,14 @@ eventual child-agent creation. These remain product capabilities to develop and
 validate; documentation is not evidence that each is implemented or enabled.
 
 Platform name: **Supa Agency**. Blockchain: **Solana**.
-Platform token: **$SUPA (planned, not live)**.
+Platform token: **$SUPA (planned, not live)**; token name **Supa Agency**, symbol
+**SUPA**. Its official Solana mint must end in exact case-sensitive **`SUPA`**.
+Launch must use the owner-restricted interface on `supaagency.xyz` with Pump.fun
+underneath, explicit wallet/mint signatures and verified confirmation. Preserve
+one canonical platform mint, separate from all agent tokens. **Website publication
+comes first; the current frontend security gate must pass before any live launch.**
+See the [vanity-mint compatibility and signing design](docs/supa-platform-token-launch.md).
+No key generation, signing or token-launch execution is enabled by this requirement.
 Purchased website domain: **supaagency.xyz** (owner-confirmed; not deployed).
 Official X account: **[@supa_agency](https://x.com/supa_agency)**.
 Tagline: **One agent. One purpose. One token.**
