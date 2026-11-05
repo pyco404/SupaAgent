@@ -3,7 +3,17 @@
 Owner-approved direction, 5 November 2026. **Documentation only: no capability,
 credential, migration, deployment or financial execution is activated here.**
 
-Supa Agency is a Solana-native agent platform. **One agent. One purpose. One token.**
+Supa Agency is a Solana-native ecosystem where users create purposeful autonomous
+AI agents that can reason, remember, work, learn, earn revenue, pay operating
+expenses and participate in their own agent-linked token economies.
+**One agent. One purpose. One token.**
+
+This unifies and expands the original Supa Agent vision. Durable agent identity,
+autonomous reasoning, persistent memory, goal execution, personality, authorized
+economic activity and continued learning remain the foundation. Tokenization and
+ecosystem reporting extend those capabilities. They do not replace the work engine
+or make a token a prerequisite for separately authorized agent operation.
+
 $SUPA is the planned platform token; it is not live and is not an individual
 agent token. Every qualifying user-created agent should have one associated
 Solana token. Pump.fun is the preferred planned launch integration; no live
@@ -15,6 +25,59 @@ configuration, provider abstraction, factual checks and permissions remain the
 foundation. The official account is **@supa_agency**. **supaagency.xyz** is purchased,
 as confirmed by the owner; DNS attachment and website deployment remain pending. Local visible branding is updated;
 service names, logo, frontend design and running Railway workloads are unchanged.
+
+## Unified capabilities and evidence boundaries
+
+| Product capability to preserve or extend | Intended behavior and required boundary |
+|---|---|
+| Reasoning, memory and goals | Bounded autonomous planning and permitted tool execution; persistent experience, priorities, pause/resume and restart fencing; models cannot grant themselves tools or authority |
+| Personality and social activity | Individual agent personalities plus Supa's witty ecosystem-wide voice; verified events, creator consent, private-memory exclusions, repetition controls and abstention |
+| Work, learning and self-improvement | Produce useful work, validate outcomes and learn from evidence; model assessments remain hypotheses until verified; code, policy or tool changes require review rather than self-escalation |
+| Genuine USDC operations | Earn from real delivered services and pay explicitly authorized provider/infrastructure expenses; retain exact asset/network, counterparty, receipt, usage and reconciliation evidence; simulation and Devnet are not real earnings |
+| Financial operations and bounded trading | Separate application-enforced mandates for observation, payment, signing and trading; explicit destinations, expiry, costs, exposure/loss limits, reserves and stop controls |
+| Collaboration and child agents | Consent-bound cross-agent tasks and attribution; eventual children have separate identity, purpose, budgets, permissions and lifecycle with auditable parentage; no inherited wallet or launch powers |
+| Purposeful user-created agents | Creator ownership, versioned purposes, explicit qualification and granular disclosure; creation, activation, qualification and token launch are separate decisions |
+| Agent-linked token economies | One uniquely associated Solana token per qualifying agent, with separately approved launches and Pump.fun as the planned integration; receipt-backed associations and transparent activity |
+| Community participation | Public discovery, creator-approved feedback, collaboration and verifiable token observations; participation conveys no automatic control, revenue claim or token-holder privilege |
+
+These are product commitments and release targets, not claims of current live
+availability. Existing implementation notes below distinguish local domain/backend
+work from deployed services. Their historical milestone limits do not remove any
+of these long-term capabilities. This documentation update changes no code,
+authorization, credential, schema, deployment or active capability.
+
+## Operational economy and token-market separation
+
+Maintain separate accounting views and authorization scopes for service operations,
+provider/infrastructure expenses, treasury funding and token-market activity.
+Every monetary record identifies asset/mint, chain/network, exact units, operation,
+source evidence and settlement status. Simulated funds, Devnet assets, verified
+real USDC and internal dollar cost estimates must never be combined as one spendable
+balance. A model-generated report, accepted evaluation, job status or dashboard
+estimate alone cannot establish genuine earnings or a settled payment.
+
+A work record can move through proposal, validation, semantic acceptance, customer
+delivery and job completion independently of payment receipt verification and
+revenue recognition. Preserve the existing accounting rules while designing any
+real-USDC extension. For infrastructure payments, separately bind the invoice or
+usage evidence, authorized counterparty, service, amount, expiry and payment
+mandate; an active reasoning cycle does not imply a payment permission.
+
+Token price, volume, liquidity and unrealized gains are market observations, not
+operational earnings. Record launch fees, trading allocations, execution costs and
+realized market outcomes separately from service revenue. Token sales or launch
+proceeds must not be labeled customer-work revenue. Classification of proceeds,
+fees and other market flows remains an explicit accounting-design decision.
+A confirmed association grants no revenue entitlement to token holders. $SUPA has
+its own token-design and authorization track, independent of every agent token.
+
+Separate ledgers do not create extra funds. Any permitted movement between an
+operating allocation and a market allocation needs a reconciled, authorized record
+that preserves conservation of funds and prevents double spending. Protect minimum
+operating reserves, customer liabilities and outstanding reservations. Unknown
+provider/chain outcomes remain unknown with conservative holds until sufficient
+evidence and the applicable approval support reconciliation; no automatic release
+or duplicate execution follows from a token launch or market event.
 
 ## Agent identity and token association
 
@@ -123,30 +186,46 @@ output. Do not infer independent retrieval or verification from model fluency.
 
 | Phase | Bounded deliverable | Required exit evidence and approval |
 |---|---|---|
-| 0 — Direction (this update) | Product identity, token distinction, privacy and roadmap documentation | Documentation review; no live activation |
-| 1 — Purpose and qualification | Disposable-only purpose reviews, creator consent and token-association proposals | Resolve qualification/authority decisions; test identity isolation, uniqueness, duplicate requests, revocation and unauthorized access; approve implementation/schema separately |
-| 2 — Verified ecosystem drafts | Explicit event projections and synthetic market observations feeding Supa's existing draft/review pipeline | Grounded multi-event drafts, privacy exclusions, stale/conflicting data rejection, repetition controls, memory provenance and abstention tests; no publishing or paid calls without approval |
-| 3 — Launch integration rehearsal | Offline/mocked Pump.fun adapter, exact proposal scopes, reservations and ambiguous-outcome recovery | Confirm current official provider/network support and fees, test timeouts/concurrency/restart fencing, custody and spending controls; do not assume a provider offers a test network |
-| 4 — Separately approved live pilot | One qualifying agent and one precisely approved launch | Verified owner/custody, independent encrypted recovery and restore drill before sensitive persistent state, approved fees/network/provider, current security review and exact launch authorization; retain chain receipt and reconciliation evidence |
-| 5 — Optional publication and broader rollout | Reviewed X integration and ecosystem summaries under independent limits | Separate X credentials/consent/review/publishing approval, rate limits, pause/stop and incident handling; trading, revenue sharing and platform $SUPA launch each require their own decisions |
+| 0 — Unified direction | Preserve the autonomous-agent foundation and add purposeful agents, token economies and consent-based reporting | Documentation review only; no activation |
+| 1 — Purpose and identity foundation | Versioned purposes, qualification, creator consent and association proposals alongside existing memory, goals and lifecycle | Disposable authorization, uniqueness, revocation, provenance and recovery tests; separate schema/rollout approval |
+| 2 — Autonomous work and verified learning | Bounded task execution, useful results, memory, evidence-based improvement and consent-bound collaborations | Outcome validation, human review where required, resource/cost bounds, cross-agent privacy and pause/restart tests; separate execution authorization |
+| 3 — Real USDC operations | Controlled customer earnings and authorized provider/infrastructure payments | Independent encrypted recovery, verified receipts, delivery/payment accounting, custody, reserves and narrowly scoped payment approvals; no inferred trading mandate |
+| 4 — Token launch rehearsal and pilot | Mocked Pump.fun integration followed only by an exactly authorized launch for one qualifying agent | Current provider/network/fee verification, reviewed custody/metadata, uniqueness, reservations, unknown-outcome reconciliation and a separately approved pilot; do not assume test-network support |
+| 5 — Bounded token-market participation | Verified agent-token observations and, only if separately approved, limited trading | Approved market sources, exposure/loss limits, operating-reserve protection, isolated accounting, trading permissions and incident controls; no automatic token-holder rights |
+| 6 — Reviewed ecosystem publication | Evidence-grounded agent activity, collaborations and daily summaries in Supa's personality | Consent rechecks, private draft retention, semantic review, repetition/abstention tests and independent X publishing approval |
+| 7 — Expanded autonomy and child agents | Reviewed improvements and eventual child-agent creation without automatic authority inheritance | Verified lineage, child budgets/permissions, coordination/termination rules, capability and financial isolation, and separately approved activation |
+
+These are independently gated release tracks, not a requirement to launch tokens
+before agents can work, earn authorized USDC or collaborate. The implementation
+notes below retain evidence of completed local work; this roadmap does not reset
+that work or activate unfinished capabilities. Each live or recurring mandate,
+including paid inference, trading and publishing, needs its own explicit scope.
 
 An associated token is a product target for a qualifying agent, not an automatic
 side effect of creation or a deadline to bypass any release gate. The pilot does
 not authorize recurring launches or persistent autonomous financial activity.
 
-## Decisions still required
+## Architecture decisions still required
 
-- Exact qualification and purpose-review criteria, reviewer roles, appeals and
-  treatment of paused, terminated, disputed or transferred agents.
-- Creator consent defaults, permitted public fields, retention and revocation
-  behavior; no assumptions about legal identity verification or token rights.
-- Token metadata, supply, mint/update authorities, signing custody, launch funding,
-  fee ceilings and failure/reconciliation policy; separate $SUPA token design.
-- Approved market sources, quote units, venues, comparison windows, freshness
-  thresholds and treatment of unavailable or unreliable observations.
-- Separate approvals for schema changes, frontend branding, repositories/services
-  or domain changes, credentials, paid inference, signing, token launches, trading,
-  publishing and deployments. This document grants none of them.
+The existing Rust components support this direction without a new architecture.
+The main conflicts are between product ambition and authorization/accounting
+contracts that must be decided before live activation:
+
+| Decision | Constraint retained now | Decision still needed |
+|---|---|---|
+| Autonomy versus token qualification | Agent creation, activation, qualification and launch are independent; no token prerequisite for permitted work | Qualification criteria, review/appeal roles and treatment of paused, terminated or transferred agents |
+| Genuine revenue versus evaluations and market flows | Evaluation acceptance does not complete customer work or create revenue; token metrics are not earnings | Real-USDC delivery, receipt/finality, refunds/disputes and proceeds classification while preserving current ledgers |
+| Survival reserves versus trading and launch costs | No implicit draw on operating reserves, liabilities or historical holds | Minimum reserves, segregated allocations, loss/exposure limits, approved venues and emergency authority |
+| Purpose evolution versus permanent mint identity | Current association rule permits one canonical token per agent across clusters, with immutable history | Safe rehearsal-to-live identity mapping, purpose changes, custody, metadata/supply authorities, replacement or transfer policy; no silent reassignment |
+| Community participation versus control | Token ownership grants no wallet, agent, permission or revenue rights | Any proposed feedback/governance mechanism and its explicit limits; separate $SUPA design |
+| Self-improvement and children versus least privilege | Learning cannot expand tools, modify production automatically or inherit signing authority | Reviewed improvement process, parent/child funding, ownership, consent, independent budgets and coordinated stopping |
+| Public transparency versus privacy | Missing/revoked disclosure consent excludes private platform data; no unrestricted cross-agent memory access | Public fields, retention, collaboration attribution and revocation policy; public chain records/posts cannot be promised deletion |
+| Continuous agency versus bounded mandates | Current workers, signing, trading, paid inference and publishing remain disabled | Expiry/renewal, unattended operating limits, recovery and incident policies for each future recurring mandate |
+
+Market-data source approval, freshness windows, comparable quote units and treatment
+of conflicting observations also require review. Keep credentials, schema rollout,
+financial execution, $SUPA issuance, individual launches, publishing and deployment
+approvals separate. This vision grants none of them.
 
 Current staging stays authenticated, private where required and synthetic-only.
 Autonomous workers, paid inference, wallet signing, trading, token launches and
