@@ -11,7 +11,7 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
   const context = canvas.getContext("2d");
   const previousRole = host.getAttribute("role");
   host.setAttribute("role", "listbox");
-  if (!host.hasAttribute("aria-label")) host.setAttribute("aria-label", "Supa Agent sections");
+  if (!host.hasAttribute("aria-label")) host.setAttribute("aria-label", "Supa Agency sections");
   host.style.touchAction = "pan-x pinch-zoom";
   canvas.setAttribute("aria-hidden", "true");
   canvas.style.pointerEvents = "none";
