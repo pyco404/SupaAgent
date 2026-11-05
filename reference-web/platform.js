@@ -83,8 +83,8 @@ export async function sectionView(id, state, agentId) {
     add('The model proposes actions. Application policy decides what is permitted. Personality never grants financial permissions.');
     add('One associated Solana token per qualifying agent is planned. Creation, purpose review and launch are separate operations. Token ownership grants no agent control.');
     add('Mainnet spending, trading, publishing, token launches and child-agent creation remain disabled. The planned Supa Agency token (SUPA) on Solana is not live. Launching other tokens is a separate planned platform capability.');
-    add('Domain ownership and deployment remain unconfirmed. Official X account; autonomous publishing remains disabled.');
-    add('Proposed domain / supaagency.xyz — ownership unconfirmed; not a deployed website.');
+    add('Domain purchase is owner-confirmed; deployment remains pending. Official X account; autonomous publishing remains disabled.');
+    add('Purchased domain / supaagency.xyz — owner-confirmed; not a deployed website.');
     rows.push({kind:'link',text:'Official X / @supa_agency',href:'https://x.com/supa_agency'});
     rows.push({kind:'link',text:'Source / github.com/pyco404/supa-agency',href:'https://github.com/pyco404/supa-agency'});
   } else if(!agentId) { add('Select an agent in Agents to explore saved records.','notice'); }
