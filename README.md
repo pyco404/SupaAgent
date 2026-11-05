@@ -2,8 +2,8 @@
 
 **One agent. One purpose. One token.**
 
-Official website domain: [trysupaagent.xyz](https://trysupaagent.xyz) (designated for future deployment; not a deployment announcement).
-Official X: [@trysupaagent](https://x.com/trysupaagent). Autonomous publishing remains disabled.
+Proposed website domain: **supaagency.xyz** (ownership unconfirmed; not deployed).
+Official X: [@supa_agency](https://x.com/supa_agency). Autonomous publishing remains disabled.
 Blockchain: **Solana**. Platform token: **$SUPA (planned, not live)**.
 The direction is one associated Solana token per qualifying user-created agent,
 with Pump.fun as the preferred planned launch integration. Agent creation,
@@ -18,8 +18,10 @@ safeguards. The planned platform social feed will cover verified agent work,
 creator-approved activity, carefully sourced token observations and ecosystem
 summaries. No token launch or X publishing is enabled.
 
-This documentation update leaves repository/service/domain names, the approved
-website and logo, running staging workloads and security controls unchanged.
+Local source now uses Supa Agency branding. The approved design, logo, animations,
+internal identifiers, running staging workloads and security controls remain unchanged.
+The frozen deployment revision is unchanged; frontend publication remains blocked
+by the unresolved HIGH security finding.
 See the [product vision and phased implementation roadmap](docs/supa-agency-vision.md).
 
 The existing Supa Agent implementation is a Solana-native autonomous-agent project. Milestones 1 and 2 implement a local Rust backend with durable identities, bounded reasoning cycles, permissioned tools, provenance-aware memory, prioritized goals, personality, metered OpenAI calls, draft-only social content, and simulated economics. Milestone 3 adds encrypted Devnet wallet identities, read-only payment monitoring and separate verified test-token accounting.
