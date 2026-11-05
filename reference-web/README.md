@@ -1,6 +1,6 @@
-# Supa Agent cinematic website
+# Supa Agency cinematic website
 
-The approved dark, warm-ivory terminal experience now presents Supa Agent content.
+The approved dark, warm-ivory terminal experience now presents Supa Agency content.
 The code introduction, typing hands, robot, radial portal, tilted wheel, organic
 branches, terminal and ambient entity remain. The older Next.js operator console
 in `web/` remains intact; the Rust workspace and database are unchanged.
@@ -176,7 +176,7 @@ Viewports were calibrated before each capture; event coverage was unavailable.
 ### Clear workspace toolbar and current Home logo
 
 The workspace toolbar now contains only the agent selector. Reload saved records,
-Show all text and Operator sign-in are available through the footer's SUPA AGENT
+Show all text and Operator sign-in are available through the footer's SUPA AGENCY
 command button (or the `:` keyboard shortcut). The panel has a close button and
 supports Escape; reload and text reveal close it after use. The Home navigation
 card uses the latest source-character robot SVG instead of the solid icon.
