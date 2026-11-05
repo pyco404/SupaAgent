@@ -1925,6 +1925,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "supa-domain",
+ "tokio",
  "tracing",
  "uuid",
 ]
