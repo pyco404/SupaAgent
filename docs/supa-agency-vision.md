@@ -26,6 +26,17 @@ foundation. The official account is **@supa_agency**. **supaagency.xyz** is purc
 as confirmed by the owner; DNS attachment and website deployment remain pending. Local visible branding is updated;
 service names, logo, frontend design and running Railway workloads are unchanged.
 
+## Official platform-token launch requirement
+
+The platform token's name is **Supa Agency**, symbol **SUPA** (display **$SUPA**),
+on Solana. Its single original official mint must end with exact case-sensitive
+`SUPA`, and remain separate from all individual agent-token identities. Launch
+through the owner-restricted interface on `supaagency.xyz`, using Pump.fun with
+explicit wallet/mint signatures and independently verified launch confirmation.
+Website publication and acceptance must precede the launch. Preserve the frontend
+security gate; no key generation or token execution is activated here. See the
+[compatibility assessment and secure signing design](supa-platform-token-launch.md).
+
 ## Unified capabilities and evidence boundaries
 
 | Product capability to preserve or extend | Intended behavior and required boundary |
