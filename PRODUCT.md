@@ -25,8 +25,8 @@ and eventually interact with economic and social services under explicit limits.
 
 Platform name: **Supa Agency**. Blockchain: **Solana**.
 Platform token: **$SUPA (planned, not live)**.
-Official website domain: **https://trysupaagent.xyz** (unchanged).
-Official X account: **[@trysupaagent](https://x.com/trysupaagent)** (unchanged).
+Proposed website domain: **supaagency.xyz** (ownership unconfirmed; not deployed).
+Official X account: **[@supa_agency](https://x.com/supa_agency)**.
 Tagline: **One agent. One purpose. One token.**
 
 Every qualifying user-created agent should have one associated Solana token.
@@ -42,9 +42,10 @@ The planned platform token $SUPA is distinct from each individual agent token.
 Token ownership grants no automatic agent control, wallet access, permissions,
 revenue rights or guaranteed returns.
 
-This is a documentation-level direction. Existing repositories, Railway service
-names, domain, frontend identity/logo and running staging configuration remain
-unchanged. No public website deployment, token mint or autonomous X publisher is
+Visible application branding and metadata now use Supa Agency. Existing internal
+identifiers, Railway service names, logo, design, animations and running staging
+configuration remain unchanged. The frozen deployment revision is not rebranded
+by these local source edits. No public website deployment, token mint or autonomous X publisher is
 claimed. See [official identity](docs/official-project-identity.md) and the
 [Supa Agency vision and phased roadmap](docs/supa-agency-vision.md).
 
