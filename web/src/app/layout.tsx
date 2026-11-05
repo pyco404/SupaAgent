@@ -12,15 +12,14 @@ const VT323 = localFont({
   preload: true,
 });
 
-const description = "Supa Agent — Born to think. Built to survive. A Solana-native agent platform in development, with persistent memory and bounded reasoning. SUPA is a planned token, not live.";
+const description = "Supa Agency — One agent. One purpose. One token. A Solana-native agent platform in development, with persistent memory and bounded reasoning. SUPA is a planned token, not live.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://trysupaagent.xyz"),
-  applicationName: "Supa Agent",
-  title: { default: "Supa Agent — Born to think. Built to survive.", template: "%s / Supa Agent" },
+  applicationName: "Supa Agency",
+  title: { default: "Supa Agency — One agent. One purpose. One token.", template: "%s / Supa Agency" },
   description,
-  openGraph: { type: "website", siteName: "Supa Agent", title: "Supa Agent — Born to think. Built to survive.", description, url: "https://trysupaagent.xyz" },
-  twitter: { card: "summary", site: "@trysupaagent", creator: "@trysupaagent", title: "Supa Agent — Born to think. Built to survive.", description },
+  openGraph: { type: "website", siteName: "Supa Agency", title: "Supa Agency — One agent. One purpose. One token.", description },
+  twitter: { card: "summary", site: "@supa_agency", creator: "@supa_agency", title: "Supa Agency — One agent. One purpose. One token.", description },
   robots: { index: false, follow: false },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
