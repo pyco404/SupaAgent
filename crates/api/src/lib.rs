@@ -2,6 +2,7 @@ mod access;
 mod autonomy;
 mod controlled;
 mod economy;
+mod ecosystem;
 mod live_work;
 mod operator_status;
 pub use access::{OperatorCredential, Principal};
@@ -170,14 +171,24 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
         };
         let write = request.method() != axum::http::Method::GET;
         let parts: Vec<_> = path.split('/').collect();
-        let required =
-            if write && (parts.get(3) == Some(&"access") || parts.get(3) == Some(&"wallet")) {
-                Role::Owner
-            } else if write {
-                Role::Operator
-            } else {
-                Role::Viewer
-            };
+        let required = if write
+            && (parts.get(3) == Some(&"access")
+                || parts.get(3) == Some(&"wallet")
+                || matches!(
+                    parts.get(3),
+                    Some(
+                        &"purpose"
+                            | &"ecosystem-consent"
+                            | &"qualification-review"
+                            | &"achievement-review"
+                    )
+                )) {
+            Role::Owner
+        } else if write {
+            Role::Operator
+        } else {
+            Role::Viewer
+        };
         if !actor.role.permits(required) {
             return ApiError(Error::Denied).into_response();
         }
@@ -213,6 +224,7 @@ pub fn router(state: AppState) -> Router {
         .merge(access::routes())
         .route("/operator-status", get(operator_status::status))
         .merge(economy::routes())
+        .merge(ecosystem::routes())
         .merge(controlled::routes())
         .merge(live_work::routes())
         .merge(wallet::routes())
