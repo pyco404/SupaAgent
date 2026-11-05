@@ -1,3 +1,4 @@
+pub mod agent_identity;
 mod provider_diagnostics;
 pub use provider_diagnostics::*;
 mod live_work;
