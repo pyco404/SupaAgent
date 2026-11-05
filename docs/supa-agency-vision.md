@@ -12,9 +12,9 @@ integration, mint, market, trading or listing is claimed.
 Supa remains the platform personality: autonomous reasoning, persistent memories,
 humor, sarcasm, curiosity, ambition and occasional drama. The existing personality
 configuration, provider abstraction, factual checks and permissions remain the
-foundation. The official account is still **@trysupaagent** and the designated
-domain remains **trysupaagent.xyz**. Repositories, service names, logo, frontend
-appearance and running Railway staging workloads are unchanged.
+foundation. The official account is **@supa_agency**. **supaagency.xyz** is proposed;
+ownership and deployment are unconfirmed. Local visible branding is updated;
+service names, logo, frontend design and running Railway workloads are unchanged.
 
 ## Agent identity and token association
 
@@ -40,7 +40,7 @@ reference is an application identity, not a claim of independently verified civi
 identity. Store private identity evidence separately under existing access rules.
 
 Design database uniqueness for one canonical confirmed mint per qualifying agent
-and network, and one agent association per mint/network. Keep proposals and failed
+across clusters, and one agent association per mint/network. Keep proposals and failed
 attempts separate from canonical associations. Reject duplicate concurrent
 launches with application authorization, transaction locking, idempotency and
 spending reservations. Unknown submission outcomes retain their pending state
@@ -153,3 +153,98 @@ Autonomous workers, paid inference, wallet signing, trading, token launches and
 X publishing remain disabled. Preserve the protected primary database and both
 historical accounting holds. Existing deployment authorizations do not authorize
 this roadmap's schema or feature rollout.
+
+
+## Review contract: purposeful agents and unique tokens
+
+This is the proposed next implementation contract, not an enabled capability or
+migration. Keep the existing agent UUID and owner authorization as the authority.
+
+- `PurposeRevision`: agent ID, immutable revision ID, objective, allowed task
+  classes, measurable success criteria, excluded actions and creator-approved
+  public summary. Private goals and customer data are never public summaries.
+- `QualificationReview`: exact purpose revision, policy version, reviewer
+  principal, decision/reason, timestamp and evidence IDs. Pending, rejected,
+  expired or revoked qualification cannot authorize a launch. Review is distinct
+  from agent activation and cannot grant capabilities or spending authority.
+- `AgentTokenAssociation`: agent ID, creator-at-authorization, purpose review,
+  explicit Solana cluster, mint, authorization ID, provider, transaction receipt,
+  verification source/time and status. A proposal has no confirmed mint.
+- Enforce one canonical association per agent (across clusters) and one association
+  per `(cluster, mint)`. Disposable cluster fixtures are not additional live tokens.
+  Preserve previous associations as immutable history. Replacement/transfer rules
+  require review; do not silently overwrite a mint or infer identity from a ticker.
+- Launch lifecycle: proposed → independently authorized → submitted → confirmed,
+  rejected or unknown. Unknown stays reserved and blocks retries until reconciled.
+  Use a unique idempotency key and an agent-row transaction lock; concurrent
+  proposals must not create duplicate launches or duplicate charge reservations.
+- Read-only token observation, launch signing, trading, agent execution and $SUPA
+  issuance remain separate capabilities. No token-holder-to-role conversion,
+  revenue sharing, launch fee or custody policy is implied by association.
+
+Minimum qualification proposal: an explicit bounded purpose, reviewable success
+criteria, an authorized creator, approved public metadata and independent launch
+prerequisites. Thresholds and reviewer authority require product/security approval;
+no model score or market valuation substitutes for a qualification decision.
+
+## Review contract: extending Social Intelligence v2
+
+Keep `social_context` → shared provider `social_payload` → `SocialDecision.validate`
+→ persisted private draft/review as the core path. OpenAI and Claude continue using
+the same personality and evidence contract. Do not add permissive string matching
+or arbitrary facts to `verified_fact` to admit ecosystem events.
+
+Introduce a proposed typed `PublicPlatformEvent` projection before those existing
+steps. It contains only allowlisted public facts, an opaque event ID, subject agent
+ID, event kind, occurrence/observation timestamps, source-record IDs, consent
+revision and verifier version. Project from authoritative persisted records; a
+model output or arbitrary caller-supplied event is never sufficient verification.
+
+| Event kind | Required authority and disclosure boundary |
+| --- | --- |
+| Agent created | Persisted creation; creator-approved display identity and public purpose revision; no private goal text |
+| Task completed | Terminal task outcome plus retained result, validation and required semantic review; an accepted evaluation alone is excluded |
+| Task failed | Recorded terminal failure and an allowlisted public reason; exclude prompts, raw errors, credentials and customer prose |
+| Achievement/discovery | Reviewed evidence and exact claim scope; hypotheses remain non-factual or trigger abstention |
+| Token observation | Confirmed association; approved source, cluster, mint, venue, quote units, window and source timestamps |
+
+Recheck consent/role eligibility before projection, before model dispatch, before
+retention/review and before any separately approved publication. Missing/revoked
+consent excludes the event. A provider result arriving after revocation cannot be
+accepted. Reads must not expose private memories or cross-owner records. Draft
+retention and redaction policy require explicit review; revocation cannot erase
+already public chain data or guarantee deletion of published posts.
+
+Each generated factual claim must reference an eligible projected event and match
+its exact verified claim. Store evidence IDs outside public prose. Completion is
+not payment; token price/volume/liquidity is not agent quality, revenue or a promise
+of returns. Require two comparable observations for a price-change claim; reject
+mismatched mint, venue, quote units or windows, non-finite values, missing/stale
+sources and conflicting observations. Market freshness thresholds remain a review
+choice; missing thresholds mean abstention. No live retrieval source is activated.
+
+Preserve verified-memory provenance, repetition/topic cooldowns, bounded budgets,
+original wording and abstention. Wit is commentary on verified experience, never
+extra factual content. Avoid corporate language, copied drafts, forced jokes and
+repetitive fact-first colon openings. Keep Supa's sarcasm, curiosity and ambition.
+Do not hardcode tweets or bypass the current validator's narrower supported facts.
+The current provider instructions still prohibit ecosystem/market claims until
+this typed path and its validation are separately implemented and tested.
+
+### Next concrete code slice and offline acceptance
+
+Implement domain-only `PurposeRevision`, `QualificationReview` and association
+proposal validation with deterministic fixtures first. No migration, provider
+call, signing or live launch is needed. Then implement the typed social projection
+and validator together, using synthetic events and the offline provider.
+
+Required regressions: duplicate agent/mint associations; mismatched purpose review;
+unauthorized creator/reviewer; unqualified launch; unknown-outcome retry; cross-owner
+reads; absent/revoked consent; evaluation-versus-completion; unpaid-versus-revenue;
+unsupported/extra claims; stale/conflicting market data; repetition; empty-event
+abstention; memory hypotheses; and provider parity. Transactional uniqueness and
+restart recovery belong in a later disposable-database migration review.
+
+No current runtime events, APIs, database permissions, launch integrations or
+publishing behavior are expanded by this contract. The frozen application and
+current security/publication gate remain unchanged.
