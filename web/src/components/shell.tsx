@@ -71,10 +71,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return <><a href="#content" className="skip-link">Skip to content</a>
     <header className="site-header">
       <div className="header-inner">
-        <Link className="brand" href="/" aria-label="Supa Agent home"><SupaLogo/><span>SUPA<span className="muted"> / AGENT</span></span></Link>
+        <Link className="brand" href="/" aria-label="Supa Agency home"><SupaLogo/><span>SUPA<span className="muted"> / AGENCY</span></span></Link>
         <div className="header-right">
           <span className="environment">LOCAL / DEVNET</span>
-          <a className="source-link" href="https://github.com/pyco404/SupaAgent" rel="noreferrer" target="_blank">SOURCE ↗</a>
+          <a className="source-link" href="https://github.com/pyco404/supa-agency" rel="noreferrer" target="_blank">SOURCE ↗</a>
           <button ref={trigger} className="menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-haspopup="dialog" onClick={() => {
             const modal = dialog.current;
             if (!modal || modal.open || !window.matchMedia("(max-width: 640px)").matches) return;
@@ -102,7 +102,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }}>
       <div className="mobile-navigation-header">
-        <Link className="brand" href="/" onClick={closeMenu} aria-label="Supa Agent home"><SupaLogo/><span>SUPA<span className="muted"> / AGENT</span></span></Link>
+        <Link className="brand" href="/" onClick={closeMenu} aria-label="Supa Agency home"><SupaLogo/><span>SUPA<span className="muted"> / AGENCY</span></span></Link>
         <button ref={closeButton} className="mobile-navigation-close" aria-label="Close navigation" onClick={closeMenu}>×</button>
       </div>
       <div className="mobile-navigation-content">
@@ -111,5 +111,5 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <p className="mobile-navigation-footer">LOCAL / DEVNET <span>READ-ONLY CONSOLE</span></p>
       </div>
     </dialog>
-    <main id="content"><PageMotion path={pathname}>{children}</PageMotion></main><footer className="site-footer"><div><PixelMark/><span>SUPA AGENT</span><span className="muted">An experiment in autonomous survival.</span></div><p>READ-ONLY CONSOLE <span className="mint">/</span> SIMULATION + DEVNET TEST TOKENS</p><p className="muted">Creation, payments, trading and X publishing are planned. This preview cannot execute them.</p></footer></>;
+    <main id="content"><PageMotion path={pathname}>{children}</PageMotion></main><footer className="site-footer"><div><PixelMark/><span>SUPA AGENCY</span><span className="muted">An experiment in autonomous survival.</span></div><p>READ-ONLY CONSOLE <span className="mint">/</span> SIMULATION + DEVNET TEST TOKENS</p><p className="muted">Creation, payments, trading and X publishing are planned. This preview cannot execute them.</p></footer></>;
 }
