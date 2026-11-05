@@ -34,7 +34,7 @@ validate; documentation is not evidence that each is implemented or enabled.
 
 Platform name: **Supa Agency**. Blockchain: **Solana**.
 Platform token: **$SUPA (planned, not live)**; token name **Supa Agency**, symbol
-**SUPA**. Its official Solana mint must end in exact case-sensitive **`SUPA`**.
+**SUPA**. Its official Solana mint must begin with exact case-sensitive uppercase **`SUPA`**.
 Launch must use the owner-restricted interface on `supaagency.xyz` with Pump.fun
 underneath, explicit wallet/mint signatures and verified confirmation. Preserve
 one canonical platform mint, separate from all agent tokens. **Website publication
