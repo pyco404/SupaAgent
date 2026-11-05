@@ -40,6 +40,16 @@ pub enum AgentIdentityRejection {
     DuplicateMint,
     #[error("duplicate_token_association_record")]
     DuplicateRecord,
+    #[error("original_token_binding_mismatch")]
+    OriginalTokenMismatch,
+    #[error("invalid_successor_policy")]
+    InvalidSuccessorPolicy,
+    #[error("successor_authorization_required")]
+    SuccessorAuthorizationRequired,
+    #[error("successor_public_disclosure_required")]
+    SuccessorDisclosureRequired,
+    #[error("invalid_token_successor")]
+    InvalidSuccessor,
 }
 type IdentityResult<T> = std::result::Result<T, AgentIdentityRejection>;
 
@@ -245,6 +255,8 @@ pub struct AgentTokenAssociation {
 #[derive(Default)]
 pub struct AgentTokenAssociations {
     entries: Vec<AgentTokenAssociation>,
+    originals: Vec<AgentTokenOriginalRecord>,
+    successors: Vec<AgentTokenSuccessorRecord>,
 }
 impl AgentTokenAssociations {
     pub fn entries(&self) -> &[AgentTokenAssociation] {
@@ -257,47 +269,268 @@ impl AgentTokenAssociations {
         evidence: &AgentTokenEvidence,
     ) -> IdentityResult<()> {
         use AgentIdentityRejection::*;
-        qualification.validate()?;
+        validate_token_association(&candidate, qualification, evidence)?;
         let c = &candidate;
-        let purpose = qualification.purpose;
-        if c.id.is_nil()
-            || c.agent_id != purpose.agent_id
-            || c.creator_id != purpose.creator_id
-            || c.purpose_revision_id != purpose.id
-            || c.qualification_review_id != qualification.review.id
-            || c.evidence_id.is_nil()
-            || validate_solana_address(&c.mint).is_err()
-            || validate_solana_signature(&c.transaction).is_err()
-        {
-            return Err(InvalidAssociation);
-        }
-        if evidence.state != AgentTokenEvidenceState::Confirmed {
-            return Err(UnconfirmedEvidence);
-        }
-        if evidence.id != c.evidence_id
-            || evidence.network != c.network
-            || evidence.mint != c.mint
-            || evidence.transaction != c.transaction
-            || evidence.observed_at < qualification.review.reviewed_at
-            || evidence.observed_at > qualification.now
-        {
-            return Err(EvidenceMismatch);
-        }
-        if self.entries.iter().any(|e| e.id == c.id) {
+        if self.record_id_used(c.id) {
             return Err(DuplicateRecord);
         }
         // One canonical token per agent across all supported clusters.
         if self.entries.iter().any(|e| e.agent_id == c.agent_id) {
             return Err(DuplicateAgent);
         }
-        if self
-            .entries
-            .iter()
-            .any(|e| e.network == c.network && e.mint == c.mint)
-        {
+        if self.mint_used(c.network, &c.mint) {
             return Err(DuplicateMint);
         }
+        if self.evidence_used(c.evidence_id) {
+            return Err(DuplicateRecord);
+        }
+        self.originals.push(AgentTokenOriginalRecord {
+            association: candidate.clone(),
+            confirmed_at: evidence.observed_at,
+            recorded_at: qualification.now,
+        });
         self.entries.push(candidate);
+        Ok(())
+    }
+}
+
+/// Confirmed originals are retained permanently; no deletion or reassignment API.
+/// Serialize-only audit snapshots do not provide a client-controlled restore path.
+#[derive(Clone, PartialEq, Eq, Serialize)]
+pub struct AgentTokenOriginalRecord {
+    pub association: AgentTokenAssociation,
+    pub confirmed_at: DateTime<Utc>,
+    pub recorded_at: DateTime<Utc>,
+}
+/// A separately approved exception, never a replacement of the original binding.
+/// No holder balances, ownership, wallet permissions or financial claims are modeled.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentTokenSuccessor {
+    pub original: AgentTokenAssociation,
+    pub successor: AgentTokenAssociation,
+    pub authorization_id: Uuid,
+    pub disclosure_id: Uuid,
+}
+/// Server-loaded current policy. Roles alone do not confer this authority.
+/// No defaults or Deserialize implementation: never accept this from HTTP/model JSON.
+pub struct AgentTokenSuccessorPolicy {
+    pub id: Uuid,
+    pub version: u32,
+    pub authorized_approvers: BTreeSet<Uuid>,
+    pub authorized_disclosure_verifiers: BTreeSet<Uuid>,
+    pub max_authorization_validity_seconds: u32,
+    pub max_disclosure_age_seconds: u32,
+}
+/// Explicit, current, expiring approval of the full original/successor snapshot.
+/// This receipt authorizes recording an association only, not signing or launching.
+pub struct AgentTokenSuccessorAuthorization {
+    pub id: Uuid,
+    pub policy_id: Uuid,
+    pub policy_version: u32,
+    pub approver_id: Uuid,
+    pub approved: bool,
+    pub revoked: bool,
+    pub candidate: AgentTokenSuccessor,
+    pub approved_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+}
+/// Trusted independent verification that both network/mint identities, their
+/// canonical agent linkage and exceptional status were publicly disclosed.
+/// Does not grant disclosure permission for private creator or customer information.
+pub struct AgentTokenSuccessorDisclosure {
+    pub id: Uuid,
+    pub source_id: Uuid,
+    pub verifier_id: Uuid,
+    pub state: AgentTokenEvidenceState,
+    pub publicly_accessible: bool,
+    pub candidate: AgentTokenSuccessor,
+    pub published_at: DateTime<Utc>,
+    pub verified_at: DateTime<Utc>,
+}
+#[derive(Clone, PartialEq, Eq, Serialize)]
+pub struct AgentTokenSuccessorRecord {
+    pub candidate: AgentTokenSuccessor,
+    pub policy_id: Uuid,
+    pub policy_version: u32,
+    pub approved_by: Uuid,
+    pub approved_at: DateTime<Utc>,
+    pub authorization_expires_at: DateTime<Utc>,
+    pub disclosure_source_id: Uuid,
+    pub disclosure_verified_by: Uuid,
+    pub disclosed_at: DateTime<Utc>,
+    pub disclosure_verified_at: DateTime<Utc>,
+    pub confirmed_at: DateTime<Utc>,
+    pub recorded_at: DateTime<Utc>,
+}
+fn validate_token_association(
+    candidate: &AgentTokenAssociation,
+    qualification: &AgentQualificationContext<'_>,
+    evidence: &AgentTokenEvidence,
+) -> IdentityResult<()> {
+    use AgentIdentityRejection::*;
+    qualification.validate()?;
+    let c = candidate;
+    let purpose = qualification.purpose;
+    if c.id.is_nil()
+        || c.agent_id != purpose.agent_id
+        || c.creator_id != purpose.creator_id
+        || c.purpose_revision_id != purpose.id
+        || c.qualification_review_id != qualification.review.id
+        || c.evidence_id.is_nil()
+        || validate_solana_address(&c.mint).is_err()
+        || validate_solana_signature(&c.transaction).is_err()
+    {
+        return Err(InvalidAssociation);
+    }
+    if evidence.state != AgentTokenEvidenceState::Confirmed {
+        return Err(UnconfirmedEvidence);
+    }
+    if evidence.id != c.evidence_id
+        || evidence.network != c.network
+        || evidence.mint != c.mint
+        || evidence.transaction != c.transaction
+        || evidence.observed_at < qualification.review.reviewed_at
+        || evidence.observed_at > qualification.now
+    {
+        return Err(EvidenceMismatch);
+    }
+    Ok(())
+}
+impl AgentTokenAssociations {
+    /// Always returns the first confirmed official binding, even after exceptions
+    /// or expiry/revocation of qualification. No caller can mutate this reference.
+    pub fn original_token(&self, agent: Uuid) -> Option<&AgentTokenAssociation> {
+        self.entries.iter().find(|e| e.agent_id == agent)
+    }
+    pub fn original_history(&self) -> &[AgentTokenOriginalRecord] {
+        &self.originals
+    }
+    pub fn successor_history(&self) -> &[AgentTokenSuccessorRecord] {
+        &self.successors
+    }
+    fn record_id_used(&self, id: Uuid) -> bool {
+        self.entries.iter().any(|e| e.id == id)
+            || self
+                .successors
+                .iter()
+                .any(|e| e.candidate.successor.id == id)
+    }
+    fn evidence_used(&self, id: Uuid) -> bool {
+        self.entries.iter().any(|e| e.evidence_id == id)
+            || self
+                .successors
+                .iter()
+                .any(|e| e.candidate.successor.evidence_id == id)
+    }
+    fn mint_used(&self, network: SolanaNetwork, mint: &str) -> bool {
+        self.entries
+            .iter()
+            .any(|e| e.network == network && e.mint == mint)
+            || self.successors.iter().any(|e| {
+                e.candidate.successor.network == network && e.candidate.successor.mint == mint
+            })
+    }
+    pub fn try_record_successor(
+        &mut self,
+        candidate: AgentTokenSuccessor,
+        qualification: &AgentQualificationContext<'_>,
+        evidence: &AgentTokenEvidence,
+        policy: &AgentTokenSuccessorPolicy,
+        authorization: &AgentTokenSuccessorAuthorization,
+        disclosure: &AgentTokenSuccessorDisclosure,
+    ) -> IdentityResult<()> {
+        use AgentIdentityRejection::*;
+        let now = qualification.now;
+        let original = self
+            .originals
+            .iter()
+            .find(|r| r.association.agent_id == candidate.original.agent_id)
+            .ok_or(OriginalTokenMismatch)?;
+        if original.association != candidate.original {
+            return Err(OriginalTokenMismatch);
+        }
+        let c = &candidate.successor;
+        if c.agent_id != candidate.original.agent_id
+            || c.network != candidate.original.network
+            || c.mint == candidate.original.mint
+            || candidate.authorization_id.is_nil()
+            || candidate.disclosure_id.is_nil()
+            || candidate.authorization_id == candidate.disclosure_id
+        {
+            return Err(InvalidSuccessor);
+        }
+        validate_token_association(c, qualification, evidence)?;
+        let valid_set = |set: &BTreeSet<Uuid>| !set.is_empty() && !set.contains(&Uuid::nil());
+        if policy.id.is_nil()
+            || policy.version == 0
+            || !valid_set(&policy.authorized_approvers)
+            || !valid_set(&policy.authorized_disclosure_verifiers)
+            || !(1..=86400).contains(&policy.max_authorization_validity_seconds)
+            || !(1..=86400).contains(&policy.max_disclosure_age_seconds)
+        {
+            return Err(InvalidSuccessorPolicy);
+        }
+        if authorization.id != candidate.authorization_id
+            || authorization.policy_id != policy.id
+            || authorization.policy_version != policy.version
+            || !policy
+                .authorized_approvers
+                .contains(&authorization.approver_id)
+            || !authorization.approved
+            || authorization.revoked
+            || authorization.candidate != candidate
+            || authorization.approved_at < original.recorded_at
+            || authorization.approved_at > evidence.observed_at
+            || authorization.expires_at <= now
+            || authorization.expires_at <= authorization.approved_at
+            || authorization.expires_at - authorization.approved_at
+                > Duration::seconds(i64::from(policy.max_authorization_validity_seconds))
+        {
+            return Err(SuccessorAuthorizationRequired);
+        }
+        if disclosure.id != candidate.disclosure_id
+            || disclosure.source_id.is_nil()
+            || !policy
+                .authorized_disclosure_verifiers
+                .contains(&disclosure.verifier_id)
+            || disclosure.state != AgentTokenEvidenceState::Confirmed
+            || !disclosure.publicly_accessible
+            || disclosure.candidate != candidate
+            || disclosure.published_at < evidence.observed_at
+            || disclosure.verified_at < disclosure.published_at
+            || disclosure.verified_at > now
+            || now - disclosure.published_at
+                > Duration::seconds(i64::from(policy.max_disclosure_age_seconds))
+        {
+            return Err(SuccessorDisclosureRequired);
+        }
+        if self.record_id_used(c.id)
+            || self.evidence_used(c.evidence_id)
+            || self.successors.iter().any(|r| {
+                r.candidate.authorization_id == candidate.authorization_id
+                    || r.candidate.disclosure_id == candidate.disclosure_id
+            })
+        {
+            return Err(DuplicateRecord);
+        }
+        if self.mint_used(c.network, &c.mint) {
+            return Err(DuplicateMint);
+        }
+        self.successors.push(AgentTokenSuccessorRecord {
+            candidate,
+            policy_id: policy.id,
+            policy_version: policy.version,
+            approved_by: authorization.approver_id,
+            approved_at: authorization.approved_at,
+            authorization_expires_at: authorization.expires_at,
+            disclosure_source_id: disclosure.source_id,
+            disclosure_verified_by: disclosure.verifier_id,
+            disclosed_at: disclosure.published_at,
+            disclosure_verified_at: disclosure.verified_at,
+            confirmed_at: evidence.observed_at,
+            recorded_at: now,
+        });
         Ok(())
     }
 }
