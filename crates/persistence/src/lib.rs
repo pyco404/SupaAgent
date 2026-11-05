@@ -1,7 +1,9 @@
 mod access;
 mod controlled;
 mod economy;
+mod ecosystem_reviews;
 mod ecosystem_social;
+pub use ecosystem_reviews::EcosystemAchievementRequest;
 pub use ecosystem_social::EcosystemConsentRequest;
 mod epoch;
 mod intelligence;
