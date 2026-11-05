@@ -1,6 +1,8 @@
 mod access;
 mod controlled;
 mod economy;
+mod ecosystem_social;
+pub use ecosystem_social::EcosystemConsentRequest;
 mod epoch;
 mod intelligence;
 mod operational;
