@@ -84,4 +84,4 @@ createServer(async (request, response) => {
     if (error.code === "ENOENT" || error.code === "ENOTDIR" || error.code === "EACCES") return finish(response, 404, "Not found");
     finish(response, 500, "Local asset unavailable");
   }
-}).listen(port, "127.0.0.1", () => console.log(`Supa Agent local: http://127.0.0.1:${port}`));
+}).listen(port, "127.0.0.1", () => console.log(`Supa Agency local: http://127.0.0.1:${port}`));
