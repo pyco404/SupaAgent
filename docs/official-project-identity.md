@@ -7,7 +7,7 @@
   deployment and the canonical application origin are not configured by this update.
 - Blockchain: **Solana**.
 - Platform token name: **Supa Agency**; ticker: **SUPA** (display **$SUPA**),
-  planned and not live. Its canonical Solana mint must end with exact case-sensitive
+  planned and not live. Its canonical Solana mint must begin with exact case-sensitive uppercase
   **`SUPA`**. No official mint address is assigned by this update.
 - Official platform launch: owner-restricted `https://supaagency.xyz` interface,
   Pump.fun underneath, explicit wallet signatures and verified launch confirmation.
