@@ -8,6 +8,9 @@ useful work, learning, authorized USDC earnings and operating expenses, bounded
 trading, collaboration and eventual child-agent creation remain first-class
 product goals. Creator-reviewed purposes, one uniquely associated token per
 qualifying agent, approved launches and ecosystem reporting extend that foundation.
+That token is the agent's original permanent official mint after confirmation;
+exceptional successors require additional authorization, public disclosure and an
+immutable link to the original, with no automatic holder or rights migration.
 See the [unified product vision and decision register](supa-agency-vision.md).
 
 The dependency graph and milestone notes below describe the original foundation.
@@ -55,6 +58,39 @@ mechanism or live payment/trading/launch service is established here. Concrete
 custody, reserve, purpose-change, child ownership and community-rights decisions
 remain in the vision's decision register. Independent recovery and separately
 approved scopes remain prerequisites for sensitive persistent or live operations.
+
+### Permanent token identity and successor history
+
+The canonical agent UUID retains one original verified `(network, mint)` forever.
+Original confirmation is distinct from creation, qualification and a launch
+request. Rejected, failed, pending or unknown evidence cannot establish that mint.
+No creator/agent/admin role can overwrite it through the domain API. Purpose,
+ownership or lifecycle changes cannot silently change the original token.
+
+The domain keeps original confirmation records and exceptional successor records
+in separate append-only histories. A successor proposal binds a full original
+snapshot, the same agent identity, a unique mint, current qualification and confirmed
+chain evidence. An explicit bounded policy, exact-scope expiring approval and
+independently verified public disclosure must all agree. Successor history records
+approval/disclosure provenance and timestamps, always links to the first original,
+and never changes `original_token` or the existing original-only `entries` view.
+Same-network exceptions are supported in domain validation; cross-network exceptions
+need their own policy review. There is no automatic active-mint switch.
+
+Approval, disclosure, policy and chain-verification contexts are trusted server
+inputs, not HTTP/model-deserializable authority. No default policy, network adapter,
+publication, signing, holder transfer or balance/rights update is attached. The
+platform token $SUPA remains a distinct planned identity. Public future views must
+label the original official mint and exception history separately, with evidence;
+they must not promise that balances or claims migrated.
+
+The in-memory aggregate enforces these rules only for loaded state. Future database
+rollout still needs immutable original rows, append-only successor/provenance rows,
+unique agent/mint/receipt constraints, transactional concurrency, trusted rehydration
+and restricted administrative changes with retained audit evidence. Failed/unknown
+launch attempts belong to a separate reconciled history. No existing migration or
+running database is changed by this domain-first implementation. Live launches and
+the frontend security gate retain their existing independent restrictions.
 
 ## Historical Milestone 1 foundation
 
