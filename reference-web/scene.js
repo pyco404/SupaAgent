@@ -321,7 +321,7 @@ export function createScenes({ intro, blueprint, entity, transition, spark, redu
     const rows = [['API', data.connection], ['agents', data.agentCount ?? 'unavailable'], ['economy', 'simulation'], ['signing', 'disabled'], ['Mainnet', 'unavailable']];
     rows.forEach(([label, value], i) => { const y = h * .36 + i * 19; ctx.globalAlpha = .6; ctx.fillText(label, split + 10, y); ctx.textAlign = 'right'; ctx.fillText(String(value), w - 12, y); ctx.textAlign = 'left'; ctx.globalAlpha = .2; ctx.beginPath(); ctx.moveTo(split + 10, y + 5); ctx.lineTo(w - 12, y + 5); ctx.stroke(); });
     }
-    ctx.globalAlpha = .6; ctx.fillText('root · Supa Agent / not runtime activity', 15, h - 12); if(!compact)ctx.fillText('decorative topology', split + 10, h - 12); ctx.globalAlpha = 1;
+    ctx.globalAlpha = .6; ctx.fillText('root · Supa Agency / not runtime activity', 15, h - 12); if(!compact)ctx.fillText('decorative topology', split + 10, h - 12); ctx.globalAlpha = 1;
   }
   function drawEntity(time) {
     // The code texture changes every 1.8s, not every frame. Preserve precise redraws
