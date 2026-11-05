@@ -2,7 +2,7 @@
 
 **One agent. One purpose. One token.**
 
-Proposed website domain: **supaagency.xyz** (ownership unconfirmed; not deployed).
+Purchased website domain: **supaagency.xyz** (owner-confirmed; not deployed).
 Official X: [@supa_agency](https://x.com/supa_agency). Autonomous publishing remains disabled.
 Blockchain: **Solana**. Platform token: **$SUPA (planned, not live)**.
 The direction is one associated Solana token per qualifying user-created agent,
