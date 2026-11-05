@@ -349,7 +349,7 @@ fn public_fact(
         PlatformEventData::AgentCreated {
             purpose_revision_id,
         } if !purpose_revision_id.is_nil() => {
-            "A publicly listed agent was created with a recorded purpose."
+            "A publicly listed agent was created; its purpose is recorded."
         }
         PlatformEventData::AgentQualified {
             purpose_revision_id,
