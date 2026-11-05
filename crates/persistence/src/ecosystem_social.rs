@@ -31,7 +31,7 @@ fn category(value: &str) -> Result<EcosystemEventKind> {
     })
 }
 /// One agent lock serializes consent, ACL changes and event reservation. No wallet lock.
-async fn scope(
+pub(super) async fn scope(
     tx: &mut Tx<'_>,
     agent: Uuid,
     actor: Uuid,
@@ -52,21 +52,23 @@ async fn scope(
     if !allowed {
         return Err(Error::Denied);
     }
-    let created: DateTime<Utc> = sqlx::query_scalar(
-        "SELECT (data->>'created_at')::timestamptz FROM public.agents WHERE id=$1 FOR UPDATE",
-    )
-    .bind(agent)
-    .fetch_optional(&mut **tx)
-    .await
-    .map_err(db)?
-    .ok_or(Error::NotFound)?;
-    let rows = sqlx::query(
-        "SELECT principal_id,role FROM public.agent_access WHERE agent_id=$1 FOR SHARE",
-    )
-    .bind(agent)
-    .fetch_all(&mut **tx)
-    .await
-    .map_err(db)?;
+    sqlx::query("SELECT ecosystem_social.lock_agent($1)")
+        .bind(agent)
+        .execute(&mut **tx)
+        .await
+        .map_err(db)?;
+    let created: String =
+        sqlx::query_scalar("SELECT data->>'created_at' FROM public.agents WHERE id=$1")
+            .bind(agent)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(db)?
+            .ok_or(Error::NotFound)?;
+    let rows = sqlx::query("SELECT principal_id,role FROM public.agent_access WHERE agent_id=$1")
+        .bind(agent)
+        .fetch_all(&mut **tx)
+        .await
+        .map_err(db)?;
     let owners: Vec<Uuid> = rows
         .iter()
         .filter(|r| r.get::<String, _>("role") == "owner")
@@ -87,6 +89,7 @@ async fn scope(
         .fetch_one(&mut **tx)
         .await
         .map_err(db)?;
+    let created: DateTime<Utc> = created.parse().map_err(|_| Error::Database)?;
     Ok((owners[0], created, now))
 }
 fn value<T: Serialize>(v: &T) -> Result<Value> {
@@ -229,9 +232,9 @@ impl Store {
         {
             return Err(Error::Stale);
         }
-        // Creation is backed by the existing immutable-purpose extension plus actual activity.
-        // Other categories stay unavailable until their authoritative loaders are reviewed.
-        let rows=sqlx::query("SELECT a.id,a.created_at,a.simulated,p.id AS purpose_id FROM public.activity a JOIN LATERAL (SELECT id FROM ecosystem_social.purposes WHERE agent_id=a.agent_id AND creator_id=$2 ORDER BY revision LIMIT 1) p ON true WHERE $3 AND a.created_at>=$4 AND a.agent_id=$1 AND a.kind='lifecycle' AND a.code='created' ORDER BY a.created_at DESC,a.id LIMIT 64 FOR SHARE OF a")
+        // Authoritative creation and terminal offline-job records only.
+        // Qualification and achievements require recorded human reviews; markets stay unavailable.
+        let rows=sqlx::query("SELECT a.id,a.created_at,a.simulated,p.id AS purpose_id FROM public.activity a JOIN LATERAL (SELECT id FROM ecosystem_social.purposes WHERE agent_id=a.agent_id AND creator_id=$2 ORDER BY revision LIMIT 1) p ON true WHERE $3 AND a.created_at>=$4 AND a.agent_id=$1 AND a.kind='lifecycle' AND a.code='created' ORDER BY a.created_at DESC,a.id LIMIT 64")
             .bind(agent).bind(owner).bind(grant.categories.iter().any(|s|s=="agent_created")).bind(grant.valid_from).fetch_all(&mut *tx).await.map_err(db)?;
         let old_ids: Vec<Uuid> = if old.is_some() {
             sqlx::query_scalar("SELECT source_id FROM ecosystem_social.prepared_events WHERE request_id=$1 ORDER BY source_id")
@@ -239,15 +242,36 @@ impl Store {
         } else {
             vec![]
         };
-        let mut records = vec![];
+        let mut candidates = vec![];
         for row in rows {
             let id: Uuid = row.get("id");
-            let occurred: DateTime<Utc> = row.get("created_at");
-            let simulated: bool = row.get("simulated");
-            let purpose: Uuid = row.get("purpose_id");
+            let occurred = row.get("created_at");
+            let simulated = row.get("simulated");
+            let purpose = row.get("purpose_id");
+            let record = PlatformSourceRecord {
+                simulated,
+                source_record_id: id,
+                agent_id: agent,
+                creator_id: owner,
+                occurred_at: occurred,
+                data: PlatformEventData::AgentCreated {
+                    purpose_revision_id: purpose,
+                },
+            };
             let snapshot = json!({"agent_id":agent,"creator_id":owner,"kind":"agent_created","occurred_at":occurred,"simulated":simulated,"purpose_revision_id":purpose});
-            sqlx::query("INSERT INTO ecosystem_social.sources(source_id,agent_id,kind,snapshot) VALUES($1,$2,'agent_created',$3) ON CONFLICT(source_id) DO NOTHING")
-                .bind(id).bind(agent).bind(&snapshot).execute(&mut *tx).await.map_err(db)?;
+            candidates.push((record, "agent_created", snapshot));
+        }
+        candidates.extend(terminal_sources(&mut tx, agent, owner, &grant).await?);
+        candidates.extend(
+            crate::ecosystem_reviews::review_sources(&mut tx, agent, owner, &grant, now).await?,
+        );
+        candidates.sort_by_key(|(r, _, _)| std::cmp::Reverse((r.occurred_at, r.source_record_id)));
+        candidates.truncate(64);
+        let mut records = vec![];
+        for (record, kind, snapshot) in candidates {
+            let id = record.source_record_id;
+            sqlx::query("INSERT INTO ecosystem_social.sources(source_id,agent_id,kind,snapshot) VALUES($1,$2,$3,$4) ON CONFLICT(source_id) DO NOTHING")
+                .bind(id).bind(agent).bind(kind).bind(&snapshot).execute(&mut *tx).await.map_err(db)?;
             let saved: Value = sqlx::query_scalar(
                 "SELECT snapshot FROM ecosystem_social.sources WHERE source_id=$1",
             )
@@ -268,16 +292,7 @@ impl Store {
             if (old.is_some() && !old_ids.contains(&id)) || (old.is_none() && seen) {
                 continue;
             }
-            records.push(PlatformSourceRecord {
-                simulated,
-                source_record_id: id,
-                agent_id: agent,
-                creator_id: owner,
-                occurred_at: occurred,
-                data: PlatformEventData::AgentCreated {
-                    purpose_revision_id: purpose,
-                },
-            });
+            records.push(record);
         }
         let evidence: Vec<_> = records
             .iter()
@@ -369,4 +384,105 @@ impl Store {
         tx.commit().await.map_err(db)?;
         Ok(payload)
     }
+}
+
+/// Derive outcomes from terminal jobs joined to their immutable terminal audit receipt.
+/// No customer prose leaves this loader. Evaluation sessions and generic activity
+/// cannot qualify. Completion must match the application's deterministic analyzer.
+pub(super) async fn terminal_sources(
+    tx: &mut Tx<'_>,
+    agent: Uuid,
+    owner: Uuid,
+    grant: &EcosystemConsentRequest,
+) -> Result<Vec<(PlatformSourceRecord, &'static str, Value)>> {
+    if !grant
+        .categories
+        .iter()
+        .any(|s| matches!(s.as_str(), "task_completed" | "task_failed"))
+    {
+        return Ok(vec![]);
+    }
+    let rows=sqlx::query("SELECT j.id,j.state,j.network,j.spec,j.input,j.output,j.output_sha256,j.failure_code,a.id AS audit_id,a.created_at,a.data FROM public.economic_jobs j JOIN LATERAL (SELECT id,created_at,data,operation FROM public.economic_audit WHERE job_id=j.id AND agent_id=j.agent_id ORDER BY id DESC LIMIT 1) a ON a.operation=j.state WHERE j.agent_id=$1 AND j.state IN ('completed','failed') AND j.execution_token IS NULL AND j.lease_until IS NULL AND a.created_at>=$2 AND j.output_sha256=encode(sha256(convert_to(j.output::text,'UTF8')),'hex') AND a.data->>'output_sha256'=j.output_sha256 ORDER BY a.created_at DESC,j.id LIMIT 64")
+        .bind(agent).bind(grant.valid_from).fetch_all(&mut **tx).await.map_err(db)?;
+    let mut result = vec![];
+    for row in rows {
+        let id: Uuid = row.get("id");
+        let output: Value = row.get("output");
+        if output["contract"] != "structured_report_v1"
+            || output["live_inference"] != false
+            || output["job_id"] != json!(id)
+        {
+            continue;
+        }
+        let state: String = row.get("state");
+        let failure: Option<String> = row.get("failure_code");
+        let audit: Value = row.get("data");
+        if audit.get("failure_code") != Some(&json!(failure)) {
+            continue;
+        }
+        let (kind, data) = if state == "completed"
+            && grant.categories.iter().any(|s| s == "task_completed")
+        {
+            let spec: ServiceSpec = match serde_json::from_value(row.get("spec")) {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
+            let input: String = row.get("input");
+            if spec.input(&input).is_err() || failure.is_some() {
+                continue;
+            }
+            let expected =
+                WorkRequest::parse(&input, spec.kind).and_then(|r| analyze_work(&r, spec.kind));
+            let Ok(expected) = expected else {
+                continue;
+            };
+            if expected["status"] != "completed"
+                || expected.as_object().is_none_or(|fields| {
+                    fields.iter().any(|(k, v)| output["work"].get(k) != Some(v))
+                })
+            {
+                continue;
+            }
+            (
+                "task_completed",
+                PlatformEventData::TaskCompleted {
+                    result_id: id,
+                    state: CompletionState::Completed,
+                    result_verified: true,
+                    semantic_review: SemanticReviewState::NotRequired,
+                },
+            )
+        } else if state == "failed" && grant.categories.iter().any(|s| s == "task_failed") {
+            let reason = match failure.as_deref() {
+                Some("incomplete_or_unsupported_work") => PublicFailureCode::InsufficientEvidence,
+                Some("bounded_work_permission_denied") => PublicFailureCode::PermissionDenied,
+                _ => continue,
+            };
+            if !matches!(
+                output["work"]["status"].as_str(),
+                Some("abstained" | "incomplete")
+            ) {
+                continue;
+            }
+            ("task_failed", PlatformEventData::TaskFailed { reason })
+        } else {
+            continue;
+        };
+        let occurred: DateTime<Utc> = row.get("created_at");
+        let simulated = row.get::<String, _>("network") == "simulated";
+        let snapshot = json!({"agent_id":agent,"creator_id":owner,"kind":kind,"occurred_at":occurred,"simulated":simulated,"audit_id":row.get::<i64,_>("audit_id"),"output_sha256":row.get::<String,_>("output_sha256"),"failure_code":failure});
+        result.push((
+            PlatformSourceRecord {
+                simulated,
+                source_record_id: id,
+                agent_id: agent,
+                creator_id: owner,
+                occurred_at: occurred,
+                data,
+            },
+            kind,
+            snapshot,
+        ));
+    }
+    Ok(result)
 }
