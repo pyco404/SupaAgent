@@ -453,3 +453,58 @@ budget/dispatch controls; revalidation and human semantic review of actual gener
 text; and a retention/recovery policy before sensitive persistent state. No paid
 inference, publishing, trading, token launches, autonomous execution, Railway
 configuration or protected accounting changed.
+
+### Authenticated ecosystem backend (local, not deployed)
+
+The backend now exposes five bearer-authenticated POST operations under
+`/agents/{id}/`: `purpose`, `ecosystem-consent`, `qualification-review`,
+`achievement-review`, and `ecosystem-prepare`. Purpose, consent and reviews require
+both a named owner credential and current database ownership. Preparation permits
+an authorized owner/operator. Public service credentials, viewers, outsiders,
+expired credentials, identity mismatches and body-supplied actor overrides are
+rejected. Existing operational epochs remain explicitly unsupported and fail
+closed; no new epoch permit or migration is inferred from these routes.
+
+Preparation loads actual creation receipts; terminal offline-job outcomes joined
+to immutable audit receipts; current qualification reviews; and explicit semantic
+achievement reviews. Completed results must match deterministic supplied-input
+analysis, their job identity, output hash and terminal audit. Only the specifically
+mapped evidence/permission failure reasons are public; ambiguous provider failures
+abstain. Generic activity, model goal assessments and evaluation-only acceptance
+cannot establish task completion or achievement. A qualification review requires an
+administrator-installed, versioned reviewer policy and evidence IDs resolving to
+actual creation records. No default policy is installed by the API or runtime.
+A newer disabled policy version revokes earlier authority. Achievement acceptance
+requires an owner-confirmed review bound to an already-completed deterministic
+result and its exact hash. Neither operation delivers work, completes jobs, changes
+revenue/accounting, qualifies token launches, grants capabilities or activates agents.
+
+Latest reviews, current purpose, reviewer policy, source hashes and creator consent
+are rechecked during preparation/replay. Revoked/expired/conflicting evidence fails
+closed; immutable reservations persist across restart. Token associations and
+independently verified market ingestion remain unavailable to this loader. No
+provider transport or publishing operation is connected. Facts remain separate from
+commentary through the existing review-only model-input contract and draft validator.
+
+`deployment/ecosystem-social-grants.sql` defines a proposed feature-only role for
+review, not a grant to the deployed API. It permits selected source/schema reads
+and append-only feature records. A fixed-search-path, lock-only SECURITY DEFINER
+function serializes existing ACL mutations without granting UPDATE on agents,
+wallets or ACL tables. Runtime cannot install reviewer policies, modify history,
+alter schemas, administer roles, or write financial tables. The separate extension
+and grants are applied only to newly created disposable databases. All original 13
+migration files remain unchanged; existing Railway schema and permissions are untouched.
+
+The isolated runner now requires PostgreSQL 18 binaries and optionally their
+extracted library directory. It verifies exact socket/database/data-directory
+identity before writes, exercises real HTTP authentication using the restricted
+role, performs two database restart drills and preserves the protected primary's
+stopped state and hashes. Its private evidence remains under
+`artifacts/supa-agency-ecosystem-integration/`. This local run does not certify a
+new container image or alter the previously accepted Railway deployment revision.
+
+Next: review the explicit extension/grants and operational-epoch authorization
+before any separately approved rollout; then connect offline social drafting to
+freshly revalidated envelopes and human semantic review. Independently verified
+agent-token/market ingestion needs its own source-authority and privacy review.
+Paid inference, token launching, financial execution and X publication remain disabled.
