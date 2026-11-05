@@ -6,8 +6,17 @@
 - Purchased domain: **supaagency.xyz**, confirmed by the owner. DNS routing,
   deployment and the canonical application origin are not configured by this update.
 - Blockchain: **Solana**.
-- Platform token: **$SUPA**, planned and not live. Individual agent tokens are
-  distinct; creation, purpose verification and token launching are separate.
+- Platform token name: **Supa Agency**; ticker: **SUPA** (display **$SUPA**),
+  planned and not live. Its canonical Solana mint must end with exact case-sensitive
+  **`SUPA`**. No official mint address is assigned by this update.
+- Official platform launch: owner-restricted `https://supaagency.xyz` interface,
+  Pump.fun underneath, explicit wallet signatures and verified launch confirmation.
+  Preserve one canonical platform mint, separate from individual agent tokens.
+- Sequence: publish and accept the website first; launch only after separate
+  authorization. The [vanity-mint signing design](supa-platform-token-launch.md)
+  grants no key generation, signing, deployment or launch authority.
+- Individual agent creation, purpose verification and token launching remain
+  separate operations; they cannot create or replace the platform mint.
 - Canonical repositories: `pyco404/supa-agency` and private
   `pyco404/supa-agency-infra`.
 
