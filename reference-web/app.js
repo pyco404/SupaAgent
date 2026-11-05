@@ -1,5 +1,5 @@
-// Supa Agent / SUPA
-// Born to think. Built to survive.
+// Supa Agency / SUPA
+// One agent. One purpose. One token.
 // Persistent agents. Application-enforced permissions.
 import { createWheel } from './wheel.js';
 import { createScenes } from './scene.js';
@@ -77,7 +77,7 @@ document.addEventListener('scroll',event=>{const target=event.target;if(target==
 let restoringRoute=false;
 const ready=boot();
 async function boot(){
-  const data=sceneData={days:[],account:'Supa Agent',connection:'connecting',agentCount:null,retrievedAt:null};
+  const data=sceneData={days:[],account:'Supa Agency',connection:'connecting',agentCount:null,retrievedAt:null};
   scenes=createScenes({intro:$('.intro-canvas'),blueprint:$('.blueprint'),entity:$('.entity'),transition:$('.transition'),spark:$('.spark'),reduced,data});
   document.fonts.ready.then(()=>scenes?.redraw());
   wheel=createWheel({host:$('.wheel'),canvas:$('.wheel-ink'),items:navigation,reducedMotion:reduced,onSelect:index=>{if(!restoringRoute)void select(index);}});
@@ -125,7 +125,7 @@ async function reload(currentScene=sceneData){
 $('.reload-records').addEventListener('click',()=>{closeCommand(false);$('.buffer').focus({preventScroll:true});void reload();});
 $('#agent-select').addEventListener('change',event=>{agentId=event.target.value;syncAgentPicker();void select(itemIndex);});
 function updateOfficialMetadata(path){
-  const url=new URL(path,'https://trysupaagent.xyz').href;
+  const url=new URL(path,location.origin).href;
   $('link[rel=canonical]').setAttribute('href',url);
   $('meta[property="og:url"]').setAttribute('content',url);
   for(const selector of ['meta[property="og:title"]','meta[name="twitter:title"]'])$(selector).setAttribute('content',document.title);
@@ -133,7 +133,7 @@ function updateOfficialMetadata(path){
 function setView(projects){
   closeAgentPicker();
   entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
-  if(!projects){document.title='Supa Agent — Born to think. Built to survive.';updateOfficialMetadata('/');}
+  if(!projects){document.title='Supa Agency — One agent. One purpose. One token.';updateOfficialMetadata('/');}
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
   if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));wheel.reveal();$('.buffer').focus({preventScroll:true});});}
 }
@@ -183,7 +183,7 @@ async function select(index,background=false){
   if(!background){itemIndex=index;cancelTyping();}
   if(!background&&document.body.dataset.view==='projects'){
     if(location.pathname!==item.path)history.pushState({view:'projects'},'',`${item.path}${location.search}`);
-    document.title=`${item.label.split(' · ')[0]} / Supa Agent`;
+    document.title=`${item.label.split(' · ')[0]} / Supa Agency`;
     updateOfficialMetadata(item.path);
   }
   const buffer=$('.buffer');
