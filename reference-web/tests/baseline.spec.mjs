@@ -112,7 +112,7 @@ test("normal terminal boot restores complete accessible text when motion is redu
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(buffer).toHaveAttribute("aria-busy", "false");
   await expect(buffer).toHaveAttribute("aria-live", "polite");
-  await expect(buffer).toContainText("Born to think. Built to survive.");
+  await expect(buffer).toContainText("One agent. One purpose. One token.");
   expect(await buffer.locator("[hidden]").count()).toBe(0);
   await expect(page.locator(".entity-state b").nth(1)).toHaveText("idle");
 });
@@ -229,7 +229,7 @@ test("Enter shows an opaque radial portal before navigating exactly once", async
   await expect(portal).toHaveClass(/active/);
   const brand=page.locator(".portal-brand");
   await expect(brand).toBeVisible();
-  await expect(brand).toHaveText("SUPA AGENT");
+  await expect(brand).toHaveText("SUPA AGENCY");
   await expect(brand.locator("img")).toHaveAttribute("src", "/public/assets/supa-agent-code.svg");
   const box=await brand.boundingBox(),viewport=page.viewportSize();
   expect(box.x+box.width/2).toBeCloseTo(viewport.width/2, 0);
