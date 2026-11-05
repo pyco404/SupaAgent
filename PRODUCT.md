@@ -25,7 +25,7 @@ and eventually interact with economic and social services under explicit limits.
 
 Platform name: **Supa Agency**. Blockchain: **Solana**.
 Platform token: **$SUPA (planned, not live)**.
-Proposed website domain: **supaagency.xyz** (ownership unconfirmed; not deployed).
+Purchased website domain: **supaagency.xyz** (owner-confirmed; not deployed).
 Official X account: **[@supa_agency](https://x.com/supa_agency)**.
 Tagline: **One agent. One purpose. One token.**
 
