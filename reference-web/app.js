@@ -3,11 +3,12 @@
 // Persistent agents. Application-enforced permissions.
 import { createWheel } from './wheel.js';
 import { createScenes } from './scene.js';
-import { navigation, overview, sectionView, read, units } from './platform.js';
+import { navigation as privateNavigation, publicNavigation, publicSectionView, overview, sectionView, read, units } from './platform.js';
 
 const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
 const publicLanding = root.dataset.publicLanding === 'true';
+const navigation = publicLanding ? publicNavigation : privateNavigation;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 reduced.addEventListener('change', event => { root.dataset.motion=event.matches?'still':'running';if(event.matches)revealTyping?.(); });
 root.dataset.motion = reduced.matches?'still':'running';
@@ -17,7 +18,7 @@ let sceneData, revealTyping=null;
 let theme=0,wheel,scenes,itemIndex=0,typing=0,typingTimer=0,leaving=false,entryAttempt=0,worm=false;
 let state={status:{error:'Connecting to local backend…'},agents:{error:'Loading saved agents…'},retrievedAt:'not yet retrieved'},agentId='',renderVersion=0,reloadVersion=0;
 let commandHistory=[],historyIndex=0,liveTimer=0,liveBusy=false,viewFingerprint='';
-try{const saved=localStorage.getItem('supa.selected-agent');if(/^[0-9a-f-]{36}$/i.test(saved??''))agentId=saved;}catch{/* Optional public identity preference. */}
+try{const saved=publicLanding?null:localStorage.getItem('supa.selected-agent');if(/^[0-9a-f-]{36}$/i.test(saved??''))agentId=saved;}catch{/* Optional private identity preference. */}
 function rememberAgent(){try{if(agentId)localStorage.setItem('supa.selected-agent',agentId);else localStorage.removeItem('supa.selected-agent');}catch{/* Authentication never depends on browser storage. */}}
 $('.buffer').addEventListener('input',event=>{const form=event.target.closest('form');if(form)form.dataset.unsavedChanges='true';});
 $('.buffer').addEventListener('change',event=>{const form=event.target.closest('form');if(form)form.dataset.unsavedChanges='true';});
@@ -82,13 +83,23 @@ async function boot(){
   scenes=createScenes({intro:$('.intro-canvas'),blueprint:$('.blueprint'),entity:$('.entity'),transition:$('.transition'),spark:$('.spark'),reduced,data});
   document.fonts.ready.then(()=>scenes?.redraw());
   wheel=createWheel({host:$('.wheel'),canvas:$('.wheel-ink'),items:navigation,reducedMotion:reduced,onSelect:index=>{if(!restoringRoute)void select(index);}});
-  if(!publicLanding){migrateLegacyRoute();restoreRoute();}
+  if(publicLanding){
+    $('.agent-picker').hidden=true;$('#agent-label').hidden=true;
+    $('.reload-records').hidden=true;$('.reload-records').disabled=true;
+    $('[data-stat=repos]').textContent='—';$('[data-stat=stars]').textContent='—';$('[data-stat=followers]').textContent='PUBLIC';
+    $('.snapshot > span').textContent='PUBLIC VIEWS';$('.snapshot-date').textContent='Read-only';
+    $('.bar').setAttribute('aria-label','Public exploration status');
+    $('.study-note').textContent='PUBLIC · Read-only exploration / no live activity or private records';
+    data.connection='public';
+  }else migrateLegacyRoute();
+  restoreRoute();
   root.dataset.ready='true';
   if(!publicLanding){void reload(data);liveTimer=setInterval(()=>void refreshLive(),15000);}
   return true;
 }
 // Read-only polling pauses while hidden, typing or interacting. It never starts a cycle.
 async function refreshLive(){
+  if(publicLanding)return;
   if($('.buffer').contains(document.activeElement)&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName))return;
   if($('.buffer').querySelector('form[data-unsaved-changes=true]'))return;
   if(liveBusy||$('.buffer').querySelector('[data-economic-action-pending=true]')||document.hidden||document.body.dataset.view!=='projects'||$('.buffer').getAttribute('aria-busy')==='true'||!$('.command').hidden||!$('#agent-options').hidden||$('.projects').classList.contains('drawer-open'))return;
@@ -132,14 +143,13 @@ function updateOfficialMetadata(path){
   for(const selector of ['meta[property="og:title"]','meta[name="twitter:title"]'])$(selector).setAttribute('content',document.title);
 }
 function setView(projects){
-  if(projects&&publicLanding){location.assign('/operator');return;}
   closeAgentPicker();
   entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
   if(!projects){document.title='Supa Agency — One agent. One purpose. One token.';updateOfficialMetadata('/');}
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
   if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));wheel.reveal();$('.buffer').focus({preventScroll:true});});}
 }
-async function enter(event){event?.preventDefault();if(publicLanding){location.assign('/operator');return;}if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'',`/${location.search}`);setView(true);}
+async function enter(event){event?.preventDefault();if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'',`${publicLanding?'/home':'/'}${location.search}`);setView(true);}
 $('.enter').addEventListener('click',enter);
 $('.skip').addEventListener('click',event=>{
   event.preventDefault();
@@ -156,11 +166,12 @@ function migrateLegacyRoute(){
   history.replaceState({view:'projects'},'',`${item.path}${location.search}`);
 }
 function restoreRoute(){
+  if(publicLanding&&location.pathname==='/'){setView(false);return;}
   const item=navigation.find(entry=>entry.path===location.pathname);
   if(!item)return;
   restoringRoute=true;
   itemIndex=navigation.indexOf(item);wheel.select(itemIndex);
-  setView(item.id!=='home'||history.state?.view==='projects');
+  setView(publicLanding||item.id!=='home'||history.state?.view==='projects');
   restoringRoute=false;
 }
 function changeTheme(){theme=(theme+1)%palettes.length;applyTheme();try{localStorage.setItem('supa.dark-theme',String(theme));}catch{/* Optional preference. */}scenes.redraw();window.dispatchEvent(new Event('resize'));$('.announcement').textContent=`Dark theme ${theme+1} of ${palettes.length}`;}
@@ -177,8 +188,7 @@ $('.tabline').addEventListener('click',()=>setDrawer($('.tabline').getAttribute(
 $('.wheel').addEventListener('click',event=>{if(event.target.closest('.wheel-item')&&matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.buffer').focus({preventScroll:true});}});
 function line(text,className='terminal-line'){const el=node('p',className,text);$('.buffer').append(el);return el;}
 async function select(index,background=false){
-  if(publicLanding)return;
-  rememberAgent();
+  if(!publicLanding)rememberAgent();
   const item=navigation[index];if(!item)return;
   // Saved lifecycle is an identity attribute, never proof of a healthy worker.
   scenes?.setLifecycle(state.agents.error?null:state.agents.data?.find(agent=>agent.id===agentId)?.lifecycle);
@@ -191,19 +201,19 @@ async function select(index,background=false){
   }
   const buffer=$('.buffer');
   if(!background){
-    $('.tab-file').textContent=item.label.split(' · ')[0];$('.winbar').textContent=`supa@local — ${item.label} / read-only`;
+    $('.tab-file').textContent=item.label.split(' · ')[0];$('.winbar').textContent=`supa@${publicLanding?'public':'local'} — ${item.label} / read-only`;
     buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
     $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
-    line('supa@local ~','prompt');line('Loading saved view…','prompt');
+    line(`supa@${publicLanding?'public':'local'} ~`,'prompt');line(publicLanding?'Opening public view…':'Loading saved view…','prompt');
   }
-  const rows=await sectionView(item.id,state,agentId);
+  const rows=publicLanding?publicSectionView(item.id):await sectionView(item.id,state,agentId);
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
-  $('.winbar').textContent=`supa@local — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='economy')?'bounded economic controls':rows.some(row=>['autonomy','schedule','launch'].includes(row.kind))?'offline controls':'read-only'}`;
+  $('.winbar').textContent=`supa@${publicLanding?'public':'local'} — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='economy')?'bounded economic controls':rows.some(row=>['autonomy','schedule','launch'].includes(row.kind))?'offline controls':'read-only'}`;
   const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
   if(background&&buffer.querySelector('form[data-unsaved-changes=true]'))return;
   if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
   viewFingerprint=fingerprint;if(background)cancelTyping();
-  buffer.replaceChildren();line('supa@local ~','prompt');
+  buffer.replaceChildren();line(`supa@${publicLanding?'public':'local'} ~`,'prompt');
   for(const row of rows){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
@@ -274,7 +284,7 @@ function typeTerminal() {
   }
   typingTimer=setTimeout(tick,150);
 }
-function openCommand(prefix=''){if(publicLanding){location.assign('/operator');return;}closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
+function openCommand(prefix=''){closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
 function economyPanel(view,id){
   const details=node('details','calculation autonomy-panel');details.dataset.economy='jobs';details.append(node('summary','','Services, jobs and earned revenue'));
   details.append(node('p','terminal-notice','Operator-controlled offline work. Simulated units and Devnet test USDC stay separate. No real spending or transfers. Reload records after an uncertain response; never retry automatically.'));
@@ -472,7 +482,7 @@ $('.command').addEventListener('submit',event=>{
   if(value==='theme'){changeTheme();return;}
   if(['q','quit'].includes(value)){history.pushState({view:'intro'},'',`/${location.search}`);setView(false);$('.enter').focus();return;}
   const command=value.replace(/^supa\s+/,'');
-  if(command==='help'){line('UI commands only: supa status, supa agents, supa inspect <name or UUID>, supa intelligence, supa memory, supa economy, supa social, supa capabilities. ↑↓ choose views, j/k scroll, : opens command, Escape returns navigation. No shell execution.','terminal-notice');$('.announcement').textContent='Command help added to terminal.';return;}
+  if(command==='help'){line(publicLanding?'Public UI commands: supa status, supa agents, supa capabilities. ↑↓ choose views, j/k scroll, Escape returns navigation. Private records require sign-in.':'UI commands only: supa status, supa agents, supa inspect <name or UUID>, supa intelligence, supa memory, supa economy, supa social, supa capabilities. ↑↓ choose views, j/k scroll, : opens command, Escape returns navigation. No shell execution.','terminal-notice');$('.announcement').textContent='Command help added to terminal.';return;}
   if(command.startsWith('inspect ')){
     const query=command.slice(8).toLowerCase();const agent=state.agents.data?.find(a=>a.id===query||a.name.toLowerCase()===query);
     if(!agent){const message='No matching saved agent. Use supa agents.';$('.announcement').textContent=message;line(message,'terminal-notice');$('.buffer').scrollTop=$('.buffer').scrollHeight;return;}
