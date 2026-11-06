@@ -62,7 +62,7 @@ input:disabled, select:disabled { color: var(--dim); opacity: 1; }
 .header-right { display: flex; align-items: center; }
 .environment { display: flex; align-items: center; gap: var(--space-2); font-size: 17px; }
 .status-dot { display: inline-block; width: 6px; height: 6px; background: var(--mint); }
-.source-link { font-size: 18px; }
+.source-link { font-size: 18px; border: 0; background: transparent; padding: 0; margin-right: var(--space-5); }
 .source-link:hover { color: var(--mint); }
 .navigation { border-top: 1px solid var(--border); }
 .nav-inner { min-height: 52px; }
