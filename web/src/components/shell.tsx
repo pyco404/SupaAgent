@@ -73,6 +73,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="header-inner">
         <Link className="brand" href="/" aria-label="Supa Agency home"><SupaLogo/><span>SUPA<span className="muted"> / AGENCY</span></span></Link>
         <div className="header-right">
+          <button type="button" className="source-link" onClick={() => window.alert("GitHub account private, will be open sourced soon.")}>GITHUB</button>
           <span className="environment">LOCAL / DEVNET</span>
           <button ref={trigger} className="menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-haspopup="dialog" onClick={() => {
             const modal = dialog.current;
