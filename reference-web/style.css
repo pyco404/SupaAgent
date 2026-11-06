@@ -161,3 +161,8 @@ body:before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;bac
 .launch-panel input:not([type=checkbox]){display:block;min-height:44px;width:100%;min-width:0;max-width:100%;margin-top:6px;padding:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;caret-color:var(--ink);color-scheme:dark}
 .launch-panel input:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
 .launch-panel :disabled{opacity:.6}
+
+/* Keep the finished terminal text alive with a quiet, decorative insertion caret. */
+.buffer[data-typing-state="complete"] > :last-child:is(.terminal-line,.terminal-command,.terminal-notice,.terminal-heading,.prompt)::after{content:'';display:inline-block;width:1px;height:1em;margin-inline-start:3px;background:currentColor;vertical-align:-.12em;pointer-events:none}
+@media(prefers-reduced-motion:no-preference){body[data-view="projects"] .buffer[data-typing-state="complete"] > :last-child:is(.terminal-line,.terminal-command,.terminal-notice,.terminal-heading,.prompt)::after{animation:terminal-caret-blink 1.1s steps(1,end) infinite}}
+@keyframes terminal-caret-blink{0%,49.99%{opacity:1}50%,100%{opacity:0}}
