@@ -10,10 +10,12 @@ test('public landing is explicitly enabled only for the official host',()=>{try{
  delete process.env.SUPA_PUBLIC_LANDING_ENABLED;assert.equal(publicLandingRequest(request()),false);assert.equal(localRequest(request()),false);
  configured();for(const host of ['supa-web-staging.up.railway.app','supaagency.xyz.evil.invalid','evil.invalid','supaagency.xyz:444','www.supaagency.xyz'])assert.equal(publicLandingRequest(request('/',{host})),false);
 }finally{restore();}});
-test('only landing and bounded static assets are public; console, data and writes stay closed',()=>{try{
- configured();for(const path of ['/','/robots.txt','/style.css','/app.js','/scene.js','/public/assets/supa-agent-icon.svg','/public/fonts/IBMPlexMono-Regular.ttf'])assert.equal(publicLandingRequest(request(path)),true,path);
- for(const path of ['/operator','/agents','/memory','/api/status','/api/agents','/api/operator-status','/api/autonomy','/experience','/experience/api/agents','/.env','/public/secrets.env'])assert.equal(publicLandingRequest(request(path)),false,path);
+test('only editorial public views and bounded assets are public; records, controls and writes stay closed',()=>{try{
+ configured();for(const path of ['/','/home','/agents','/about','/robots.txt','/style.css','/app.js','/scene.js','/public/assets/supa-agent-icon.svg','/public/fonts/IBMPlexMono-Regular.ttf'])assert.equal(publicLandingRequest(request(path)),true,path);
+ for(const path of ['/operator','/agents/894ec18a-bb53-4f82-955f-7eff9f92d8a1','/agents/new','/memory','/economy','/social','/intelligence','/trading','/token-launch','/factory','/api/status','/api/agents','/api/operator-status','/api/autonomy','/api/console/agents','/experience','/experience/agents','/experience/api/agents','/.env','/public/secrets.env'])assert.equal(publicLandingRequest(request(path)),false,path);
+ for(const path of ['/home/','/agents/','/about/private','/AGENTS','/agents%2fprivate'])assert.equal(publicLandingRequest(request(path)),false,path);
  for(const method of ['POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(publicLandingRequest(request('/',{method})),false,method);
+ for(const path of ['/home','/agents','/about'])for(const method of ['POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(publicLandingRequest(request(path,{method})),false,`${method} ${path}`);
  assert.equal(publicLandingRequest(request('/',{method:'HEAD'})),true);
 }finally{restore();}});
 test('origin checks reject cross-origin requests and preserve authenticated staging origin',()=>{try{
