@@ -35,6 +35,11 @@ export async function GET(request: Request, context: { params: Promise<{ path?: 
       .replace('class="enter" href="/"', 'class="enter" href="/home"'), {headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
   }
   if (path === "/healthz") return Response.json({status:"ok",mode:"private-staging",signing_enabled:false},{headers});
+  if (path === "/my-agents") {
+    if (!operatorAuthorized(request.headers.get("authorization"))) return new Response("Authenticated management access required", {status:401,headers});
+    return new Response(await readFile(resolve(process.cwd(), "../reference-web/my-agents.html")),
+      {headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
+  }
   if (path === "/operator") {
     if (!operatorAuthorized(request.headers.get("authorization"))) return new Response("Operator authentication required", {status:401,headers:{...headers,"WWW-Authenticate":'Basic realm="Supa operator", charset="UTF-8"'}});
     return new Response(null, {status:302, headers:{...headers, Location:"/agents"}});
