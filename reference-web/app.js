@@ -7,6 +7,7 @@ import { navigation, overview, sectionView, read, units } from './platform.js';
 
 const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
+const publicLanding = root.dataset.publicLanding === 'true';
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 reduced.addEventListener('change', event => { root.dataset.motion=event.matches?'still':'running';if(event.matches)revealTyping?.(); });
 root.dataset.motion = reduced.matches?'still':'running';
@@ -81,10 +82,9 @@ async function boot(){
   scenes=createScenes({intro:$('.intro-canvas'),blueprint:$('.blueprint'),entity:$('.entity'),transition:$('.transition'),spark:$('.spark'),reduced,data});
   document.fonts.ready.then(()=>scenes?.redraw());
   wheel=createWheel({host:$('.wheel'),canvas:$('.wheel-ink'),items:navigation,reducedMotion:reduced,onSelect:index=>{if(!restoringRoute)void select(index);}});
-  migrateLegacyRoute();restoreRoute();
+  if(!publicLanding){migrateLegacyRoute();restoreRoute();}
   root.dataset.ready='true';
-  void reload(data);
-  liveTimer=setInterval(()=>void refreshLive(),15000);
+  if(!publicLanding){void reload(data);liveTimer=setInterval(()=>void refreshLive(),15000);}
   return true;
 }
 // Read-only polling pauses while hidden, typing or interacting. It never starts a cycle.
@@ -104,6 +104,7 @@ async function refreshLive(){
   }finally{liveBusy=false;}
 }
 async function reload(currentScene=sceneData){
+  if(publicLanding)return;
   const version=++reloadVersion;$('.reload-records').disabled=true;$('.reload-records').textContent='Retrieving…';
   try {
     const next=await overview();if(version!==reloadVersion)return;state=next;
@@ -125,19 +126,20 @@ async function reload(currentScene=sceneData){
 $('.reload-records').addEventListener('click',()=>{closeCommand(false);$('.buffer').focus({preventScroll:true});void reload();});
 $('#agent-select').addEventListener('change',event=>{agentId=event.target.value;syncAgentPicker();void select(itemIndex);});
 function updateOfficialMetadata(path){
-  const url=new URL(path,location.origin).href;
+  const url=new URL(path,'https://supaagency.xyz').href;
   $('link[rel=canonical]').setAttribute('href',url);
   $('meta[property="og:url"]').setAttribute('content',url);
   for(const selector of ['meta[property="og:title"]','meta[name="twitter:title"]'])$(selector).setAttribute('content',document.title);
 }
 function setView(projects){
+  if(projects&&publicLanding){location.assign('/operator');return;}
   closeAgentPicker();
   entryAttempt++;leaving=false;scenes?.cancelWarp();cancelTyping();renderVersion++;$('.buffer').setAttribute('aria-busy','false');
   if(!projects){document.title='Supa Agency — One agent. One purpose. One token.';updateOfficialMetadata('/');}
   document.body.dataset.view=projects?'projects':'intro';$('.intro').hidden=projects;$('.projects').hidden=!projects;closeCommand(false);setDrawer(false,false);scenes?.setMode(projects?'projects':'intro');
   if(projects){void select(itemIndex);requestAnimationFrame(()=>{window.dispatchEvent(new Event('resize'));wheel.reveal();$('.buffer').focus({preventScroll:true});});}
 }
-async function enter(event){event?.preventDefault();if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'',`/${location.search}`);setView(true);}
+async function enter(event){event?.preventDefault();if(publicLanding){location.assign('/operator');return;}if(!await ready||leaving||document.body.dataset.view!=='intro')return;leaving=true;const attempt=++entryAttempt,completed=await scenes.warp();if(!completed||attempt!==entryAttempt)return;itemIndex=0;wheel.select(0);history.pushState({view:'projects'},'',`/${location.search}`);setView(true);}
 $('.enter').addEventListener('click',enter);
 $('.skip').addEventListener('click',event=>{
   event.preventDefault();
@@ -175,6 +177,7 @@ $('.tabline').addEventListener('click',()=>setDrawer($('.tabline').getAttribute(
 $('.wheel').addEventListener('click',event=>{if(event.target.closest('.wheel-item')&&matchMedia('(max-width:700px)').matches){setDrawer(false,false);$('.buffer').focus({preventScroll:true});}});
 function line(text,className='terminal-line'){const el=node('p',className,text);$('.buffer').append(el);return el;}
 async function select(index,background=false){
+  if(publicLanding)return;
   rememberAgent();
   const item=navigation[index];if(!item)return;
   // Saved lifecycle is an identity attribute, never proof of a healthy worker.
@@ -271,7 +274,7 @@ function typeTerminal() {
   }
   typingTimer=setTimeout(tick,150);
 }
-function openCommand(prefix=''){closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
+function openCommand(prefix=''){if(publicLanding){location.assign('/operator');return;}closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
 function economyPanel(view,id){
   const details=node('details','calculation autonomy-panel');details.dataset.economy='jobs';details.append(node('summary','','Services, jobs and earned revenue'));
   details.append(node('p','terminal-notice','Operator-controlled offline work. Simulated units and Devnet test USDC stay separate. No real spending or transfers. Reload records after an uncertain response; never retry automatically.'));
