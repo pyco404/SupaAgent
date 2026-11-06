@@ -56,6 +56,14 @@ createServer(async (request, response) => {
     }
     response.writeHead(302,{Location:'/agents'});return response.end();
   }
+  if (path === '/my-agents') {
+    if (!operatorAuthorized(request.headers.authorization)) return finish(response,401,'Authenticated management access required');
+    response.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+    return response.end(request.method==='HEAD'?undefined:await readFile(resolve(root,'my-agents.html')));
+  }
+  if (path === '/token-launch') {
+    response.writeHead(308,{Location:'/factory'+new URL(request.url,'http://localhost').search});return response.end();
+  }
   if (path.startsWith('/api/')) {
     const result = await readResource(request.url, request.headers);
     response.writeHead(result.status, {'Content-Type':'application/json; charset=utf-8'});
