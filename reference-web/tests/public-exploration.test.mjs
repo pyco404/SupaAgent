@@ -9,7 +9,7 @@ test('public projection is a fixed editorial allowlist with no live record input
   for(const item of publicNavigation){
    const rows=publicSectionView(item.id,{agents:[{name:'PRIVATE_STAGING_SENTINEL'}]});
    assert.deepEqual(rows,publicSectionView(item.id));
-   assert.ok(rows.every(row=>['command','notice','text','heading','navigate','link','disabled'].includes(row.kind)));
+   assert.ok(rows.every(row=>['command','notice','text','heading','navigate','link','disabled','github'].includes(row.kind)));
    assert.ok(!JSON.stringify(rows).includes('PRIVATE_STAGING_SENTINEL'));
   }
   assert.match(JSON.stringify(publicSectionView('agents')),/No public agent profiles are available yet/);
