@@ -167,6 +167,7 @@ function migrateLegacyRoute(){
   history.replaceState({view:'projects'},'',`${item.path}${location.search}`);
 }
 function restoreRoute(){
+  if(location.pathname==='/token-launch')history.replaceState({view:'projects'},'',`/factory${location.search}`);
   if(publicLanding&&location.pathname==='/'){setView(false);return;}
   const item=navigation.find(entry=>entry.path===location.pathname);
   if(!item)return;
