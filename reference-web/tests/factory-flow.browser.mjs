@@ -49,7 +49,7 @@ test('public Factory flow preserves nine-section navigation and never requests p
  expect(privateRequests).toEqual([]);expect(writes).toEqual([]);expect(errors).toEqual([]);
 });
 
-test('My Agents is authenticated, contains no records and cannot execute lifecycle actions',async({request})=>{
+test('My Agents is authenticated, contains no records and cannot execute lifecycle actions',async({request,page},info)=>{
  for(const [role,expected] of [['anonymous',401],['invalid',401],['visitor',401],['viewer',200],['operator',200]]){
   const headers={host:'supaagency.xyz',...(role==='anonymous'?{}:{authorization:basic(role)})};
   const response=await request.get(local+'/my-agents',{headers});expect(response.status()).toBe(expected);
@@ -67,4 +67,25 @@ test('My Agents is authenticated, contains no records and cannot execute lifecyc
  for(const path of ['/factory','/my-agents'])
   expect((await request.post(local+path,{headers:{host:'supaagency.xyz'},data:{name:'not-created'}})).status()).toBe(401);
  expect((await request.get(local+'/factory',{headers:{host:'127.0.0.1:3336'}})).status()).toBe(401);
+ await page.route('**/*',async route=>{
+  const req=route.request(),url=new URL(req.url());
+  expect(req.method()).toBe('GET');expect(url.origin).toBe(origin);
+  expect(['/my-agents','/style.css','/public/assets/supa-agent-code.svg','/public/assets/terminal-grain.svg','/public/fonts/IBMPlexMono-Regular.ttf']).toContain(url.pathname);
+  const response=await route.fetch({url:local+url.pathname,
+   headers:{...req.headers(),host:'supaagency.xyz',authorization:basic('operator')}});
+  await route.fulfill({response});
+ });
+ await page.goto(origin+'/my-agents');await page.evaluate(()=>document.fonts.ready);
+ const type=await page.evaluate(()=>{
+  const body=getComputedStyle(document.querySelector('.terminal-line'));
+  const h1=getComputedStyle(document.querySelector('h1')),h2=getComputedStyle(document.querySelector('h2'));
+  return {leading:parseFloat(body.lineHeight)/parseFloat(body.fontSize),
+   headingStep:parseFloat(h1.fontSize)/parseFloat(h2.fontSize),
+   bodyStep:parseFloat(h2.fontSize)/parseFloat(body.fontSize),overflow:document.documentElement.scrollWidth>innerWidth};
+ });
+ expect(type.leading).toBeGreaterThanOrEqual(1.5);expect(type.headingStep).toBeGreaterThanOrEqual(1.25);
+ expect(type.bodyStep).toBeGreaterThanOrEqual(1.25);expect(type.overflow).toBe(false);
+ await expect(page.getByRole('button')).toHaveCount(4);
+ for(const button of await page.getByRole('button').all())await expect(button).toBeDisabled();
+ await page.screenshot({path:info.outputPath('my-agents.png')});
 });
