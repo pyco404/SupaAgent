@@ -36,7 +36,8 @@ export function publicLandingHost(request: Request): boolean {
 export function publicLandingRequest(request: Request): boolean {
   if (!publicLandingHost(request) || !["GET", "HEAD"].includes(request.method)) return false;
   const path = new URL(request.url).pathname;
-  return path === "/" || path === "/robots.txt"
+  // Only editorial public views. Agent details, APIs and controls are never admitted.
+  return ["/", "/home", "/agents", "/about", "/robots.txt"].includes(path)
     || ["/style.css", "/app.js", "/scene.js", "/wheel.js", "/platform.js"].includes(path)
     || /^\/public\/(assets\/[a-z0-9-]+\.svg|fonts\/[a-zA-Z0-9._-]+\.(woff2|ttf|txt))$/.test(path);
 }
