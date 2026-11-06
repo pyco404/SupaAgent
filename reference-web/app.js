@@ -227,6 +227,7 @@ async function select(index,background=false){
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
     else if(row.kind==='draft'){const block=node('figure','saved-draft');block.append(node('blockquote','',row.text),node('figcaption','prompt',row.meta));buffer.append(block);}
     else if(row.kind==='navigate'){const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{const target=navigation.findIndex(item=>item.id===row.id);wheel.select(target);void select(target);});buffer.append(button);}
+    else if(row.kind==='disabled'){const button=node('button','terminal-entry',row.text);button.disabled=true;buffer.append(button);}
     else if(row.kind==='heading')buffer.append(node('h2','terminal-heading',row.text));
     else line(row.text,row.kind==='command'?'terminal-command':row.kind==='heading'?'terminal-heading':row.kind==='notice'?'terminal-notice':'terminal-line');
   }
