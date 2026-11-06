@@ -26,6 +26,21 @@ export function operatorToken(header:string|null):string|null {
 }
 export function operatorAuthorized(header: string | null): boolean { return operatorToken(header)!==null; }
 
+export const officialSiteOrigin = "https://supaagency.xyz";
+export function publicLandingHost(request: Request): boolean {
+  return process.env.SUPA_SITE_MODE === "staging"
+    && process.env.SUPA_PUBLIC_LANDING_ENABLED === "true"
+    && request.headers.get("host") === "supaagency.xyz"
+    && (!request.headers.get("origin") || request.headers.get("origin") === officialSiteOrigin);
+}
+export function publicLandingRequest(request: Request): boolean {
+  if (!publicLandingHost(request) || !["GET", "HEAD"].includes(request.method)) return false;
+  const path = new URL(request.url).pathname;
+  return path === "/" || path === "/robots.txt"
+    || ["/style.css", "/app.js", "/scene.js", "/wheel.js", "/platform.js"].includes(path)
+    || /^\/public\/(assets\/[a-z0-9-]+\.svg|fonts\/[a-zA-Z0-9._-]+\.(woff2|ttf|txt))$/.test(path);
+}
+
 export function localRequest(request: Request): boolean {
   if (process.env.SUPA_SITE_MODE === "staging") {
     try {
@@ -33,7 +48,7 @@ export function localRequest(request: Request): boolean {
       const loopback = ["127.0.0.1", "localhost", "[::1]"].includes(configured.hostname);
       if ((configured.protocol !== "https:" && !(loopback && configured.protocol === "http:")) || configured.username || configured.password || configured.pathname !== "/" || configured.search || configured.hash) return false;
       const origin = request.headers.get("origin");
-      return request.headers.get("host") === configured.host && (!origin || origin === configured.origin);
+      return publicLandingHost(request) || (request.headers.get("host") === configured.host && (!origin || origin === configured.origin));
     } catch { return false; }
   }
   const allowed = (value: string) => {
