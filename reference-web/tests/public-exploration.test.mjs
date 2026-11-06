@@ -5,7 +5,7 @@ import {publicNavigation,publicSectionView,read} from '../platform.js';
 test('public projection is a fixed editorial allowlist with no live record input',async()=>{
  const saved=globalThis.fetch;let requests=0;globalThis.fetch=()=>{requests++;throw Error('unexpected_network');};
  try{
-  assert.deepEqual(publicNavigation.map(x=>x.path),['/home', '/agents', '/intelligence', '/memory', '/economy', '/social', '/trading', '/token-launch', '/factory', '/about']);
+  assert.deepEqual(publicNavigation.map(x=>x.path),['/home', '/agents', '/intelligence', '/memory', '/economy', '/social', '/trading', '/factory', '/about']);
   for(const item of publicNavigation){
    const rows=publicSectionView(item.id,{agents:[{name:'PRIVATE_STAGING_SENTINEL'}]});
    assert.deepEqual(rows,publicSectionView(item.id));
@@ -16,7 +16,7 @@ test('public projection is a fixed editorial allowlist with no live record input
   assert.match(JSON.stringify(publicSectionView('home')),/Supa Agent/);
   assert.match(JSON.stringify(publicSectionView('about')),/planned, not live/);
   assert.equal(publicSectionView('memory').some(x=>x.kind==='detail'),false);
-  for(const id of ['agents','intelligence','memory','economy','social','trading','token-launch','factory']){
+  for(const id of ['intelligence','memory','economy','social','trading','token-launch','factory']){
    assert.ok(publicSectionView(id).some(row=>row.kind==='disabled'),`${id}_no_executable_controls`);
    assert.ok(!publicSectionView(id).some(row=>['agent','detail','draft','launch','economy','schedule','live'].includes(row.kind)));
   }
@@ -29,4 +29,15 @@ test('public browser mode refuses private reads before any network request',asyn
  globalThis.fetch=()=>{requests++;throw Error('unexpected_network');};
  try{for(const path of ['/api/agents','/api/operator-status','/api/agents/private/memory'])assert.deepEqual(await read(path),{error:'Private records require sign-in.'});assert.equal(requests,0);}
  finally{if(doc===undefined)delete globalThis.document;else globalThis.document=doc;globalThis.fetch=fetch;}
+});
+
+test('Factory separates agent creation, qualification and optional permanent tokens',()=>{
+ for(const id of ['home','agents'])assert.ok(publicSectionView(id).some(row=>row.kind==='navigate'&&row.id==='factory'&&row.text==='Create Agent →'));
+ const rows=publicSectionView('factory'),text=rows.map(row=>row.text).join('\n');
+ assert.deepEqual(rows.filter(row=>row.kind==='heading').map(row=>row.text),['Factory / Create Agents','1. Create Agent','2. Configure','3. Purpose Qualification','4. Agent Token / Optional','5. My Agents']);
+ for(const expected of ['Name, purpose, description and personality','autonomy level and spending limits','creator consent','Skip this step','Pump.fun','platform token $SUPA','permanently','public disclosure','no automatic wallet control'])assert.ok(text.includes(expected),expected);
+ assert.equal(rows.filter(row=>row.kind==='disabled').length,4);
+ assert.ok(rows.some(row=>row.href==='/my-agents'));
+ assert.ok(!rows.some(row=>['launch','agent','schedule','live','economy'].includes(row.kind)));
+ assert.equal(publicNavigation.some(row=>row.id==='token-launch'||row.id==='my-agents'),false);
 });
