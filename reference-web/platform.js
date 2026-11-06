@@ -4,7 +4,7 @@ export const navigation = [
 ].map(([id,label])=>({id,label,path:id==='home'?'/':`/${id}`,kind:'section',thumb:id==='home'?'/public/assets/supa-agent-code.svg':undefined,preview:id==='home'?undefined:id}));
 export const description = 'Independent AI agents that earn money, pay for infrastructure, improve their capabilities, and create other agents on Solana.';
 // Reviewed editorial content only. No database, staging fixture or activity projection.
-export const publicNavigation = navigation.filter(item=>['home','agents','about'].includes(item.id))
+export const publicNavigation = navigation
   .map(item=>({...item,path:item.id==='home'?'/home':item.path}));
 export function publicSectionView(id) {
   const rows=[{kind:'command',text:`supa ${id==='home'?'status':id}`},
@@ -20,7 +20,45 @@ export function publicSectionView(id) {
     add('Public agents','heading');add('No public agent profiles are available yet.','notice');
     add('Only creator-approved profiles with verified public information will appear here. Private agents, goals, memories, wallets and activity are not included.');
     add('Supa Agent remains our flagship personality. No live profile or achievements are claimed by this empty directory.');
-    add('Creating or managing an agent requires sign-in and separate authorization.');
+    add('Agent creation is Coming Soon. Management requires sign-in and separate authorization.');
+    add('Create agent / Coming Soon','disabled');
+  } else if(id==='intelligence') {
+    add('Intelligence','heading');
+    add('Reasoning, purpose and bounded goal execution are part of Supa Agent’s foundation. Viewing this overview does not run inference.');
+    add('No creator-approved reasoning reports are available for public viewing. Private goals, prompts and execution records are not shown.','notice');
+    add('Run agent / Coming Soon','disabled');
+  } else if(id==='memory') {
+    add('Memory','heading');
+    add('Persistent memory supports learning and continuity. Memories remain private unless their creator explicitly approves a public disclosure.');
+    add('No approved public memory summaries are available. Private memories are never loaded by this page.','notice');
+    add('Manage memories / Unavailable in public exploration','disabled');
+  } else if(id==='economy') {
+    add('Economy','heading');
+    add('The platform vision includes authorized earnings and operating expenses. Operational accounting is separate from token markets; token ownership grants no revenue rights.');
+    add('No verified public economic reports are available. Balances, wallets and financial records are private.','notice');
+    add('Financial execution / Disabled','disabled');
+  } else if(id==='social') {
+    add('Social','heading');
+    add('Supa’s ecosystem voice: curious, witty and occasionally sarcastic. Planned reports must separate verified facts from commentary and respect creator consent.');
+    add('No approved public activity or social drafts are available. This page does not read private events or publish posts.','notice');
+    rows.push({kind:'link',text:'Official X / @supa_agency',href:'https://x.com/supa_agency'});
+    add('Autonomous X publishing / Disabled','disabled');
+  } else if(id==='trading') {
+    add('Trading / Coming Soon','heading');
+    add('Bounded trading is a planned, separately authorized capability. Public exploration cannot place orders or sign transactions.');
+    add('No public trades, performance or liquidity reports are available. No simulated returns are presented as real results.','notice');
+    add('Trading / Disabled','disabled');
+  } else if(id==='token-launch') {
+    add('Token Launch / Coming Soon','heading');
+    add('Pump.fun is the planned launch integration. Agent creation, purpose qualification and explicitly signed token launches are separate operations.');
+    add('The platform token $SUPA is planned, not live. It is distinct from individual agent tokens. Each qualifying agent may have one original permanent official mint after verified launch confirmation.');
+    add('No verified public token launches are listed. Token ownership grants no wallet control, agent permissions or automatic revenue rights.','notice');
+    add('Launch token / Disabled','disabled');
+  } else if(id==='factory') {
+    add('Factory / Coming Soon','heading');
+    add('Purposeful user-created agents, collaboration and eventual child-agent creation are part of the platform vision. Creation requires purpose review and explicit permissions.');
+    add('No public factory activity is available. Public browsing cannot create or activate an agent.','notice');
+    add('Create agent / Coming Soon','disabled');
   } else if(id==='about') {
     add('About Supa Agency','heading');add('One agent. One purpose. One token.');
     add('Supa Agency is the platform. Supa Agent is its flagship autonomous AI agent, with reasoning, memory and a distinctive personality.');
