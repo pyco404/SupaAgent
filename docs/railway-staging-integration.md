@@ -1605,3 +1605,71 @@ independent runner. The final decision remains **NO-GO** until supported small c
 stable startup, bounded traffic/costs and independently tested shutdown coverage
 are established. No provisioning, credentials, DNS, paid inference, primary
 database changes, protected accounting changes, push or CI dispatch occurred.
+
+## Supa Agency official website preparation — November 6, 2026
+
+The running frontend still uses the earlier frozen source. The next frontend-only
+candidate must use the separately reviewed Supa Agency application commit and
+retain the already validated Alpine recipe/tooling pin. This is a new image:
+previous scan results do not certify it. API and PostgreSQL image pins, services,
+database state and credentials remain unchanged.
+
+Official branding is Supa Agency; tagline “One agent. One purpose. One token.”;
+X is <https://x.com/supa_agency>. The purchased official domain is
+<https://supaagency.xyz>; its launch remains pending. $SUPA is planned, not launched.
+The official platform mint must begin with exact uppercase `SUPA`. Website
+publication must precede any separately approved token launch.
+
+### Public landing, authenticated controls
+
+The owner selected a public landing page with authenticated controls/private data.
+`SUPA_PUBLIC_LANDING_ENABLED` is absent/false by default. Do not enable it on the
+running service during preparation. The opt-in accepts only exact `supaagency.xyz`
+GET/HEAD landing/static requests, with same-origin checks; `www.supaagency.xyz`
+redirects to the fixed HTTPS apex. Console routes, API requests and writes still
+require credentials. The existing Railway-generated staging hostname remains
+fully authenticated. Internal public-entry headers are overwritten by the proxy.
+The public page does not poll backend records; its Enter action requests operator
+sign-in. Logo, CSS, fonts and animation implementations are unchanged. Only the
+explicitly enabled official landing is indexable; staging remains noindex.
+
+Keep `SUPA_SITE_MODE=staging`, the exact current Railway `SUPA_SITE_ORIGIN`, private
+`SUPA_BACKEND_URL=http://supa-api.railway.internal:8080`, and distinct named
+visitor/operator credentials. Confirm current credential expiry before deployment;
+renewal and any API restart require separate authorization. Keep the worker at
+zero and all financial, publishing and paid-inference capabilities disabled.
+
+### Domain records and HTTPS
+
+Read-only inspection found no Railway custom-domain registrations. Therefore no
+exact custom routing target or ownership token has been allocated. Do not invent
+records or reuse the generated staging hostname as a presumed custom-domain target.
+After separate registration approval, register apex and www on the existing web
+service/port 3000; record Railway's returned `status.dnsRecords` and
+`status.verificationToken` without changing DNS. Prepare the exact routing and TXT
+verification records for owner review. Apex routing requires provider-supported
+CNAME flattening/ALIAS/ANAME; Railway does not provide a static A address. Point www
+using Railway's returned CNAME and verification record, then redirect it to apex.
+Review existing DNS records, CAA and DNSSEC before the separate DNS change.
+
+Follow [Railway domain API documentation](https://docs.railway.com/integrations/api/manage-domains)
+and [domain setup](https://docs.railway.com/networking/domains/working-with-domains).
+After DNS authorization, wait for verified ownership and an issued HTTPS certificate
+for each hostname, test hostname/chain verification, canonical redirects and the
+public/private boundaries. Never bypass TLS verification or remove authentication
+from console/API routes.
+
+### Minimum remaining approvals
+
+1. Synchronize the reviewed application and frontend-workflow commits; authorize
+   one frontend-only build, actual runtime/authentication tests, all-severity and
+   embedded-secret scans. Keep HIGH/CRITICAL findings blocking archive acceptance.
+2. Publish the exact retained validated archive privately without rebuilding;
+   verify manifest/configuration/layers, association and anonymous-access denial.
+3. Approve one existing-web-service update using the new immutable digest, with
+   valid synthetic authentication; no backend/PG update is implied.
+4. Approve custom-domain registration, then the returned exact DNS records and
+   activation of the public-landing switch. Verify Railway HTTPS before launch.
+
+No image publication, CI dispatch, DNS modification, credential renewal or live
+Railway configuration change is performed by this preparation.
