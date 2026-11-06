@@ -27,3 +27,17 @@ test('settled entity avoids redundant glyph work and invalidates on theme and re
  await page.emulateMedia({reducedMotion:'no-preference'});await ready(page);await page.getByRole('button',{name:'Show all text',exact:true}).click();await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(150);const count=await page.evaluate(()=>window.entityPaints);await page.waitForTimeout(600);expect(await page.evaluate(()=>window.entityPaints)-count).toBeLessThanOrEqual(3000);
  await commands(page);await page.locator('.command-input').fill('theme');const before=await page.evaluate(()=>window.entityPaints);await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>window.entityPaints)).toBeGreaterThan(before);const resized=await page.evaluate(()=>window.entityPaints);const size=page.viewportSize();await page.setViewportSize({width:size.width-10,height:size.height});await expect.poll(()=>page.evaluate(()=>window.entityPaints)).toBeGreaterThan(resized);await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);const pixels=await page.locator('.entity').evaluate(c=>c.toDataURL());await page.waitForTimeout(250);expect(await page.locator('.entity').evaluate(c=>c.toDataURL())).toBe(pixels);
 });
+
+test('completed text keeps a blinking caret and honors reduced motion',async({page})=>{
+ await page.emulateMedia({reducedMotion:'no-preference'});await ready(page,'/about');
+ const buffer=page.locator('.buffer');await expect(buffer).toHaveAttribute('data-typing-state','typing');
+ expect(await buffer.locator(':scope > :last-child').evaluate(el=>getComputedStyle(el,'::after').content)).toBe('none');
+ await page.getByRole('button',{name:'Show all text',exact:true}).click();await expect(buffer).toHaveAttribute('data-typing-state','complete');
+ const caret=buffer.locator(':scope > :last-child');const text=await buffer.innerText();
+ const blink=await caret.evaluate(el=>{const style=getComputedStyle(el,'::after'),animation=el.getAnimations({subtree:true}).find(a=>a.animationName==='terminal-caret-blink');if(!animation)return {animation:style.animationName,content:style.content,width:style.width,view:document.body.dataset.view,all:document.getAnimations().map(a=>a.animationName)};animation.pause();animation.currentTime=100;const visible=getComputedStyle(el,'::after').opacity;animation.currentTime=700;const hidden=getComputedStyle(el,'::after').opacity;animation.play();return {width:style.width,visible,hidden};});
+ expect(blink).toEqual({width:'1px',visible:'1',hidden:'0'});expect(await buffer.innerText()).toBe(text);
+ await page.emulateMedia({reducedMotion:'reduce'});expect(await caret.evaluate(el=>getComputedStyle(el,'::after').animationName)).toBe('none');expect(await caret.evaluate(el=>getComputedStyle(el,'::after').opacity)).toBe('1');
+ await ready(page,'/agents');await expect(buffer).toHaveAttribute('data-typing-state','complete');expect(await buffer.locator(':scope > :last-child').evaluate(el=>getComputedStyle(el,'::after').width)).toBe('1px');
+ await page.emulateMedia({reducedMotion:'no-preference'});await ready(page,'/agents');await expect(buffer).toHaveAttribute('data-typing-state','complete',{timeout:20000});expect(await buffer.locator(':scope > :last-child').evaluate(el=>getComputedStyle(el,'::after').animationName)).toBe('terminal-caret-blink');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
