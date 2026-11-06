@@ -74,7 +74,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <Link className="brand" href="/" aria-label="Supa Agency home"><SupaLogo/><span>SUPA<span className="muted"> / AGENCY</span></span></Link>
         <div className="header-right">
           <span className="environment">LOCAL / DEVNET</span>
-          <a className="source-link" href="https://github.com/pyco404/supa-agency" rel="noreferrer" target="_blank">SOURCE ↗</a>
           <button ref={trigger} className="menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-haspopup="dialog" onClick={() => {
             const modal = dialog.current;
             if (!modal || modal.open || !window.matchMedia("(max-width: 640px)").matches) return;
