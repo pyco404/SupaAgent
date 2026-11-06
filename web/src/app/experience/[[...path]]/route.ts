@@ -2,7 +2,7 @@
 import { readFile, realpath } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 import { readResource, runAutonomy, isEconomicPath } from "../../../../../reference-web/backend.mjs";
-import { operatorAuthorized, publicLandingHost } from "@/lib/auth";
+import { operatorAuthorized, publicLandingRequest } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,13 +25,14 @@ export async function GET(request: Request, context: { params: Promise<{ path?: 
   const parts = (await context.params).path ?? [];
   if (parts.some(part=>part.includes("\\") || part.includes("\0") || part === "." || part === "..")) return new Response("Invalid path", {status:400, headers});
   const path = "/"+parts.join("/");
-  const publicLanding = request.headers.get("x-supa-public-landing") === "1" && publicLandingHost(request);
-  if (publicLanding && path === "/robots.txt") return new Response("User-agent: *\nAllow: /$\nDisallow: /api/\nDisallow: /operator\nDisallow: /agents\n", {headers:{...headers,"Content-Type":"text/plain; charset=utf-8"}});
-  if (publicLanding && path === "/") {
+  const publicLanding = request.headers.get("x-supa-public-landing") === "1"
+    && publicLandingRequest(new Request(new URL(path, request.url), {method:request.method, headers:request.headers}));
+  if (publicLanding && path === "/robots.txt") return new Response("User-agent: *\nAllow: /$\nAllow: /home$\nAllow: /agents$\nAllow: /about$\nDisallow: /api/\nDisallow: /operator\n", {headers:{...headers,"Content-Type":"text/plain; charset=utf-8"}});
+  if (publicLanding && ["/", "/home", "/agents", "/about"].includes(path)) {
     const html = await readFile(resolve(process.cwd(), "../reference-web/index.html"), "utf8");
     return new Response(html.replace('data-motion="running"', 'data-motion="running" data-public-landing="true"')
       .replace('content="noindex, nofollow"', 'content="index, follow"')
-      .replace('class="enter" href="/"', 'class="enter" href="/operator"'), {headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
+      .replace('class="enter" href="/"', 'class="enter" href="/home"'), {headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
   }
   if (path === "/healthz") return Response.json({status:"ok",mode:"private-staging",signing_enabled:false},{headers});
   if (path === "/operator") {
