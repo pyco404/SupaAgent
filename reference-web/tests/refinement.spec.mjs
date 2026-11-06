@@ -41,3 +41,16 @@ test('completed text keeps a blinking caret and honors reduced motion',async({pa
  await page.emulateMedia({reducedMotion:'no-preference'});await ready(page,'/agents');await expect(buffer).toHaveAttribute('data-typing-state','complete',{timeout:20000});expect(await buffer.locator(':scope > :last-child').evaluate(el=>getComputedStyle(el,'::after').animationName)).toBe('terminal-caret-blink');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+
+test('GitHub labels show a private-source notice without opening a repository',async({page,context})=>{
+ await ready(page,'/about');
+ const start=page.url();let popups=0;context.on('page',()=>popups++);
+ const github=page.getByRole('button',{name:'github',exact:true});
+ const source=page.getByRole('button',{name:'Source / github.com/pyco404/supa-agency',exact:true});
+ for(const button of [github,source]){
+  const shown=page.waitForEvent('dialog');const clicked=button.click();const dialog=await shown;
+  expect(dialog.type()).toBe('alert');expect(dialog.message()).toBe('GitHub account private, will be open sourced soon.');await dialog.accept();await clicked;expect(page.url()).toBe(start);
+ }
+ await github.focus();const keyboard=page.waitForEvent('dialog');const pressed=page.keyboard.press('Enter');const dialog=await keyboard;expect(dialog.message()).toContain('will be open sourced soon');await dialog.accept();await pressed;
+ expect(popups).toBe(0);await expect(page.locator('a[href*="github.com"]')).toHaveCount(0);
+});
