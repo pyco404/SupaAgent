@@ -66,6 +66,44 @@ class Harness:
 
 
 class StateTests(unittest.TestCase):
+    def test_native_access_success_without_local_token_or_receipt(self):
+        # The real handover path consumes only Railway deployment observations.
+        h = Harness()
+        self.assertTrue(h.run()['ready'])
+        self.assertEqual(h.probe_calls, 2)
+        self.assertEqual(h.mutations, [])
+
+    def test_native_access_denied_is_terminal_without_retrying_deployment(self):
+        h = Harness([observation('FAILED')])
+        self.fails(h, 'target_deployment_failed')
+        self.assertEqual(h.reads, 1)
+        self.assertEqual(h.probe_calls, 0)
+
+    def test_native_access_unavailable_never_accepted(self):
+        h = Harness([Unavailable()])
+        self.fails(h, 'activation_readiness_deadline_exceeded')
+        self.assertEqual(h.probe_calls, 0)
+
+    def test_native_access_unknown_state_never_accepted(self):
+        self.fails(Harness([observation('UNKNOWN')]),
+                   'activation_readiness_deadline_exceeded')
+
+    def test_native_access_requires_immutable_reference(self):
+        for image in ('ghcr.io/example/frontend:latest',
+                      'ghcr.io/example/frontend@sha256:short',
+                      'https://user:password@ghcr.io/example/frontend'):
+            with self.subTest(image=image):
+                expected = {**EXPECTED, 'image': image}
+                with self.assertRaisesRegex(Failure, '^immutable_private_image_required$'):
+                    M['native_image_access'](observation()['deployment'], expected)
+
+    def test_native_access_missing_or_conflicting_digest_fails_closed(self):
+        for digest in (None, 'sha256:' + 'b' * 64):
+            with self.subTest(digest=digest):
+                frame = observation()
+                frame['deployment']['meta']['imageDigest'] = digest
+                self.fails(Harness([frame]), 'target_digest_mismatch')
+
     def fails(self, h, code):
         with self.assertRaisesRegex(Failure, '^' + code + '$'):
             h.run()
