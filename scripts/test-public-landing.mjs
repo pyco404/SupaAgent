@@ -26,12 +26,12 @@ async function exercise(enabled){
   for(const text of ['Supa Agency','One agent. One purpose. One token.','https://supaagency.xyz/','data-public-landing="true"','href="/home"'])assert.ok(landing.text.includes(text),'landing_brand_contract');
   assert.equal(landing.headers['x-robots-tag'],'index, follow');assert.match(landing.text, /name="robots" content="index, follow"/);
   await check('/',200,undefined,{},'HEAD');
-  for(const path of ['/home','/agents','/about']){
+  for(const path of ['/home', '/agents', '/intelligence', '/memory', '/economy', '/social', '/trading', '/token-launch', '/factory', '/about']){
    const page=await check(path,200);assert.ok(page.text.includes('data-public-landing="true"'),'public_view_marker');
    await check(path,200,undefined,{},'HEAD');await check(path,401,`127.0.0.1:${port}`);
    for(const method of ['POST','PUT','PATCH','DELETE'])await check(path,401,undefined,{},method);
   }
-  for(const path of ['/api/status','/api/agents','/api/operator-status','/api/autonomy','/api/launch','/api/console/agents','/operator','/agents/private','/memory','/intelligence','/economy','/social','/trading','/token-launch','/factory','/experience','/experience/agents','/experience/api/status','/.env','/public/secrets.env'])await check(path,401);
+  for(const path of ['/api/status','/api/agents','/api/operator-status','/api/autonomy','/api/launch','/api/console/agents','/operator','/wallet','/wallets','/management','/admin','/api/wallet','/agents/private','/memory/private','/intelligence/control','/economy/wallet','/social/drafts','/trading/orders','/token-launch/create','/factory/create','/experience','/experience/agents','/experience/api/status','/.env','/public/secrets.env'])await check(path,401);
   await check('/api/agents',401,undefined,{'x-supa-public-landing':'1','x-supa-experience':'1','x-supa-role':'owner'});
   await check('/api/autonomy',401,undefined,{},'POST');
   await check('/',401,undefined,{},'POST');
@@ -42,7 +42,7 @@ async function exercise(enabled){
   const visitor={authorization:basic('fixture-visitor',password)};
   const signed=await check('/',200,`127.0.0.1:${port}`,visitor);assert.ok(!signed.text.includes('data-public-landing="true"'),'staging_not_public');
   await check('/operator',401,undefined,visitor);
-  for(const path of ['/home','/agents','/about']){const page=await check(path,path==='/home'?308:200,undefined,visitor);assert.ok(!page.text.includes('data-public-landing="true"'),'authenticated_experience_not_downgraded');}
+  for(const path of ['/home', '/agents', '/intelligence', '/memory', '/economy', '/social', '/trading', '/token-launch', '/factory', '/about']){const page=await check(path,path==='/home'?308:200,undefined,visitor);assert.ok(!page.text.includes('data-public-landing="true"'),'authenticated_experience_not_downgraded');}
   const operator=await check('/operator',302,undefined,{authorization:basic('fixture-operator',operatorPassword)});assert.equal(operator.headers.location,'/agents');
  }finally{
   if(child.exitCode===null&&child.signalCode===null){child.kill('SIGTERM');await new Promise((yes,no)=>{const t=setTimeout(()=>{child.kill('SIGKILL');no(new Error('shutdown_timeout'));},5000);child.once('exit',()=>{clearTimeout(t);yes();});});}
