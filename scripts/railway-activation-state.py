@@ -2,6 +2,7 @@
 """Pure, bounded Railway activation observation; performs no mutations or network I/O."""
 from dataclasses import dataclass
 import math
+import re
 import time
 
 
@@ -26,7 +27,16 @@ def require(value, code):
         raise ActivationFailure(code)
 
 
-def deployment_ready(row, expected):
+def native_image_access(row, expected):
+    """Verify native deployment availability, without handling registry credentials.
+
+    This is deployment-time evidence, not a preflight token-validity test: Railway
+    may cache images. Package privacy/association and registry integrity remain
+    independent publication requirements. Never serialize raw deployment metadata.
+    """
+    require(isinstance(expected.get('image'), str) and
+            re.fullmatch(r'ghcr\.io/[a-z0-9._-]+/[a-z0-9._-]+@sha256:[0-9a-f]{64}',
+                         expected['image']) is not None, 'immutable_private_image_required')
     require(isinstance(row, dict), 'deployment_observation_invalid')
     for field in ('id', 'projectId', 'environmentId', 'serviceId'):
         require(row.get(field) == expected[field], 'deployment_identity_mismatch')
@@ -37,6 +47,10 @@ def deployment_ready(row, expected):
     require(meta.get('image') == expected['image'], 'target_image_mismatch')
     require(meta.get('imageDigest') == expected['image'].split('@', 1)[1], 'target_digest_mismatch')
     return True
+
+
+def deployment_ready(row, expected):
+    return native_image_access(row, expected)
 
 
 def inspect_inventory(services, baseline, expected):
