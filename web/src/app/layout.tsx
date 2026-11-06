@@ -15,10 +15,12 @@ const VT323 = localFont({
 const description = "Supa Agency — One agent. One purpose. One token. A Solana-native agent platform in development, with persistent memory and bounded reasoning. SUPA is a planned token, not live.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://supaagency.xyz"),
+  alternates: { canonical: "https://supaagency.xyz/" },
   applicationName: "Supa Agency",
   title: { default: "Supa Agency — One agent. One purpose. One token.", template: "%s / Supa Agency" },
   description,
-  openGraph: { type: "website", siteName: "Supa Agency", title: "Supa Agency — One agent. One purpose. One token.", description },
+  openGraph: { url: "https://supaagency.xyz/", type: "website", siteName: "Supa Agency", title: "Supa Agency — One agent. One purpose. One token.", description },
   twitter: { card: "summary", site: "@supa_agency", creator: "@supa_agency", title: "Supa Agency — One agent. One purpose. One token.", description },
   robots: { index: false, follow: false },
 };
