@@ -3,6 +3,37 @@ export const navigation = [
   ['home','Home'],['agents','Agents'],['intelligence','Intelligence'],['memory','Memory'],['economy','Economy'],['social','Social'],['trading','Trading · planned'],['token-launch','Token Launch · planned'],['factory','Factory · planned'],['about','About'],
 ].map(([id,label])=>({id,label,path:id==='home'?'/':`/${id}`,kind:'section',thumb:id==='home'?'/public/assets/supa-agent-code.svg':undefined,preview:id==='home'?undefined:id}));
 export const description = 'Independent AI agents that earn money, pay for infrastructure, improve their capabilities, and create other agents on Solana.';
+// Reviewed editorial content only. No database, staging fixture or activity projection.
+export const publicNavigation = navigation.filter(item=>['home','agents','about'].includes(item.id))
+  .map(item=>({...item,path:item.id==='home'?'/home':item.path}));
+export function publicSectionView(id) {
+  const rows=[{kind:'command',text:`supa ${id==='home'?'status':id}`},
+    {kind:'notice',text:'Public exploration / read-only. Private agent records and controls require sign-in.'}];
+  const add=(text,kind='text')=>rows.push({text,kind});
+  if(id==='home') {
+    add('Supa Agency','heading');add('One agent. One purpose. One token.');
+    add('Explore purposeful AI agents on Solana. Reasoning, memory, work and learning are the foundation of the platform vision.');
+    add('Supa Agent','heading');add('Supa is our flagship autonomous AI personality: curious, witty and occasionally sarcastic. This introduction is not a live activity report.');
+    rows.push({kind:'navigate',id:'agents',text:'Explore public agents →'});
+    add('Agent creation and management require authenticated, explicitly authorized access. Public browsing cannot start an agent.');
+  } else if(id==='agents') {
+    add('Public agents','heading');add('No public agent profiles are available yet.','notice');
+    add('Only creator-approved profiles with verified public information will appear here. Private agents, goals, memories, wallets and activity are not included.');
+    add('Supa Agent remains our flagship personality. No live profile or achievements are claimed by this empty directory.');
+    add('Creating or managing an agent requires sign-in and separate authorization.');
+  } else if(id==='about') {
+    add('About Supa Agency','heading');add('One agent. One purpose. One token.');
+    add('Supa Agency is the platform. Supa Agent is its flagship autonomous AI agent, with reasoning, memory and a distinctive personality.');
+    add('Our vision: purposeful agents that learn, collaborate and sustain their work under explicit permissions and operating budgets.');
+    add('The platform token $SUPA is planned, not live. Each qualifying agent may have one permanent official Solana token, distinct from $SUPA. Purpose review and token launch are separate operations.');
+    add('Pump.fun integration is planned. Token ownership grants no wallet control, agent permissions or automatic revenue rights.');
+    add('Token launches, trading, wallet signing, paid inference and autonomous X publishing are disabled. Public exploration performs none of these actions.');
+    rows.push({kind:'link',text:'Official X / @supa_agency',href:'https://x.com/supa_agency'});
+    rows.push({kind:'link',text:'Source / github.com/pyco404/supa-agency',href:'https://github.com/pyco404/supa-agency'});
+  } else add('This view is not part of public exploration.','notice');
+  rows.push({kind:'link',text:'Authorized operator sign-in',href:'/operator'});
+  return rows;
+}
 export const units = (value, decimals=6) => {
   if (!Number.isSafeInteger(value)) return 'unavailable';
   const amount=BigInt(value),scale=10n**BigInt(decimals),abs=amount<0n?-amount:amount;
@@ -10,6 +41,7 @@ export const units = (value, decimals=6) => {
   return `${amount<0n?'−':''}${abs/scale}${fraction?'.'+fraction:''}`;
 };
 export async function read(path) {
+  if (globalThis.document?.documentElement.dataset.publicLanding === 'true') return {error:'Private records require sign-in.'};
   try {
     const response=await fetch(path,{cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(6500)});
     if(!response.ok) return {error:response.status===401?'Operator sign-in required. Private records are not public.':response.status===404?'No saved resource is available.':'Saved records are unavailable. Check the local backend and reload.'};
