@@ -64,21 +64,33 @@ try{
   assert.match(await page.locator('.buffer').innerText(),/Supa Agent/,'flagship_preserved');
   await page.screenshot({path:resolve(output,`${test.name}-home.png`)});
   const navigate=async label=>{if(test.isMobile)await page.locator('.tabline').click();await page.getByRole('option',{name:label,exact:true}).click();};
-  stage=test.name+'_agents';await navigate('Agents');await page.waitForURL('**/agents');assert.match(await page.locator('.buffer').innerText(),/No public agent profiles are available yet/);
-  await page.screenshot({path:resolve(output,`${test.name}-agents.png`)});
-  stage=test.name+'_about';await navigate('About');await page.waitForURL('**/about');assert.match(await page.locator('.buffer').innerText(),/planned, not live/);assert.equal(await page.getByRole('link',{name:'Official X / @supa_agency'}).getAttribute('href'),'https://x.com/supa_agency');
-  await page.screenshot({path:resolve(output,`${test.name}-about.png`)});
-  await page.reload();await page.locator('body[data-view=projects]').waitFor();assert.match(await page.locator('.buffer').innerText(),/About Supa Agency/,'deep_link_refresh');
+  const sections=[['Agents','agents',/No public agent profiles are available yet/],['Intelligence','intelligence',/No creator-approved reasoning reports/],['Memory','memory',/No approved public memory summaries/],['Economy','economy',/No verified public economic reports/],['Social','social',/No approved public activity/],['Trading · planned','trading',/No public trades/],['Token Launch · planned','token-launch',/No verified public token launches/],['Factory · planned','factory',/No public factory activity/],['About','about',/planned, not live/]];
+  for(const [label,path,empty] of sections){
+   stage=test.name+'_'+path;await navigate(label);await page.waitForURL('**/'+path);
+   assert.match(await page.locator('.buffer').innerText(),empty);
+   if(path!=='about'){
+    const controls=page.locator('.buffer button');assert.ok(await controls.count()>0,'visible_disabled_action');
+    for(const control of await controls.all())assert.equal(await control.isDisabled(),true,'unfinished_actions_disabled');
+   }
+   assert.equal(await page.locator('.buffer form, .buffer input, .buffer select').count(),0,'no_public_management_forms');
+   await page.screenshot({path:resolve(output,`${test.name}-${path}.png`)});
+   // Fresh direct navigation must select the same editorial view without auth.
+   assert.equal((await page.goto(browserOrigin+'/'+path)).status(),200,'anonymous_deep_link');
+   await page.locator('html[data-ready=true]').waitFor();assert.match(await page.locator('.buffer').innerText(),empty);
+   assert.ok(!((await page.content()).includes(sentinel)),'no_private_fixture_on_any_section');
+  }
+  assert.equal(await page.getByRole('link',{name:'Official X / @supa_agency'}).getAttribute('href'),'https://x.com/supa_agency');
+  await navigate('Agents');await page.waitForURL('**/agents');await navigate('About');await page.waitForURL('**/about');
   await page.goBack();await page.waitForURL('**/agents');await page.goForward();await page.waitForURL('**/about');
   if(test.isMobile){await page.locator('.tabline').click();assert.equal(await page.locator('.pane').evaluate(x=>x.inert),true);await page.keyboard.press('Escape');assert.equal(await page.locator('.tabline').getAttribute('aria-expanded'),'false');}
-  else{await page.locator('.wheel').focus();await page.keyboard.press('ArrowUp');await page.waitForURL('**/agents');await page.keyboard.press('ArrowDown');await page.waitForURL('**/about');}
+  else{await page.locator('.wheel').focus();await page.keyboard.press('ArrowUp');await page.waitForURL('**/factory');await page.keyboard.press('ArrowDown');await page.waitForURL('**/about');}
   await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>document.documentElement.dataset.motion==='running');await page.emulateMedia({reducedMotion:'reduce'});
   await page.evaluate(()=>document.fonts.ready);
   const layout=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,logo:[...document.querySelectorAll('.brand img')].every(x=>x.complete&&x.naturalWidth>0),fonts:document.fonts.status}));
   assert.ok(layout.scrollWidth<=layout.width+2&&layout.logo&&layout.fonts==='loaded','responsive_logo_fonts');
-  assert.equal(await page.locator('.wheel-item').count(),3);assert.ok(!((await page.content()).includes(sentinel)),'no_private_fixture');
+  assert.equal(await page.locator('.wheel-item').count(),10);assert.ok(!((await page.content()).includes(sentinel)),'no_private_fixture');
   assert.equal(apiPolls,0,'no_public_api_polling');assert.equal(mutations,0,'no_public_writes');assert.equal(backendReads,before,'public_never_read_backend');
-  report.contexts.push({name:test.name,fresh_private_context:true,enter_without_password:true,home_agents_about:true,deep_links_and_history:true,...layout,api_polls:apiPolls,mutations,backend_reads:backendReads-before});await context.close();
+  report.contexts.push({name:test.name,fresh_private_context:true,enter_without_password:true,all_ten_public_sections:true,disabled_actions_verified:true,deep_links_and_history:true,...layout,api_polls:apiPolls,mutations,backend_reads:backendReads-before});await context.close();
  }
  for(const account of [visitor,...accounts]){
   stage='role_'+(account.role??'visitor');
@@ -94,7 +106,7 @@ try{
   await signed.waitForFunction(value=>document.querySelector('.buffer').textContent.includes(value),sentinel);await context.close();
   report.roles.push({role:account.role??'authenticated_visitor',private_status:status.status,cross_origin_status:cross.status,no_owner_escalation:true,authenticated_browser_passed:true});
  }
- for(const path of ['/operator','/api/agents','/api/operator-status','/agents/11111111-1111-4111-8111-111111111111','/memory','/token-launch'])assert.equal((await get(path)).status,401,'anonymous_private_denied');
+ for(const path of ['/operator','/wallet','/wallets','/management','/admin','/api/wallet','/api/agents','/api/operator-status','/agents/11111111-1111-4111-8111-111111111111','/memory/private','/token-launch/create','/economy/wallet','/factory/create','/social/drafts','/intelligence/control','/trading/orders'])assert.equal((await get(path)).status,401,'anonymous_private_denied');
  assert.equal((await get('/api/agents',{authorization:basic({username:'unauthorized',password:secret()})})).status,401);
  assert.equal(backendWrites,0);assert.deepEqual(report.page_errors,[]);report.backend_writes=backendWrites;report.passed=true;
 }catch(error){report.failure=error instanceof assert.AssertionError?String(error.message).split('\n')[0].slice(0,120):'browser_rehearsal_failed';report.failure_stage=stage;report.error_type=error.name;process.exitCode=1;}
