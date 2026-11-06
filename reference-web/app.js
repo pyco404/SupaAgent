@@ -3,7 +3,7 @@
 // Persistent agents. Application-enforced permissions.
 import { createWheel } from './wheel.js';
 import { createScenes } from './scene.js';
-import { navigation as privateNavigation, publicNavigation, publicSectionView, overview, sectionView, read, units } from './platform.js';
+import { navigation as privateNavigation, publicNavigation, publicSectionView, githubNotice, overview, sectionView, read, units } from './platform.js';
 
 const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
@@ -156,6 +156,7 @@ $('.skip').addEventListener('click',event=>{
   if(location.hash!=='#workspace')history.pushState({view:document.body.dataset.view},'',`${location.pathname}${location.search}#workspace`);
   $('#workspace').focus();
 });
+$('.github').addEventListener('click',()=>window.alert(githubNotice));
 $('.brand').addEventListener('click',async event=>{event.preventDefault();if(!await ready)return;history.pushState({view:'intro'},'',`/${location.search}`);setView(false);$('.enter').focus({preventScroll:true});});
 window.addEventListener('popstate',restoreRoute);
 function migrateLegacyRoute(){
@@ -227,6 +228,7 @@ async function select(index,background=false){
     else if(row.kind==='detail'){const details=node('details','calculation');details.append(node('summary','',row.text),node('p','',row.body));buffer.append(details);}
     else if(row.kind==='draft'){const block=node('figure','saved-draft');block.append(node('blockquote','',row.text),node('figcaption','prompt',row.meta));buffer.append(block);}
     else if(row.kind==='navigate'){const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{const target=navigation.findIndex(item=>item.id===row.id);wheel.select(target);void select(target);});buffer.append(button);}
+    else if(row.kind==='github'){const button=node('button','terminal-entry',row.text);button.type='button';button.addEventListener('click',()=>window.alert(githubNotice));buffer.append(button);}
     else if(row.kind==='disabled'){const button=node('button','terminal-entry',row.text);button.disabled=true;buffer.append(button);}
     else if(row.kind==='heading')buffer.append(node('h2','terminal-heading',row.text));
     else line(row.text,row.kind==='command'?'terminal-command':row.kind==='heading'?'terminal-heading':row.kind==='notice'?'terminal-notice':'terminal-line');
