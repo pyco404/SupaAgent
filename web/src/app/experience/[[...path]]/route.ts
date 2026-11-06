@@ -2,7 +2,7 @@
 import { readFile, realpath } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 import { readResource, runAutonomy, isEconomicPath } from "../../../../../reference-web/backend.mjs";
-import { operatorAuthorized, publicLandingRequest } from "@/lib/auth";
+import { operatorAuthorized, publicLandingRequest, publicSectionPaths } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,8 +27,8 @@ export async function GET(request: Request, context: { params: Promise<{ path?: 
   const path = "/"+parts.join("/");
   const publicLanding = request.headers.get("x-supa-public-landing") === "1"
     && publicLandingRequest(new Request(new URL(path, request.url), {method:request.method, headers:request.headers}));
-  if (publicLanding && path === "/robots.txt") return new Response("User-agent: *\nAllow: /$\nAllow: /home$\nAllow: /agents$\nAllow: /about$\nDisallow: /api/\nDisallow: /operator\n", {headers:{...headers,"Content-Type":"text/plain; charset=utf-8"}});
-  if (publicLanding && ["/", "/home", "/agents", "/about"].includes(path)) {
+  if (publicLanding && path === "/robots.txt") return new Response(`User-agent: *\nAllow: /$\n${publicSectionPaths.map(path=>`Allow: ${path}$\n`).join("")}Disallow: /api/\nDisallow: /operator\n`, {headers:{...headers,"Content-Type":"text/plain; charset=utf-8"}});
+  if (publicLanding && ["/", ...publicSectionPaths].includes(path)) {
     const html = await readFile(resolve(process.cwd(), "../reference-web/index.html"), "utf8");
     return new Response(html.replace('data-motion="running"', 'data-motion="running" data-public-landing="true"')
       .replace('content="noindex, nofollow"', 'content="index, follow"')
