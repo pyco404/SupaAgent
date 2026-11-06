@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { localRequest, operatorAuthorized, stagingAuthorized } from "./lib/auth";
+import { localRequest, operatorAuthorized, stagingAuthorized, publicLandingRequest, officialSiteOrigin } from "./lib/auth";
 
 export function proxy(request: NextRequest) {
+  if (process.env.SUPA_SITE_MODE === "staging" && process.env.SUPA_PUBLIC_LANDING_ENABLED === "true"
+      && request.headers.get("host") === "www.supaagency.xyz"
+      && (!request.headers.get("origin") || request.headers.get("origin") === "https://www.supaagency.xyz")
+      && ["GET", "HEAD"].includes(request.method)) {
+    return NextResponse.redirect(new URL(request.nextUrl.pathname + request.nextUrl.search, officialSiteOrigin), 308);
+  }
   if (process.env.SUPA_SITE_MODE === "staging" && request.nextUrl.pathname === "/healthz") {
-    const headers = new Headers(request.headers); headers.set("x-supa-experience", "1");
+    const headers = new Headers(request.headers); headers.set("x-supa-experience", "1"); headers.delete("x-supa-public-landing");
     return NextResponse.next({ request: { headers } });
   }
   if (!localRequest(request)) return new NextResponse("Local access only", { status: 403 });
   if (process.env.SUPA_SITE_MODE === "staging") {
     const headers = new Headers(request.headers);
-    headers.set("x-supa-experience", "1");
+    headers.set("x-supa-experience", "1"); headers.delete("x-supa-public-landing");
     if (request.nextUrl.pathname === "/healthz") return NextResponse.next({ request: { headers } });
     const authorization = request.headers.get("authorization");
-    if (!operatorAuthorized(authorization) && !stagingAuthorized(authorization)) return new NextResponse("Private staging authentication required", {
+    const authenticated = operatorAuthorized(authorization) || stagingAuthorized(authorization);
+    const publicRead = !authenticated && publicLandingRequest(request);
+    if (publicRead) headers.set("x-supa-public-landing", "1");
+    if (!authenticated && !publicRead) return new NextResponse("Private staging authentication required", {
       status: 401, headers: { "WWW-Authenticate": 'Basic realm="Supa staging", charset="UTF-8"', "Cache-Control": "no-store" },
     });
     const response = NextResponse.next({ request: { headers } });
     response.headers.set("Cache-Control", "private, no-store");
+    if (publicRead) response.headers.set("X-Robots-Tag", request.nextUrl.pathname === "/" ? "index, follow" : "noindex, nofollow");
     return response;
   }
   // The public disconnected shell contains no operator data. Configuration activates authentication.
