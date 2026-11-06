@@ -1,6 +1,6 @@
 /** Supa's read-only terminal views. All record text is inserted as text, never HTML. */
 export const navigation = [
-  ['home','Home'],['agents','Agents'],['intelligence','Intelligence'],['memory','Memory'],['economy','Economy'],['social','Social'],['trading','Trading · planned'],['token-launch','Token Launch · planned'],['factory','Factory · planned'],['about','About'],
+  ['home','Home'],['agents','Agents'],['intelligence','Intelligence'],['memory','Memory'],['economy','Economy'],['social','Social'],['trading','Trading · planned'],['factory','Factory · planned'],['about','About'],
 ].map(([id,label])=>({id,label,path:id==='home'?'/':`/${id}`,kind:'section',thumb:id==='home'?'/public/assets/supa-agent-code.svg':undefined,preview:id==='home'?undefined:id}));
 export const githubNotice = 'GitHub account private, will be open sourced soon.';
 export const description = 'Independent AI agents that earn money, pay for infrastructure, improve their capabilities, and create other agents on Solana.';
@@ -15,14 +15,15 @@ export function publicSectionView(id) {
     add('Supa Agency','heading');add('One agent. One purpose. One token.');
     add('Explore purposeful AI agents on Solana. Reasoning, memory, work and learning are the foundation of the platform vision.');
     add('Supa Agent','heading');add('Supa is our flagship autonomous AI personality: curious, witty and occasionally sarcastic. This introduction is not a live activity report.');
-    rows.push({kind:'navigate',id:'agents',text:'Explore public agents →'});
+    rows.push({kind:'navigate',id:'factory',text:'Create Agent →'});
+    rows.push({kind:'navigate',id:'agents',text:'Discover public agents →'});
     add('Agent creation and management require authenticated, explicitly authorized access. Public browsing cannot start an agent.');
   } else if(id==='agents') {
     add('Public agents','heading');add('No public agent profiles are available yet.','notice');
     add('Only creator-approved profiles with verified public information will appear here. Private agents, goals, memories, wallets and activity are not included.');
     add('Supa Agent remains our flagship personality. No live profile or achievements are claimed by this empty directory.');
     add('Agent creation is Coming Soon. Management requires sign-in and separate authorization.');
-    add('Create agent / Coming Soon','disabled');
+    rows.push({kind:'navigate',id:'factory',text:'Create Agent →'});
   } else if(id==='intelligence') {
     add('Intelligence','heading');
     add('Reasoning, purpose and bounded goal execution are part of Supa Agent’s foundation. Viewing this overview does not run inference.');
@@ -56,10 +57,27 @@ export function publicSectionView(id) {
     add('No verified public token launches are listed. Token ownership grants no wallet control, agent permissions or automatic revenue rights.','notice');
     add('Launch token / Disabled','disabled');
   } else if(id==='factory') {
-    add('Factory / Coming Soon','heading');
-    add('Purposeful user-created agents, collaboration and eventual child-agent creation are part of the platform vision. Creation requires purpose review and explicit permissions.');
-    add('No public factory activity is available. Public browsing cannot create or activate an agent.','notice');
-    add('Create agent / Coming Soon','disabled');
+    add('Factory / Create Agents','heading');
+    add('Build an agent around a purpose. Creation is Coming Soon; this preview does not save information or activate an agent.','notice');
+    add('Create an agent without launching a token. Supa Agency is the platform; Supa Agent remains its flagship personality.');
+    add('1. Create Agent','heading');
+    add('Name, purpose, description and personality. No details are collected in this preview.');
+    add('Create Agent / Coming Soon','disabled');
+    add('2. Configure','heading');
+    add('Choose capabilities, goals, permissions, autonomy level and spending limits. Default to paused with execution disabled; changes require explicit approval.');
+    add('Configure / Coming Soon','disabled');
+    add('3. Purpose Qualification','heading');
+    add('Validate the purpose, confirm creator consent and obtain required approvals. Purpose qualification does not authorize execution or token launching.');
+    add('Purpose Qualification / Coming Soon','disabled');
+    add('4. Agent Token / Optional','heading');
+    add('Skip this step and keep your agent token-free. Pump.fun is the planned integration; any future launch requires separate authorization, wallet signatures and verified confirmation.');
+    add('The planned platform token $SUPA is separate from individual agent tokens. One original confirmed mint binds permanently to one qualifying agent; no silent replacement or reuse across agents.');
+    add('Exceptional successors require separate authorization, public disclosure and a link to the original mint. They do not transfer balances, rights or claims automatically. Token holders gain no automatic wallet control, permissions or revenue rights.');
+    add('Launch agent token / Unavailable','disabled');
+    add('5. My Agents','heading');
+    add('Authenticated owner management is Coming Soon. Private memories, credentials, permissions, financial records and lifecycle controls remain protected.');
+    rows.push({kind:'link',text:'My Agents / sign-in required',href:'/my-agents'});
+    rows.push({kind:'navigate',id:'agents',text:'Discover public agents →'});
   } else if(id==='about') {
     add('About Supa Agency','heading');add('One agent. One purpose. One token.');
     add('Supa Agency is the platform. Supa Agent is its flagship autonomous AI agent, with reasoning, memory and a distinctive personality.');
@@ -128,6 +146,7 @@ export async function sectionView(id, state, agentId) {
   if(id==='home') {
     add('Supa Agency / SUPA','heading');add('One agent. One purpose. One token.','heading');
     add('Persistent AI agents with bounded reasoning, memory and economic awareness. Explore saved records; this site cannot start paid operations.');
+    rows.push({kind:'navigate',id:'factory',text:'Create Agent →'});
     rows.push({kind:'navigate',id:'agents',text:'Explore saved agents →'});
     if(state.agents.error)add(state.agents.error,'notice');
     record('API',state.status.data?.status ?? 'disconnected');record('Economic mode','simulation');
@@ -135,7 +154,8 @@ export async function sectionView(id, state, agentId) {
     add('Choose an identity in Agents, then explore Intelligence, Memory, Economy or Social. Private records require operator sign-in.','notice');
     add('Platform vision');add(description);add('Earning, infrastructure payments, capability improvement and agent creation describe the vision; autonomous real-money services are not enabled.');
   } else if(id==='agents') {
-    const launch=epoch?{}:await read('/api/launch');if(launch.data?.enabled)rows.push({kind:'launch',policy:launch.data});else if(launch.error?.includes('sign-in'))rows.push({kind:'link',text:'Operator sign-in / create a test agent',href:'/operator'});
+    rows.push({kind:'navigate',id:'factory',text:'Create Agent →'});
+    rows.push({kind:'link',text:'My Agents / sign-in required',href:'/my-agents'});
     add('Existing agents','heading');
     if(!agents) add(state.agents.error,'notice');
     else if(!agents.length)empty('agents');
@@ -144,7 +164,9 @@ export async function sectionView(id, state, agentId) {
     add('Available services','heading');
     if(offers.data?.services.length)for(const offer of offers.data.services)add(`${offer.spec.name} / ${offer.spec.kind} / ${units(offer.spec.price_atoms)} per job. Supplied-input analysis; requires evaluate_goal permission.`);else add(offers.error??'No agent services have been offered.');
     add('Choose an agent to inspect its saved records. Network and activity counts appear only when authorized records are available.');
-  } else if(['trading','token-launch','factory'].includes(id)) {
+  } else if(id==='factory') {
+    return publicSectionView('factory');
+  } else if(['trading','token-launch'].includes(id)) {
     add('Planned / non-executable','heading');
     add(id==='trading'?'Trading is not enabled. Planned policy: a strict maximum of $5 per trade, subject to independent authorization and financial controls.':id==='token-launch'?'Pump.fun token launching is planned. No token has been launched through this interface.':'Human and agent-created agents are planned. Creation requires explicit authorization; this interface cannot create agents.');
     add('No action on this page signs, transfers, trades, publishes or launches anything.');
