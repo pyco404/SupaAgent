@@ -222,6 +222,44 @@ async fn factory_journey() {
     assert_eq!(first.0, 200);
     assert_eq!(first, second);
     let agent = Uuid::parse_str(first.1["agent_id"].as_str().unwrap()).unwrap();
+    let detail = format!("/factory/agents/{agent}");
+    assert_eq!(
+        http(&a, Some(OWNER), "GET", &detail, Value::Null).await,
+        first
+    );
+    for (token, code) in [
+        (None, 401),
+        (Some(SERVICE), 403),
+        (Some(VIEWER), 403),
+        (Some(EXPIRED), 401),
+        (Some(OTHER), 404),
+    ] {
+        assert_eq!(http(&a, token, "GET", &detail, Value::Null).await.0, code);
+    }
+    assert_eq!(
+        http(
+            &a,
+            Some(OWNER),
+            "GET",
+            &format!("/factory/agents/{}", id(9999)),
+            Value::Null
+        )
+        .await
+        .0,
+        404
+    );
+    assert_eq!(
+        http(
+            &app(s.clone(), false),
+            Some(OWNER),
+            "GET",
+            &detail,
+            Value::Null
+        )
+        .await
+        .0,
+        403
+    );
     let mut conflict = request(10);
     conflict["name"] = json!("Changed");
     assert_eq!(
@@ -461,11 +499,24 @@ async fn factory_restart_recovery() {
         json!({"agents":[]})
     );
     let id = Uuid::parse_str(replay.1["agent_id"].as_str().unwrap()).unwrap();
+    let detail = format!("/factory/agents/{id}");
+    assert_eq!(
+        http(&a, Some(OWNER), "GET", &detail, Value::Null).await,
+        replay
+    );
+    assert_eq!(
+        http(&a, Some(OTHER), "GET", &detail, Value::Null).await.0,
+        404
+    );
     sqlx::query("DELETE FROM agent_access WHERE agent_id=$1")
         .bind(id)
         .execute(admin.pool())
         .await
         .unwrap();
+    assert_eq!(
+        http(&a, Some(OWNER), "GET", &detail, Value::Null).await.0,
+        404
+    );
     assert_eq!(
         http(&a, Some(OWNER), "POST", "/factory/agents", request(10))
             .await
