@@ -45,3 +45,14 @@ test('sign-in assets are readable without exposing data, and cookie scope exclud
  assert.equal(check('/style.css',{},'POST'),401);
  process.env.SUPA_SYNTHETIC_FACTORY_ENABLED='false';assert.equal(check('/sign-in'),401);process.env.SUPA_SYNTHETIC_FACTORY_ENABLED='true';
 });
+test('avatar routes keep authentication, host, origin and disabled-feature boundaries',()=>{
+ process.env.SUPA_AGENT_AVATARS_ENABLED='true';
+ const cookie=session.issueFactorySession('synthetic',password),id='11111111-1111-4111-8111-111111111111';
+ const check=(path,host='127.0.0.1:3339',headers={},method='GET')=>proxy(new NextRequest('http://127.0.0.1:3339'+path,{method,headers:{host,...headers}})).status;
+ for(const path of [`/my-agents/${id}`,`/api/factory/avatar-assets/${id}`,`/api/factory/avatar-view/${id}`]){assert.equal(check(path),401);assert.equal(check(path,undefined,{cookie:`supa_factory_session=${cookie}`}),200);}
+ assert.equal(check(`/api/public/agent-avatars/${id}/1`,'supaagency.xyz'),200);
+ assert.equal(check(`/api/public/agent-avatars/${id}/1`),401,'Railway staging remains authenticated');
+ assert.equal(check('/api/factory/avatar-uploads',undefined,{cookie:`supa_factory_session=${cookie}`,origin:'https://untrusted.invalid'},'POST'),403);
+ assert.equal(check(`/api/factory/avatar-assets/../../credentials`),401);
+ process.env.SUPA_AGENT_AVATARS_ENABLED='false';assert.equal(check(`/api/public/agent-avatars/${id}/1`,'supaagency.xyz'),401);
+});
