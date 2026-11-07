@@ -3,6 +3,7 @@ mod autonomy;
 mod controlled;
 mod economy;
 mod ecosystem;
+mod factory;
 mod live_work;
 mod operator_status;
 pub use access::{OperatorCredential, Principal};
@@ -33,6 +34,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
+    synthetic_factory_enabled: bool,
     pub live_work_enabled: bool,
     pub controlled: Option<supa_runtime::controlled::ControlledInference>,
     pub store: Store,
@@ -55,6 +57,7 @@ impl AppState {
             return Err(Error::Invalid);
         }
         Ok(Self {
+            synthetic_factory_enabled: false,
             controlled: None,
             live_work_enabled: false,
             store,
@@ -198,6 +201,12 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
             let Ok(id) = Uuid::parse_str(id) else {
                 return ApiError(Error::Denied).into_response();
             };
+            if write && state.synthetic_factory_enabled {
+                match state.store.factory_managed(id).await {
+                    Ok(false) => {}
+                    _ => return ApiError(Error::Denied).into_response(),
+                }
+            }
             if let Err(error) = state.store.require_access(id, actor.id, required).await {
                 return ApiError(error).into_response();
             }
@@ -222,6 +231,7 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
 pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(access::routes())
+        .merge(factory::routes())
         .route("/operator-status", get(operator_status::status))
         .merge(economy::routes())
         .merge(ecosystem::routes())
