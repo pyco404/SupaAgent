@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { localRequest, operatorAuthorized, stagingAuthorized, publicLandingRequest, officialSiteOrigin } from "./lib/auth";
 
+import { factoryAuthorization, factoryEnabled, factorySameOrigin } from "./lib/factory-session";
+
 export function proxy(request: NextRequest) {
   if (process.env.SUPA_SITE_MODE === "staging" && process.env.SUPA_PUBLIC_LANDING_ENABLED === "true"
       && request.headers.get("host") === "www.supaagency.xyz"
@@ -18,7 +20,11 @@ export function proxy(request: NextRequest) {
     headers.set("x-supa-experience", "1"); headers.delete("x-supa-public-landing");
     if (request.nextUrl.pathname === "/healthz") return NextResponse.next({ request: { headers } });
     const authorization = request.headers.get("authorization");
-    const authenticated = operatorAuthorized(authorization) || stagingAuthorized(authorization);
+    const factoryPath = ["/factory/create", "/my-agents", "/api/factory/agents"].includes(request.nextUrl.pathname);
+    const factoryAuth = factoryPath && !!factoryAuthorization(request);
+    const signInAsset = request.nextUrl.pathname === "/style.css" || /^\/public\/(assets\/[a-z0-9-]+\.svg|fonts\/[a-zA-Z0-9._-]+\.(woff2|ttf|txt))$/.test(request.nextUrl.pathname);
+    const factorySignIn = factoryEnabled() && (((request.nextUrl.pathname === "/sign-in" || signInAsset) && request.method === "GET") || (request.nextUrl.pathname === "/api/factory/session" && ["POST", "DELETE"].includes(request.method) && factorySameOrigin(request)));
+    const authenticated = operatorAuthorized(authorization) || stagingAuthorized(authorization) || factoryAuth || factorySignIn;
     const publicRead = !authenticated && publicLandingRequest(request);
     if (publicRead) headers.set("x-supa-public-landing", "1");
     if (!authenticated && !publicRead) return new NextResponse("Private staging authentication required", {
