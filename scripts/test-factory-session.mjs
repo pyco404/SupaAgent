@@ -1,0 +1,47 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {randomBytes} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import ts from '../web/node_modules/typescript/lib/typescript.js';
+const auth=new URL('../web/src/lib/auth.ts',import.meta.url).href;
+const source=await readFile(new URL('../web/src/lib/factory-session.ts',import.meta.url),'utf8');
+const moduleUrl='data:text/javascript,'+encodeURIComponent(ts.transpileModule(source.replace('"./auth"',JSON.stringify(auth)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText);
+const session=await import(moduleUrl);
+const nextServer=new URL('../web/node_modules/next/server.js',import.meta.url).href;
+const {NextRequest}=await import(nextServer);
+const proxySource=await readFile(new URL('../web/src/proxy.ts',import.meta.url),'utf8');
+const {proxy}=await import('data:text/javascript,'+encodeURIComponent(ts.transpileModule(proxySource.replace('"next/server"',JSON.stringify(nextServer)).replace('"./lib/auth"',JSON.stringify(auth)).replace('"./lib/factory-session"',JSON.stringify(moduleUrl)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText));
+const password=randomBytes(32).toString('hex'),api_token=randomBytes(32).toString('hex');
+Object.assign(process.env,{SUPA_SITE_MODE:'staging',SUPA_SYNTHETIC_FACTORY_ENABLED:'true',SUPA_SITE_ORIGIN:'http://127.0.0.1:3339',SUPA_PUBLIC_LANDING_ENABLED:'true',SUPA_WEB_OPERATORS:JSON.stringify([{username:'synthetic',password,api_token}])});
+const now=1000000;
+function req(value,headers={}){return new Request('http://127.0.0.1:3339/api/factory/agents',{headers:{cookie:`supa_factory_session=${value}`,...headers}});}
+test('signed bounded session does not contain account credentials and expires exclusively',()=>{
+ const c=session.issueFactorySession('synthetic',password,now);assert(c&&!c.includes(password)&&!c.includes(api_token));
+ assert(session.factoryAuthorization(req(c),now));assert.equal(session.factoryAuthorization(req(c),now+900000),null);
+ assert.equal(session.factoryAuthorization(req(c),now-1000),null);assert.equal(session.issueFactorySession('synthetic','wrong',now),null);
+});
+test('forged, duplicate and malformed cookies never confer authorization',()=>{
+ const c=session.issueFactorySession('synthetic',password,now);
+ for(const value of ['invalid',c+'x',c.replace(/^./,c[0]==='a'?'b':'a'),'a.b'])assert.equal(session.factoryAuthorization(req(value),now),null);
+ assert.equal(session.factoryAuthorization(req(c,{cookie:`supa_factory_session=${c}; supa_factory_session=${c}`}),now),null);
+});
+test('credential revocation and default-off flag invalidate sessions',()=>{
+ const c=session.issueFactorySession('synthetic',password,now);process.env.SUPA_WEB_OPERATORS='[]';assert.equal(session.factoryAuthorization(req(c),now),null);
+ process.env.SUPA_WEB_OPERATORS=JSON.stringify([{username:'synthetic',password,api_token}]);process.env.SUPA_SYNTHETIC_FACTORY_ENABLED='false';assert.equal(session.factoryAuthorization(req(c),now),null);assert.equal(session.issueFactorySession('synthetic',password,now),null);process.env.SUPA_SYNTHETIC_FACTORY_ENABLED='true';
+});
+test('same-origin writes require exact origin and host; public origin is not arbitrary',()=>{
+ for(const [host,origin,yes]of [['127.0.0.1:3339','http://127.0.0.1:3339',true],['supaagency.xyz','https://supaagency.xyz',true],['127.0.0.1:3339','https://untrusted.invalid',false],['untrusted.invalid','https://untrusted.invalid',false],['supaagency.xyz','http://supaagency.xyz',false]])assert.equal(session.factorySameOrigin(new Request('http://127.0.0.1/',{headers:{host,origin}})),yes);
+ assert.equal(session.factorySameOrigin(new Request('http://127.0.0.1/')),false);
+});
+test('sign-in assets are readable without exposing data, and cookie scope excludes operator APIs',()=>{
+ const cookie=session.issueFactorySession('synthetic',password);
+ const check=(path,headers={},method='GET')=>proxy(new NextRequest('http://127.0.0.1:3339'+path,{method,headers:{host:'127.0.0.1:3339',...headers}})).status;
+ for(const path of ['/sign-in','/style.css','/public/fonts/IBMPlexMono-Regular.ttf','/public/assets/supa-agent-code.svg'])assert.equal(check(path),200,path);
+ for(const path of ['/api/agents','/operator','/my-agents','/factory/create','/api/factory/agents','/public/../private','/style.css/private'])assert.equal(check(path,{'x-supa-public-landing':'1'}),401,path);
+ assert.equal(check('/my-agents',{cookie:`supa_factory_session=${cookie}`}),200);
+ assert.equal(check('/operator',{cookie:`supa_factory_session=${cookie}`}),401);
+ assert.equal(check('/api/agents',{cookie:`supa_factory_session=${cookie}`}),401);
+ assert.equal(check('/api/factory/session',{origin:'https://untrusted.invalid'},'POST'),403);
+ assert.equal(check('/style.css',{},'POST'),401);
+ process.env.SUPA_SYNTHETIC_FACTORY_ENABLED='false';assert.equal(check('/sign-in'),401);process.env.SUPA_SYNTHETIC_FACTORY_ENABLED='true';
+});
