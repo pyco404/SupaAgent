@@ -9,6 +9,18 @@ const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
 const publicLanding = root.dataset.publicLanding === 'true';
 const navigation = publicLanding ? publicNavigation : privateNavigation;
+// Remember section IDs only for this tab; never cache page content or authorization.
+const typingVisitKey=`supa.typed-sections.v1.${publicLanding?'public':'private'}`;
+const typedSections=new Set();
+try{
+  const saved=JSON.parse(sessionStorage.getItem(typingVisitKey)??'[]');
+  if(Array.isArray(saved))for(const id of saved.slice(0,navigation.length))if(navigation.some(item=>item.id===id))typedSections.add(id);
+}catch{/* Typing preferences are optional; in-memory visits still work. */}
+function repeatSection(id){
+  const repeat=typedSections.has(id);typedSections.add(id);
+  try{sessionStorage.setItem(typingVisitKey,JSON.stringify([...typedSections]));}catch{/* Storage denial must not interrupt navigation. */}
+  return repeat;
+}
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 reduced.addEventListener('change', event => { root.dataset.motion=event.matches?'still':'running';if(event.matches)revealTyping?.(); });
 root.dataset.motion = reduced.matches?'still':'running';
@@ -254,16 +266,16 @@ async function select(index,background=false){
     else line(row.text,row.kind==='command'?'terminal-command':row.kind==='heading'?'terminal-heading':row.kind==='notice'?'terminal-notice':'terminal-line');
   }
   buffer.scrollTop=0;$('.pane').classList.remove('is-changing');void buffer.offsetWidth;$('.pane').classList.add('is-changing');
-  $('.announcement').textContent=`Selected ${item.label}`;$('.key-feedback').textContent=': commands · ↑↓ navigate';typeTerminal();
+  $('.announcement').textContent=`Selected ${item.label}`;$('.key-feedback').textContent=': commands · ↑↓ navigate';typeTerminal(repeatSection(item.id));
 }
-// Every visit reveals complete sections in document order, using saved text only.
+// First visits type in document order; subsequent renders reveal fresh text immediately.
 function cancelTyping(){
   scenes?.stopTyping(true);
   typing++;clearTimeout(typingTimer);revealTyping=null;
   $('.skip-typing').hidden=true;
 }
 $('.skip-typing').addEventListener('click',()=>{revealTyping?.();closeCommand(false);});
-function typeTerminal() {
+function typeTerminal(instant=false) {
   clearTimeout(typingTimer);
   const buffer=$('.buffer'),token=++typing,rows=[...buffer.children],skip=$('.skip-typing');
   const ghost=document.querySelectorAll('.entity-state b')[1];
@@ -281,7 +293,7 @@ function typeTerminal() {
     skip.hidden=true;revealTyping=null;
     if(restoreFocus)buffer.focus({preventScroll:true});
   }
-  if(reduced.matches){finish();return;}
+  if(instant||reduced.matches){finish();return;}
   rows.forEach(row=>{
     row.hidden=true;row.inert=true;
     const walker=document.createTreeWalker(row,NodeFilter.SHOW_TEXT);
@@ -512,7 +524,11 @@ $('.command').addEventListener('submit',event=>{
     agentId=agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);return;
   }
   const id=({status:'home',capabilities:'about'})[command]??command,index=navigation.findIndex(item=>item.id===id);
-  if(index>=0){if(document.body.dataset.view==='intro'){itemIndex=index;history.pushState({view:'projects'},'',`${navigation[index].path}${location.search}`);setView(true);}wheel.select(index);void select(index);}
+  if(index>=0){
+    restoringRoute=true;wheel.select(index);restoringRoute=false;
+    if(document.body.dataset.view==='intro'){itemIndex=index;history.pushState({view:'projects'},'',`${navigation[index].path}${location.search}`);setView(true);}
+    else void select(index);
+  }
   else{$('.announcement').textContent='Unknown command. Try supa help.';line('Unknown command. Try supa help.','terminal-notice');}
 });
 $('.worm-switch').addEventListener('click',()=>{worm=!worm;$('.worm-switch').setAttribute('aria-pressed',String(worm));$('.worm-switch').textContent=worm?'awake':'asleep';scenes?.setWorm(worm);});
