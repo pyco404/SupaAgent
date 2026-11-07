@@ -93,11 +93,11 @@ test('reloading restarts typing and navigation cancels old text safely',async({p
 });
 
 
-test('workspace stays clear and Home uses the latest source-code logo',async({page})=>{
+test('workspace stays clear and Home uses its original cinematic artwork',async({page})=>{
   await page.goto('/site/#home');await expect(page.locator('html')).toHaveAttribute('data-ready','true');
   await expect(page.locator('.workspace-controls > button:not(.skip-typing),.workspace-controls > a')).toHaveCount(0);
   await expect(page.locator('.workspace-controls > .skip-typing')).toBeHidden();
-  await expect(page.locator('.wheel-item[data-index="0"] img')).toHaveAttribute('src','/public/assets/supa-agent-code.svg');
+  await expect(page.locator('.wheel-item[data-index="0"] img')).toHaveAttribute('src','/public/assets/supa-home-thumb.webp');
   await expect(page.locator('.reload-records')).toBeHidden();await expect(page.getByRole('link',{name:'Operator sign-in'})).toBeHidden();
   await page.getByRole('button',{name:'Open terminal commands'}).click();
   await expect(page.locator('.reload-records')).toBeVisible();await expect(page.getByRole('link',{name:'Operator sign-in'})).toBeVisible();
