@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { factoryAuthorization, factoryCookie, factoryEnabled, factorySameOrigin, issueFactorySession } from "./factory-session";
 import { localRequest, operatorToken } from "./auth";
+import { avatarRoute, avatarsEnabled } from "./avatars";
 
 const text = (max: number) => z.string().min(1).max(max).refine(v => v.trim() === v && !/[\u0000-\u001f\u007f]/.test(v));
 const configuration = z.object({
@@ -8,7 +9,7 @@ const configuration = z.object({
   personality: z.object({ voice: text(1000), traits: z.array(text(80)).max(12) }).strict(),
   goals: z.array(text(240)).min(1).max(8),
   requested_capabilities: z.array(z.enum(["read_memory", "remember", "evaluate_goal", "draft_tweet", "conserve"])).max(5),
-  autonomy: z.literal("disabled"), spending_limit_microusd: z.literal(0), private_consent: z.literal(true),
+  autonomy: z.literal("disabled"), spending_limit_microusd: z.literal(0), private_consent: z.literal(true), avatar_upload_id: z.uuid().optional(),
 }).strict();
 const agent = z.object({ agent_id: z.uuid(), configuration, status: z.literal("paused"), qualification: z.literal("pending_review"), public: z.literal(false), enabled_capabilities: z.array(z.never()), execution_enabled: z.literal(false), token_mint: z.null() }).strict();
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
@@ -21,6 +22,7 @@ async function bounded(request: Request | Response, maximum: number) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 export async function factoryRoute(request: Request, path: string): Promise<Response> {
+  if (/^\/api\/factory\/avatar/.test(path)) return avatarRoute(request, path);
   if (!localRequest(request)) return fail("origin_not_permitted", 403);
   if (!factoryEnabled()) return fail("synthetic_factory_unavailable", 403);
   if (!["GET", "POST", "DELETE"].includes(request.method) || new URL(request.url).search) return fail("request_not_permitted", 400);
@@ -47,7 +49,10 @@ async function backend(request: Request, method: "GET" | "POST", authorization: 
   if (!token) return fail("sign_in_required", 401);
   let body;
   if (method === "POST") {
-    try { body = configuration.parse(await bounded(request, 12000)); }
+    try {
+      body = configuration.parse(await bounded(request, 12000));
+      if (body.avatar_upload_id && !avatarsEnabled()) return fail("avatars_unavailable",403);
+    }
     catch { return fail("invalid_agent_configuration", 400); }
   }
   try {
