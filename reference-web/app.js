@@ -9,16 +9,11 @@ const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
 const publicLanding = root.dataset.publicLanding === 'true';
 const navigation = publicLanding ? publicNavigation : privateNavigation;
-// Remember section IDs only for this tab; never cache page content or authorization.
-const typingVisitKey=`supa.typed-sections.v1.${publicLanding?'public':'private'}`;
+// Visits belong to this document: a full reload starts a fresh typing sequence.
+// Never persist page content, authorization or typing history in browser storage.
 const typedSections=new Set();
-try{
-  const saved=JSON.parse(sessionStorage.getItem(typingVisitKey)??'[]');
-  if(Array.isArray(saved))for(const id of saved.slice(0,navigation.length))if(navigation.some(item=>item.id===id))typedSections.add(id);
-}catch{/* Typing preferences are optional; in-memory visits still work. */}
 function repeatSection(id){
   const repeat=typedSections.has(id);typedSections.add(id);
-  try{sessionStorage.setItem(typingVisitKey,JSON.stringify([...typedSections]));}catch{/* Storage denial must not interrupt navigation. */}
   return repeat;
 }
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -264,14 +259,14 @@ async function select(index,background=false){
   buffer.scrollTop=0;$('.pane').classList.remove('is-changing');void buffer.offsetWidth;$('.pane').classList.add('is-changing');
   $('.announcement').textContent=`Selected ${item.label}`;$('.key-feedback').textContent=': commands · ↑↓ navigate';typeTerminal(repeatSection(item.id));
 }
-// First visits type in document order; subsequent renders reveal fresh text immediately.
+// First visits type in document order; public revisits reveal complete rows in order.
 function cancelTyping(){
   scenes?.stopTyping(true);
   typing++;clearTimeout(typingTimer);revealTyping=null;
   $('.skip-typing').hidden=true;
 }
 $('.skip-typing').addEventListener('click',()=>{revealTyping?.();closeCommand(false);});
-function typeTerminal(instant=false) {
+function typeTerminal(repeat=false) {
   clearTimeout(typingTimer);
   const buffer=$('.buffer'),token=++typing,rows=[...buffer.children],skip=$('.skip-typing');
   const ghost=document.querySelectorAll('.entity-state b')[1];
@@ -289,13 +284,14 @@ function typeTerminal(instant=false) {
     skip.hidden=true;revealTyping=null;
     if(restoreFocus)buffer.focus({preventScroll:true});
   }
-  if(instant||reduced.matches){finish();return;}
+  if(reduced.matches||(repeat&&!publicLanding)){finish();return;}
   rows.forEach(row=>{
     row.hidden=true;row.inert=true;
+    if(repeat)return;
     const walker=document.createTreeWalker(row,NodeFilter.SHOW_TEXT);
     let text;while((text=walker.nextNode())){originals.push({text,value:text.textContent,row});text.textContent='';}
   });
-  buffer.setAttribute('aria-busy','true');buffer.setAttribute('aria-live','off');buffer.dataset.typingState='typing';
+  buffer.setAttribute('aria-busy','true');buffer.setAttribute('aria-live','off');buffer.dataset.typingState=repeat?'revealing':'typing';
   if(ghost)ghost.textContent='typing';
   skip.hidden=false;revealTyping=finish;
   function tick(){
@@ -304,6 +300,11 @@ function typeTerminal(instant=false) {
     const row=rows[rowIndex];if(!row){finish();return;}
     const follow=buffer.scrollHeight-buffer.scrollTop-buffer.clientHeight<32;
     row.hidden=false;
+    if(repeat){
+      row.inert=false;rowIndex++;
+      // Bound a public revisit to about 600 ms, including long Factory pages.
+      typingTimer=setTimeout(tick,Math.min(60,600/Math.max(1,rows.length)));return;
+    }
     const record=originals[textIndex];
     if(!record||record.row!==row){row.inert=false;rowIndex++;typingTimer=setTimeout(tick,120);return;}
     if(character<record.value.length){
@@ -313,7 +314,7 @@ function typeTerminal(instant=false) {
       typingTimer=setTimeout(tick,row.classList.contains('terminal-command')?26:16);
     }else{character=0;textIndex++;typingTimer=setTimeout(tick,8);}
   }
-  typingTimer=setTimeout(tick,150);
+  typingTimer=setTimeout(tick,repeat?0:150);
 }
 function openCommand(prefix=''){closeAgentPicker(); $('.command').hidden=false;$('.command-input').value=prefix;$('.command-input').focus();historyIndex=commandHistory.length; }
 function economyPanel(view,id){
