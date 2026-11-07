@@ -36,5 +36,8 @@ async fn create(
 ) -> ApiResult {
     allowed(&s, actor)?;
     let Json(body) = body.map_err(|_| Error::Invalid)?;
+    if body.avatar_upload_id.is_some() && !s.agent_avatars_enabled {
+        return Err(Error::Denied.into());
+    }
     Ok(Json(s.store.factory_create(actor.id, &body).await?))
 }
