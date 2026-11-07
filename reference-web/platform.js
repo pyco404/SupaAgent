@@ -72,12 +72,13 @@ export function publicSectionView(id) {
     add('No verified public token launches are listed. Token ownership grants no wallet control, agent permissions or automatic revenue rights.','notice');
     add('Launch token / Disabled','disabled');
   } else if(id==='factory') {
+    const synthetic = typeof document !== 'undefined' && document.documentElement?.dataset.syntheticFactory === 'true';
     add('Factory / Create Agents','heading');
-    if (typeof document !== 'undefined' && document.documentElement?.dataset.syntheticFactory === 'true') rows.push({kind:'link',text:'Sign in / synthetic Factory preview',href:'/sign-in'});
-    add('Build an agent around a purpose. Creation is Coming Soon; this preview does not save information or activate an agent.','notice');
+    if (synthetic) rows.push({kind:'link',text:'Create Agent / synthetic sign-in',href:'/sign-in'});
+    add(synthetic?'Invited synthetic accounts can sign in to save a private paused agent. Execution and spending remain disabled.':'Build an agent around a purpose. Creation is Coming Soon; this preview does not save information or activate an agent.','notice');
     add('Create an agent without launching a token. Supa Agency is the platform; Supa Agent remains its flagship personality.');
     add('1. Create Agent','heading');
-    add('Name, purpose, description and personality. No details are collected in this preview.');
+    add(synthetic?'Name, purpose, description and personality are collected only after sign-in and private-storage consent.':'Name, purpose, description and personality. No details are collected in this preview.');
     rows.push({kind:'artwork',id:'factory'});
     add('Create Agent / Coming Soon','disabled');
     add('2. Configure','heading');
@@ -93,7 +94,7 @@ export function publicSectionView(id) {
     add('Exceptional successors require separate authorization, public disclosure and a link to the original mint. They do not transfer balances, rights or claims automatically. Token holders gain no automatic wallet control, permissions or revenue rights.');
     add('Launch agent token / Unavailable','disabled');
     add('5. My Agents','heading');
-    add('Authenticated owner management is Coming Soon. Private memories, credentials, permissions, financial records and lifecycle controls remain protected.');
+    add(synthetic?'Sign in to view your saved private agents and configuration. Lifecycle execution remains unavailable.':'Authenticated owner management is Coming Soon. Private memories, credentials, permissions, financial records and lifecycle controls remain protected.');
     rows.push({kind:'link',text:'My Agents / sign-in required',href:'/my-agents'});
     rows.push({kind:'navigate',id:'agents',text:'Discover public agents →'});
   } else if(id==='about') {
