@@ -38,7 +38,9 @@ export function publicLandingRequest(request: Request): boolean {
   if (!publicLandingHost(request) || !["GET", "HEAD"].includes(request.method)) return false;
   const path = new URL(request.url).pathname;
   // Only editorial public views. Agent details, APIs and controls are never admitted.
-  return ["/", ...publicSectionPaths, "/robots.txt"].includes(path)
+  return (process.env.SUPA_SYNTHETIC_FACTORY_ENABLED === "true" && process.env.SUPA_AGENT_AVATARS_ENABLED === "true" &&
+      (/^\/api\/public\/agent-profiles(?:\/[0-9a-f-]{36})?$/.test(path) || /^\/api\/public\/agent-avatars\/[0-9a-f-]{36}\/[1-9][0-9]?$/.test(path) || /^\/agents\/[0-9a-f-]{36}$/.test(path)))
+    || ["/", ...publicSectionPaths, "/robots.txt"].includes(path)
     || ["/style.css", "/app.js", "/scene.js", "/wheel.js", "/platform.js"].includes(path)
     || /^\/public\/(assets\/[a-z0-9-]+\.svg|fonts\/[a-zA-Z0-9._-]+\.(woff2|ttf|txt))$/.test(path);
 }
