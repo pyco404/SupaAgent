@@ -4,6 +4,7 @@ import { extname, resolve, sep } from "node:path";
 import { readResource, runAutonomy, isEconomicPath } from "../../../../../reference-web/backend.mjs";
 import { operatorAuthorized, publicLandingRequest, publicSectionPaths } from "@/lib/auth";
 
+import { avatarRoute, avatarsEnabled } from "@/lib/avatars";
 import { factoryRoute } from "@/lib/factory";
 import { factoryAuthorization, factoryEnabled } from "@/lib/factory-session";
 
@@ -33,19 +34,26 @@ export async function GET(request: Request, context: { params: Promise<{ path?: 
   const parts = (await context.params).path ?? [];
   if (parts.some(part=>part.includes("\\") || part.includes("\0") || part === "." || part === "..")) return new Response("Invalid path", {status:400, headers});
   const path = "/"+parts.join("/");
+  if (path.startsWith("/api/public/")) return avatarRoute(request,path);
   if (path.startsWith("/api/factory/")) return factoryRoute(request, path);
-  if (factoryEnabled() && ["/sign-in", "/factory/create", "/my-agents"].includes(path)) {
+  if (factoryEnabled() && (["/sign-in", "/factory/create", "/my-agents"].includes(path) || (avatarsEnabled() && /^\/my-agents\/[0-9a-f-]{36}$/.test(path)))) {
     if (path !== "/sign-in" && !factoryAuthorization(request)) return new Response(null, {status:303,headers:{...headers,Location:"/sign-in"}});
-    return new Response(await readFile(resolve(process.cwd(), "../reference-web/factory-create.html")),{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
+    return new Response((await readFile(resolve(process.cwd(), "../reference-web/factory-create.html"),"utf8")).replace('<html lang="en">',avatarsEnabled()?'<html lang="en" data-avatars-enabled="true">':'<html lang="en">'),{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
   }
   const publicLanding = request.headers.get("x-supa-public-landing") === "1"
     && publicLandingRequest(new Request(new URL(path, request.url), {method:request.method, headers:request.headers}));
+  if (publicLanding && avatarsEnabled() && /^\/agents\/[0-9a-f-]{36}$/.test(path)) {
+    const check=await avatarRoute(new Request(new URL("/api/public/agent-profiles/"+parts[1],request.url),{headers:request.headers}),"/api/public/agent-profiles/"+parts[1]);
+    if(check.status!==200)return new Response("No approved public profile",{status:check.status,headers});
+    return new Response(await readFile(resolve(process.cwd(),"../reference-web/public-agent-profile.html")),{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
+  }
   if (publicLanding && path === "/robots.txt") return new Response(`User-agent: *\nAllow: /$\n${publicSectionPaths.map(path=>`Allow: ${path}$\n`).join("")}Disallow: /api/\nDisallow: /operator\n`, {headers:{...headers,"Content-Type":"text/plain; charset=utf-8"}});
   if (publicLanding && ["/", ...publicSectionPaths].includes(path)) {
     const html = await readFile(resolve(process.cwd(), "../reference-web/index.html"), "utf8");
     return new Response(html.replace('data-motion="running"', 'data-motion="running" data-public-landing="true"')
       .replace('content="noindex, nofollow"', 'content="index, follow"')
       .replace('class="enter" href="/"', 'class="enter" href="/home"')
+      .replace('data-view="intro"', avatarsEnabled() ? 'data-view="intro" data-agent-avatars="true"' : 'data-view="intro"')
       .replace('data-public-landing="true"', factoryEnabled() ? 'data-public-landing="true" data-synthetic-factory="true"' : 'data-public-landing="true"'), {headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
   }
   if (path === "/healthz") return Response.json({status:"ok",mode:"private-staging",signing_enabled:false},{headers});
