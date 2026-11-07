@@ -1,6 +1,6 @@
 import {test,expect} from '../../web/node_modules/@playwright/test/index.mjs';
-import {mkdir,writeFile} from 'node:fs/promises';
-import {publicNavigation,sectionArtwork} from '../platform.js';
+import {writeFile} from 'node:fs/promises';
+import {publicNavigation,publicSectionView,sectionArtwork} from '../platform.js';
 test.afterEach(async({page})=>{await page.unrouteAll({behavior:'wait'});});
 
 async function publicPreview(page){
@@ -21,41 +21,45 @@ test('original artwork preserves nine-section public navigation and readable ter
  const observed=await publicPreview(page);await page.goto('/');
  await expect(page.locator('html')).toHaveAttribute('data-ready','true');
  await page.locator('.enter').click();await expect(page).toHaveURL(/\/home$/);
- await mkdir('../artifacts/cinematic-review',{recursive:true});
+
  for(const [index,item]of publicNavigation.entries()){
   if(page.viewportSize().width<=700)await page.locator('.tabline').click();
   await page.locator(`.wheel-item[data-index="${index}"]`).click();
   await expect(page).toHaveURL(new RegExp(item.path+'$'));
   await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','complete');
-  const image=page.locator('.section-image');
-  await expect(image).toHaveAttribute('alt',sectionArtwork[item.id].alt);
-  await expect.poll(()=>image.evaluate(el=>el.complete&&el.naturalWidth>0)).toBe(true);
-  await expect(page.locator('.section-art-title')).toHaveText(sectionArtwork[item.id].title);
-  await expect(page.locator('.section-illustration figcaption')).toContainText('not live activity');
+  const artworks=publicSectionView(item.id).filter(row=>row.kind==='artwork');
+  await expect(page.locator('.section-image')).toHaveCount(artworks.length);
+  for(const [n,artwork]of artworks.entries()){
+   const image=page.locator('.section-image').nth(n);await image.scrollIntoViewIfNeeded();
+   await expect(image).toHaveAttribute('alt',sectionArtwork[artwork.id].alt);
+   await expect.poll(()=>image.evaluate(el=>el.complete&&el.naturalWidth>0)).toBe(true);
+   await expect(page.locator('.section-art-title').nth(n)).toHaveText(sectionArtwork[artwork.id].title);
+   await expect(page.locator('.section-illustration figcaption').nth(n)).toContainText('not live activity');
+  }
   await expect(page.locator('.workspace-hands')).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   const type=await page.locator('.buffer').evaluate(el=>{const s=getComputedStyle(el);return{size:parseFloat(s.fontSize),leading:parseFloat(s.lineHeight)/parseFloat(s.fontSize)};});
   expect(type.size).toBeGreaterThanOrEqual(13);expect(type.leading).toBeGreaterThanOrEqual(1.6);
-  await page.screenshot({path:`../artifacts/cinematic-review/after-${info.project.name}-${item.id}.png`});
+  await page.screenshot({path:info.outputPath(`${item.id}.png`)});
  }
  expect(observed.calls).toEqual([]);expect(observed.errors).toEqual([]);
  await expect(page.locator('.wheel-thumb')).toHaveCount(9);
  const thumbnails=await page.locator('img.wheel-thumb').evaluateAll(nodes=>nodes.map(el=>({src:el.getAttribute('src'),lazy:el.loading,alt:el.alt,width:el.width,height:el.height})));
  expect(new Set(thumbnails.map(x=>x.src)).size).toBe(9);expect(thumbnails.every(x=>x.lazy==='lazy'&&x.alt==='')).toBe(true);
  await page.goBack();await expect(page).toHaveURL(/\/factory$/);
- await page.goto('/memory');await expect(page.locator('.section-illustration')).toHaveAttribute('data-section','memory');
+ await page.goto('/memory');await expect(page.locator('.section-illustration')).toHaveCount(0);
  expect(observed.calls).toEqual([]);
 });
 
 test('artwork respects reduced motion and remains optional on private operator views',async({page})=>{
- await page.goto('/agents');await expect(page.locator('html')).toHaveAttribute('data-ready','true');
- await expect(page.locator('.section-illustration')).toBeHidden();
+ await page.goto('/factory');await expect(page.locator('html')).toHaveAttribute('data-ready','true');
+ await expect(page.locator('.section-illustration')).toHaveCount(0);
  await expect(page.locator('.section-composition')).not.toHaveClass(/has-artwork/);
- const observed=await publicPreview(page);await page.goto('/about');
+ const observed=await publicPreview(page);await page.goto('/home');
  await expect(page.locator('.section-illustration')).toBeVisible();
  expect(await page.locator('.section-image').evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
  const branches=page.locator('.blueprint');await expect(branches).toBeVisible();
- expect(await branches.evaluate(el=>getComputedStyle(el).position)).toBe('absolute');
+ expect(await branches.evaluate(el=>getComputedStyle(el).position)).not.toBe('absolute');
  expect(observed.errors).toEqual([]);expect(observed.calls).toEqual([]);
 });
 
@@ -86,5 +90,5 @@ test('keyboard access contrast and local image budget remain within the terminal
  });
  expect(measured.minimumTextContrast).toBeGreaterThanOrEqual(4.5);expect(measured.overflow).toBe(false);expect(measured.imagesWithoutAlt).toBe(0);
  expect(observed.calls).toEqual([]);expect(observed.errors).toEqual([]);
- await writeFile(`../artifacts/cinematic-review/accessibility-performance-${info.project.name}.json`,JSON.stringify({...measured,scope:'local Chromium fixtures; not a WCAG or production performance certification',privateRequests:observed.calls.length},null,2));
+ await writeFile(info.outputPath(`accessibility-performance.json`),JSON.stringify({...measured,scope:'local Chromium fixtures; not a WCAG or production performance certification',privateRequests:observed.calls.length},null,2));
 });
