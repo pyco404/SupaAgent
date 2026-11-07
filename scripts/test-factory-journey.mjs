@@ -10,7 +10,7 @@ const root=resolve(import.meta.dirname,'..'),out=resolve(root,'artifacts/functio
 const password=randomBytes(32).toString('hex');
 assert(process.env.SUPA_FACTORY_BROWSER_TOKEN?.startsWith('factory-synthetic-'));
 const accounts=['owner','viewer'].map(username=>({username,password,api_token:process.env[username==='owner'?'SUPA_FACTORY_BROWSER_TOKEN':'SUPA_FACTORY_VIEWER_TOKEN']}));
-const env={PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'development',SUPA_SITE_MODE:'staging',SUPA_SYNTHETIC_FACTORY_ENABLED:'true',SUPA_PUBLIC_LANDING_ENABLED:'true',SUPA_SITE_ORIGIN:origin,SUPA_BACKEND_URL:'http://127.0.0.1:3351',SUPA_AGENT_AVATARS_ENABLED:process.env.SUPA_FACTORY_AVATARS==='1'?'true':'false',SUPA_API_TOKEN:process.env.SUPA_FACTORY_SERVICE_TOKEN||'',SUPA_WEB_OPERATORS:JSON.stringify(accounts)};
+const env={PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,NODE_ENV:'development',SUPA_SITE_MODE:'staging',SUPA_SYNTHETIC_FACTORY_ENABLED:'true',SUPA_PUBLIC_LANDING_ENABLED:'true',SUPA_SITE_ORIGIN:origin,SUPA_BACKEND_URL:'http://127.0.0.1:3351',SUPA_AGENT_AVATARS_ENABLED:process.env.SUPA_FACTORY_AVATARS==='1'?'true':'false',SUPA_API_TOKEN:process.env.SUPA_FACTORY_SERVICE_TOKEN||'',SUPA_WEB_OPERATORS:JSON.stringify(accounts)};
 await mkdir(out,{recursive:true,mode:0o700});
 const server=spawn(process.execPath,['node_modules/next/dist/bin/next','dev','--webpack','--hostname','127.0.0.1','--port','3339'],{cwd:resolve(root,'web'),env,stdio:['ignore','pipe','pipe'],detached:true});
 let nextLog='';const scrub=chunk=>{let value=chunk.toString();for(const account of accounts)for(const secret of [account.password,account.api_token,Buffer.from(`${account.username}:${account.password}`).toString('base64')])value=value.split(secret).join('[redacted]');nextLog=(nextLog+value).slice(-100000);};server.stdout.on('data',scrub);server.stderr.on('data',scrub);
@@ -44,9 +44,21 @@ try{
   for(const b of await page.locator('article button').all())assert(await b.isDisabled());
   assert(await page.getByText('Purpose qualification: pending review',{exact:false}).count()>0);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.screenshot({path:resolve(out,`${name}-my-agents.png`),fullPage:true});
+  const ownedAgents=await (await context.request.get(origin+'/api/factory/agents')).json();
+  const created=ownedAgents.agents.find(a=>a.configuration.name===`Synthetic ${name} assistant`);assert(created);
+  const detailPath=origin+'/api/factory/agents/'+created.agent_id;
+  const detail=await context.request.get(detailPath);assert.equal(detail.status(),200);assert.deepEqual(await detail.json(),created);
+  assert.equal((await context.request.post(detailPath,{headers:{Origin:origin,'Content-Type':'application/json'},data:{name:'Unauthorized edit'}})).status(),404);
+  const unknown=await context.request.get(origin+'/api/factory/agents/99999999-9999-4999-8999-999999999999');assert.equal(unknown.status(),404);
+  if(process.env.SUPA_FACTORY_AVATARS!=='1'){
+   await page.getByRole('link',{name:'View details / configuration',exact:true}).last().click();await page.waitForURL(/\/my-agents\/[0-9a-f-]{36}$/);
+   await page.getByRole('heading',{name:`Synthetic ${name} assistant`,exact:true}).waitFor();
+   assert.equal(await page.locator('article').count(),1);assert.equal(await page.locator('article button:not(:disabled)').count(),0);
+  }
   if(process.env.SUPA_FACTORY_AVATARS==='1'){
    const article=page.locator('article').filter({has:page.getByRole('heading',{name:`Synthetic ${name} assistant`,exact:true})});
    await article.getByRole('link',{name:'View profile / edit avatar',exact:true}).click();await page.waitForURL(/\/my-agents\/[0-9a-f-]{36}$/);
+   assert.equal(await page.locator('article').count(),1,'single owner-authorized detail record');
    if(name==='mobile'){const meta=await (await context.request.get(origin+'/api/factory/avatars/'+page.url().split('/').pop())).json();assert.equal(meta.revision,0);assert.equal(meta.asset_id,null);}
    await page.locator('#avatar-preview').evaluate(img=>img.decode());assert.equal(await page.locator('#avatar-preview').evaluate(img=>img.naturalWidth),512);
    if(name==='desktop'){
