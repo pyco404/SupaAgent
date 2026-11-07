@@ -13,6 +13,8 @@ use supa_providers::Offline;
 use supa_runtime::Runtime;
 use tower::ServiceExt;
 use uuid::Uuid;
+#[path = "support/avatars.rs"]
+mod avatar_tests;
 const OWNER: &str = "factory-synthetic-owner-credential-00000000";
 const OTHER: &str = "factory-synthetic-other-credential-00000000";
 const VIEWER: &str = "factory-synthetic-viewer-credential-0000000";
@@ -97,6 +99,9 @@ fn app(s: Store, enabled: bool) -> Router {
         .unwrap();
     if enabled {
         state = state.with_synthetic_factory().unwrap();
+        if std::env::var("SUPA_FACTORY_AVATARS").as_deref() == Ok("1") {
+            state = state.with_agent_avatars().unwrap();
+        }
     }
     router(state)
 }
@@ -160,6 +165,13 @@ async fn factory_journey() {
         .await
         .unwrap();
     sqlx::raw_sql("CREATE ROLE supa_factory_runtime LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS; REVOKE CREATE ON SCHEMA public FROM PUBLIC; GRANT USAGE ON SCHEMA public,agent_factory TO supa_factory_runtime; GRANT SELECT ON application_epoch,agent_access,_sqlx_migrations TO supa_factory_runtime; GRANT EXECUTE ON FUNCTION agent_factory.create_private(uuid,uuid,jsonb,jsonb,jsonb,jsonb),agent_factory.owned(uuid),agent_factory.managed(uuid) TO supa_factory_runtime;").execute(admin.pool()).await.unwrap();
+    if std::env::var("SUPA_FACTORY_AVATARS").as_deref() == Ok("1") {
+        sqlx::raw_sql(include_str!("../../../deployment/agent-avatars.sql"))
+            .execute(admin.pool())
+            .await
+            .unwrap();
+        sqlx::raw_sql("GRANT USAGE ON SCHEMA agent_avatars TO supa_factory_runtime; GRANT EXECUTE ON FUNCTION agent_avatars.command(uuid,text,jsonb),agent_avatars.create_agent(uuid,uuid,jsonb,jsonb,jsonb,jsonb,uuid) TO supa_factory_runtime;").execute(admin.pool()).await.unwrap();
+    }
     let s = runtime_store().await;
     let a = app(s.clone(), true);
     for (token, code) in [
@@ -346,6 +358,9 @@ async fn factory_journey() {
     assert_eq!(left.0, 200);
     assert_eq!(right.0, 200);
     assert_ne!(left.1["agent_id"], right.1["agent_id"]);
+    if std::env::var("SUPA_FACTORY_AVATARS").as_deref() == Ok("1") {
+        avatar_tests::exercise(&a, &admin, &s, agent).await;
+    }
     // Full browser -> Next -> Rust -> PostgreSQL path. No live URLs or credentials.
     if std::env::var("SUPA_FACTORY_BROWSER").as_deref() == Ok("1") {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:3351")
@@ -361,6 +376,7 @@ async fn factory_journey() {
                 .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."))
                 .env("SUPA_FACTORY_BROWSER_TOKEN", OWNER)
                 .env("SUPA_FACTORY_VIEWER_TOKEN", VIEWER)
+                .env("SUPA_FACTORY_SERVICE_TOKEN", SERVICE)
                 .status()
                 .unwrap()
         })
@@ -378,6 +394,22 @@ async fn factory_journey() {
             .len()
             >= 1
     );
+    if std::env::var("SUPA_FACTORY_AVATARS").as_deref() == Ok("1") {
+        let body = json!({"request_id":id(500),"expected_revision":2,"public":false,"revoked":true,"valid_from":chrono::Utc::now(),"expires_at":chrono::Utc::now(),"categories":[]});
+        sqlx::query("INSERT INTO ecosystem_social.consents(request_id,agent_id,creator_id,revision,body) VALUES($1,$2,$3,3,$4)").bind(id(500)).bind(agent).bind(id(1)).bind(body).execute(admin.pool()).await.unwrap();
+        assert_eq!(
+            http(
+                &a,
+                Some(SERVICE),
+                "GET",
+                &format!("/public/agent-avatars/{agent}/2"),
+                Value::Null
+            )
+            .await
+            .0,
+            404
+        );
+    }
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM agents")
         .fetch_one(admin.pool())
         .await
@@ -394,6 +426,28 @@ async fn factory_restart_recovery() {
     let before = http(&a, Some(OWNER), "GET", "/factory/agents", Value::Null).await;
     assert_eq!(before.0, 200);
     assert!(!before.1["agents"].as_array().unwrap().is_empty());
+    if std::env::var("SUPA_FACTORY_AVATARS").as_deref() == Ok("1") {
+        let matching:i64=sqlx::query_scalar("SELECT count(*) FROM agent_avatars.token_images t JOIN agent_avatars.assets a ON a.id=t.asset_id WHERE t.sha256=encode(sha256(a.png),'hex')").fetch_one(admin.pool()).await.unwrap();
+        assert_eq!(
+            matching, 2,
+            "both immutable token image snapshots must survive PostgreSQL restart"
+        );
+        assert!(
+            http(
+                &a,
+                Some(SERVICE),
+                "GET",
+                "/public/agent-profiles",
+                Value::Null
+            )
+            .await
+            .1["agents"]
+                .as_array()
+                .unwrap()
+                .is_empty(),
+            "revoked public consent must remain revoked after restart"
+        );
+    }
     let replay = http(&a, Some(OWNER), "POST", "/factory/agents", request(10)).await;
     assert_eq!(replay.0, 200);
     assert_eq!(
