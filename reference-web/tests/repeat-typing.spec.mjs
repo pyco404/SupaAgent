@@ -28,26 +28,62 @@ async function complete(page){
  await expect(page.locator('.skip-typing')).toBeHidden();
 }
 
-test('first visits type; repeat navigation, history and refresh show complete text',async({page})=>{
+test('reload resets first-visit typing; same-document revisits reveal rows in order',async({page})=>{
+ await page.addInitScript(()=>sessionStorage.setItem('supa.typed-sections.v1.public',JSON.stringify(['about','factory'])));
  await page.emulateMedia({reducedMotion:'no-preference'});const denied=await publicPreview(page);
  await page.goto('/about');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await expect(page.locator('.buffer > [hidden]').first()).toBeAttached();
  await page.locator('.skip-typing').click();await complete(page);
  await choose(page,'factory');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
- // Leave while typing: the canceled timer must never overwrite the new page.
- await choose(page,'about');await complete(page);
+ // Leave while typing: the canceled character timer must never overwrite the new page.
+ await choose(page,'about');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','revealing');
+ await expect(page.locator('.buffer > :first-child')).toHaveText('supa@public ~');
+ expect(await page.locator('.buffer > [hidden]').count()).toBeGreaterThan(0);await complete(page);
  await page.goBack();await expect(page).toHaveURL(/\/factory$/);await complete(page);
  await page.goForward();await expect(page).toHaveURL(/\/about$/);await complete(page);
- await page.reload();await complete(page);await expect(page.locator('.buffer')).toContainText('Supa Agency');
- await page.waitForTimeout(350);await complete(page);
- const ids=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('supa.typed-sections.v1.public')));
- expect(ids.sort()).toEqual(['about','factory']);expect(denied).toEqual([]);
+ await page.reload();await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await page.locator('.skip-typing').click();await complete(page);
+ // Every section is a first visit again after reload, not only the current route.
+ await choose(page,'factory');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await page.locator('.skip-typing').click();await complete(page);
+ await choose(page,'about');await complete(page);expect(denied).toEqual([]);
 });
 
-test('blocked browser storage still permits instant repeat visits',async({page})=>{
+test('each public section types on its first visit after reload',async({page})=>{
+ await page.emulateMedia({reducedMotion:'no-preference'});const denied=await publicPreview(page);
+ await page.goto('/home');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await page.locator('.skip-typing').click();await complete(page);
+ for(const section of publicNavigation.filter(section=>section.id!=='home')){
+  await choose(page,section.id);await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+  await page.locator('.skip-typing').click();await complete(page);
+ }
+ await page.reload();await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await page.locator('.skip-typing').click();await complete(page);
+ for(const section of publicNavigation.filter(section=>section.id!=='about')){
+  await choose(page,section.id);await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+  await page.locator('.skip-typing').click();await complete(page);
+ }
+ expect(denied).toEqual([]);
+});
+
+test('blocked browser storage still permits ordered fast revisits and reload typing',async({page})=>{
  await page.addInitScript(()=>{Storage.prototype.getItem=()=>{throw new Error('Unavailable');};Storage.prototype.setItem=()=>{throw new Error('Unavailable');};});
  await page.emulateMedia({reducedMotion:'no-preference'});const denied=await publicPreview(page);
  await page.goto('/about');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
  await choose(page,'factory');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await choose(page,'about');await complete(page);
+ await page.reload();await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await page.locator('.skip-typing').click();await complete(page);expect(denied).toEqual([]);
+});
+
+test('interrupted row reveals cannot overwrite a new section and reduced motion finishes immediately',async({page})=>{
+ await page.emulateMedia({reducedMotion:'no-preference'});const denied=await publicPreview(page);
+ await page.goto('/about');await page.locator('.skip-typing').click();await complete(page);
+ await choose(page,'factory');await page.locator('.skip-typing').click();await complete(page);
+ await choose(page,'about');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','revealing');
+ await choose(page,'social');await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await page.waitForTimeout(800);await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+ await page.emulateMedia({reducedMotion:'reduce'});await complete(page);await expect(page.locator('.buffer')).toContainText('Social');
  await choose(page,'about');await complete(page);expect(denied).toEqual([]);
 });
 
