@@ -3,6 +3,33 @@ import {mkdir} from 'node:fs/promises';
 
 const local='http://127.0.0.1:3336',origin='https://supaagency.xyz';
 const basic=(name)=>'Basic '+Buffer.from(`${name}:${(name==='visitor'?'factory-visitor-fixture-':'factory-fixture-only-').repeat(3)}`).toString('base64');
+// Page routes take precedence; this fallback prevents a late fixture request
+// from reaching the real public hostname after the mapping is removed.
+test.beforeEach(async({context})=>{await context.route('**/*',route=>route.abort());});
+test.afterEach(async({page})=>{await page.waitForLoadState('networkidle',{timeout:10000});await page.unrouteAll({behavior:'wait'});});
+async function mappedResponse(route,options){
+ const request=route.request(),image=/^\/public\/assets\/supa-[a-z]+-(thumb|480|960)\.(webp|avif)$/.test(new URL(request.url()).pathname);
+ try{const response=await route.fetch(options);await route.fulfill({response});}
+ catch(error){
+  // Fast navigation can cancel an old decorative image while its loopback
+  // transport completes. Never excuse an active image or a protected request.
+  if(image&&request.failure()?.errorText==='net::ERR_ABORTED'&&String(error.message).includes('Route is already handled'))return;
+  throw error;
+ }
+}
+
+test('Next serves only named public artwork variants without widening private access',async({request})=>{
+ for(const variant of ['thumb.webp','480.webp','960.webp','960.avif']){
+  const path='/public/assets/supa-agents-'+variant;
+  const response=await request.get(local+path,{headers:{host:'supaagency.xyz'}});
+  expect(response.status()).toBe(200);expect(response.headers()['content-type']).toContain(variant.endsWith('avif')?'image/avif':'image/webp');
+  expect(response.headers()['x-content-type-options']).toBe('nosniff');
+  expect((await response.body()).length).toBeGreaterThan(1000);
+  expect((await request.get(local+path)).status()).toBe(401);
+  expect((await request.post(local+path,{headers:{host:'supaagency.xyz',origin:'https://supaagency.xyz'}})).status()).toBe(401);
+ }
+ for(const path of ['/api/operator-status','/api/agents','/public/assets/private.webp','/docs/cinematic-artwork-inventory.json'])expect((await request.get(local+path,{headers:{host:'supaagency.xyz'}})).status()).toBe(401);
+});
 
 test('public Factory flow preserves nine-section navigation and never requests private records',async({page},info)=>{
  const privateRequests=[],writes=[],errors=[];
@@ -13,9 +40,8 @@ test('public Factory flow preserves nine-section navigation and never requests p
   if(url.pathname.startsWith('/api/')){privateRequests.push(url.pathname);return route.abort();}
   if(url.origin!==origin)return route.abort();
   // Real Next proxy + route handler; only transport is mapped to loopback.
-  const response=await route.fetch({url:local+url.pathname+url.search,
+  await mappedResponse(route,{url:local+url.pathname+url.search,
    headers:{...req.headers(),host:'supaagency.xyz'},maxRedirects:0});
-  await route.fulfill({response});
  });
  await page.goto(origin);await expect(page.locator('html')).toHaveAttribute('data-ready','true');
  await page.locator('.enter').click();await expect(page).toHaveURL(origin+'/home');
