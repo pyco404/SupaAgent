@@ -9,7 +9,7 @@ test('public projection is a fixed editorial allowlist with no live record input
   for(const item of publicNavigation){
    const rows=publicSectionView(item.id,{agents:[{name:'PRIVATE_STAGING_SENTINEL'}]});
    assert.deepEqual(rows,publicSectionView(item.id));
-   assert.ok(rows.every(row=>['command','notice','text','heading','navigate','link','disabled','github'].includes(row.kind)));
+   assert.ok(rows.every(row=>['command','notice','text','heading','navigate','link','disabled','github','artwork'].includes(row.kind)));
    assert.ok(!JSON.stringify(rows).includes('PRIVATE_STAGING_SENTINEL'));
   }
   assert.match(JSON.stringify(publicSectionView('agents')),/No public agent profiles are available yet/);
@@ -40,4 +40,14 @@ test('Factory separates agent creation, qualification and optional permanent tok
  assert.ok(rows.some(row=>row.href==='/my-agents'));
  assert.ok(!rows.some(row=>['launch','agent','schedule','live','economy'].includes(row.kind)));
  assert.equal(publicNavigation.some(row=>row.id==='token-launch'||row.id==='my-agents'),false);
+});
+
+// Editorial placement is explicit public content; catalog entries alone never create images.
+test('public sections deliberately select zero, one or multiple approved illustrations',()=>{
+ const expected={home:['home'],agents:['agents'],intelligence:[],memory:[],economy:[],social:[],trading:[],factory:['factory','intelligence'],about:[]};
+ for(const [id,art]of Object.entries(expected)){
+  const rows=publicSectionView(id);assert.deepEqual(rows.filter(row=>row.kind==='artwork').map(row=>row.id),art);
+  for(const row of rows.filter(row=>row.kind==='artwork')){const index=rows.indexOf(row);assert.ok(index>2);assert.equal(rows[index-1].kind,'text');assert.equal(Object.keys(row).length,2);}
+ }
+ assert.deepEqual(publicSectionView('unknown').filter(row=>row.kind==='artwork'),[]);
 });
