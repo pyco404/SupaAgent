@@ -1,11 +1,67 @@
 # Factory: purposeful agent creation
 
+## Current functional integration — synthetic local validation
+
+The implementation reuses the existing signed synthetic sign-in, owner ACLs,
+transactional Factory extension, purpose/consent model and optional avatar
+pipeline. This development phase does not change the published website, Railway
+configuration, API deployment, live database or existing security gates.
+
+Owner-only agent details now have a dedicated `GET /factory/agents/{id}` Rust
+endpoint and strict Next.js adapter at `/api/factory/agents/{id}`. Both resolve
+through the creator-bound Factory projection with a current owner ACL. Missing,
+other-owner and revoked IDs receive the same unavailable response. There is no
+fallback to a generic accessible-agent list and no new table permissions. Detail
+POSTs are unavailable; configuration is displayed read-only. Editing saved goals,
+capabilities or execution authority is outside this paused-creation pilot.
+
+`/my-agents/{id}` works even when avatar uploads are disabled. The My Agents
+workspace always links to each saved agent's detail/configuration view; image
+editing is offered only when the separately gated avatar pipeline is available.
+Start, Pause, Resume, Stop and token launch stay disabled. Creation requires no
+token, paid model or wallet. Requested capabilities are recorded for review;
+autonomy remains disabled, enabled capabilities empty and spending fixed at $0.
+
+Validation includes synthetic Sign In → Factory → review → create → My Agents →
+owner details on desktop/mobile, direct detail API reads, unknown-ID/write
+rejection, credential expiry, other-owner denial, revocation and actual database
+restart. Avatar-free detail routing/adapter tests do not depend on the upload
+flag. The existing PostgreSQL suite also verifies atomic rollback, concurrent
+idempotency, schema/financial write denial and private/public image boundaries.
+
+Run `SUPA_FACTORY_TEST_RAM=1 python3 scripts/validate-agent-factory.py` on a host
+with sufficient `/dev/shm` capacity when disk space is limited. The opt-in runner
+copies the existing build cache and creates only its own private RAM data
+folder; it retains the strict newly generated `/tmp` socket target guard. It
+stops and removes only its own disposable cluster/cache, preserving test logs
+and browser screenshots in `artifacts/functional-factory`. No existing database
+URL, token, account or database path is accepted as a test target.
+
+Current disposable validation passed on PostgreSQL 18.3, including a real
+stop/start and restricted runtime SQL. Desktop and mobile each created a
+synthetic assistant, found its persistent ID in My Agents and read its detail
+configuration. Desktop exercised upload/crop/replacement; mobile skipped upload
+and received the deterministic default. Session/adapter tests (7), image-codec
+tests (5), TypeScript, lint and public-boundary regressions passed. The first
+browser attempt crashed on the constrained local host; after moving browser
+temporary files to RAM and releasing the copied compiler cache, the complete
+journey and restart checks passed. No assertion or security gate was removed.
+
+Release still requires separate source synchronization, newly scanned API and
+frontend images, private publication, reviewed synthetic database extensions /
+EXECUTE grants, bounded synthetic account provisioning and controlled deployment.
+Both Factory and avatar feature flags remain default-off. No public registration
+or sensitive records may be introduced before independent encrypted-backup
+recovery and security validation are complete. Image/container scans are release
+gates; local test success does not replace them.
+
 ## Authenticated synthetic creation milestone — local, November 7, 2026
 
-The local pilot implements **Sign In → Factory → review configuration → Create
-Agent → My Agents**. It is disabled by default and has not been pushed, built
-into release images, deployed or applied to a live database. The historical
-preview description below documents the currently released interface.
+The existing local pilot implements **Sign In → Factory → review configuration
+→ Create Agent → My Agents**. Its source is already present in the application;
+the feature remains disabled by default and is not activated against the live
+Railway database. The preview description below records the released,
+non-creating interface. This section describes the reused foundation.
 
 Reuse: existing named server-side credentials, Rust authentication middleware,
 principal UUIDs and owner ACLs; `Agent`, personality, goal and capability models;
