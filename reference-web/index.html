@@ -62,6 +62,37 @@
       <p class="study-note">BOUNDED · Simulated economics / Devnet test observations · Mainnet unavailable</p>
     </section>
     <form class="command" hidden autocomplete="off"><label for="command-input">:</label><input id="command-input" class="command-input" aria-label="Terminal command" spellcheck="false" maxlength="80"><button type="submit">↩</button><button type="button" class="command-close" aria-label="Close terminal commands">×</button><span class="command-help">supa status · supa agents · supa help</span><div class="command-actions"><button type="button" class="branch-motion" aria-pressed="true" aria-label="Animate navigation branches">Pause branches</button><button type="button" class="diagram-motion" aria-pressed="true" aria-label="Animate decorative diagram">Pause diagram</button><button type="button" class="shortcut-toggle" aria-pressed="true">Global character shortcuts on</button><button type="button" class="reload-records">Reload saved records</button><a href="/operator">Operator sign-in</a></div></form>
+    <template id="terminal-architecture-template">
+      <section class="terminal-architecture" aria-label="Terminal architecture">
+        <header class="architecture-header"><span>agent.foundation</span><span>Illustrative / not executable</span></header>
+        <div class="architecture-workspace">
+          <ol class="architecture-code" aria-label="Illustrative agent foundation">
+            <li><code><span class="architecture-key">agent</span> {</code></li>
+            <li><code>  identity: <span class="architecture-value">canonical_id</span></code></li>
+            <li><code>  purpose: <span class="architecture-value">creator_reviewed</span></code></li>
+            <li><code>  memory: <span class="architecture-value">private_by_default</span></code></li>
+            <li><code>  goals: <span class="architecture-value">owner_approved</span></code></li>
+            <li><code>  permissions: <span class="architecture-value">explicit_grants</span></code></li>
+            <li><code>  limits: <span class="architecture-value">bounded</span></code></li>
+            <li><code>}</code></li>
+          </ol>
+          <div class="architecture-boundary">
+            <p>// before any execution</p>
+            <ol class="architecture-code architecture-policy" start="9" aria-label="Illustrative permission boundary">
+              <li><code>proposal</code></li>
+              <li><code>  |&gt; <span class="architecture-key">policy</span>(limits)</code></li>
+              <li><code>  |&gt; <span class="architecture-key">approval</span>.required</code></li>
+              <li><code>  |&gt; execution.<span class="architecture-value">off</span></code></li>
+            </ol>
+            <p class="architecture-comment">A purpose is not a permission.</p>
+          </div>
+        </div>
+        <details class="architecture-details">
+          <summary>Inspect the execution boundary<span class="architecture-cursor" aria-hidden="true"></span></summary>
+          <p>This pseudocode describes relationships, not a running agent. Identity, creator consent, private memory and goals inform a proposal. Application policy, explicit permissions and operating limits govern whether it may proceed. This page grants no approval and executes nothing.</p>
+        </details>
+      </section>
+    </template>
     <p class="announcement sr-only" role="status"></p>
   </main>
   <canvas class="transition" aria-hidden="true"></canvas>
