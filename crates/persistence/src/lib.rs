@@ -1,4 +1,5 @@
 mod access;
+mod avatars;
 mod factory;
 pub use factory::FactoryRequest;
 mod controlled;
