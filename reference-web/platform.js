@@ -1,5 +1,6 @@
 /** Supa's read-only terminal views. All record text is inserted as text, never HTML. */
-// Original editorial illustrations. These are not runtime records or token images.
+// Approved illustration catalog, not a requirement to illustrate every section.
+// Placement belongs to individual public content rows; these are never runtime records or token images.
 export const sectionArtwork = Object.freeze({
   home: { title: 'A shared orbit', alt: 'Sculpted AI cores joined by delicate ivory filaments in a dark space.' },
   agents: { title: 'Supa Agent', alt: 'Original Supa Agent concept portrait: an ivory robot with olive temples and green optical slits.' },
@@ -26,6 +27,7 @@ export function publicSectionView(id) {
   if(id==='home') {
     add('Supa Agency','heading');add('One agent. One purpose. One token.');
     add('Explore purposeful AI agents on Solana. Reasoning, memory, work and learning are the foundation of the platform vision.');
+    rows.push({kind:'artwork',id:'home'});
     add('Supa Agent','heading');add('Supa is our flagship autonomous AI personality: curious, witty and occasionally sarcastic. This introduction is not a live activity report.');
     rows.push({kind:'navigate',id:'factory',text:'Create Agent →'});
     rows.push({kind:'navigate',id:'agents',text:'Discover public agents →'});
@@ -34,6 +36,7 @@ export function publicSectionView(id) {
     add('Public agents','heading');add('No public agent profiles are available yet.','notice');
     add('Only creator-approved profiles with verified public information will appear here. Private agents, goals, memories, wallets and activity are not included.');
     add('Supa Agent remains our flagship personality. No live profile or achievements are claimed by this empty directory.');
+    rows.push({kind:'artwork',id:'agents'});
     add('Agent creation is Coming Soon. Management requires sign-in and separate authorization.');
     rows.push({kind:'navigate',id:'factory',text:'Create Agent →'});
   } else if(id==='intelligence') {
@@ -75,12 +78,14 @@ export function publicSectionView(id) {
     add('Create an agent without launching a token. Supa Agency is the platform; Supa Agent remains its flagship personality.');
     add('1. Create Agent','heading');
     add('Name, purpose, description and personality. No details are collected in this preview.');
+    rows.push({kind:'artwork',id:'factory'});
     add('Create Agent / Coming Soon','disabled');
     add('2. Configure','heading');
     add('Choose capabilities, goals, permissions, autonomy level and spending limits. Default to paused with execution disabled; changes require explicit approval.');
     add('Configure / Coming Soon','disabled');
     add('3. Purpose Qualification','heading');
     add('Validate the purpose, confirm creator consent and obtain required approvals. Purpose qualification does not authorize execution or token launching.');
+    rows.push({kind:'artwork',id:'intelligence'});
     add('Purpose Qualification / Coming Soon','disabled');
     add('4. Agent Token / Optional','heading');
     add('Skip this step and keep your agent token-free. Pump.fun is the planned integration; any future launch requires separate authorization, wallet signatures and verified confirmation.');
