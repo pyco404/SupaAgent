@@ -42,7 +42,8 @@ export function publicLandingRequest(request: Request): boolean {
       (/^\/api\/public\/agent-profiles(?:\/[0-9a-f-]{36})?$/.test(path) || /^\/api\/public\/agent-avatars\/[0-9a-f-]{36}\/[1-9][0-9]?$/.test(path) || /^\/agents\/[0-9a-f-]{36}$/.test(path)))
     || ["/", ...publicSectionPaths, "/robots.txt"].includes(path)
     || ["/style.css", "/app.js", "/scene.js", "/wheel.js", "/platform.js"].includes(path)
-    || /^\/public\/(assets\/[a-z0-9-]+\.svg|fonts\/[a-zA-Z0-9._-]+\.(woff2|ttf|txt))$/.test(path);
+    || /^\/public\/(assets\/[a-z0-9-]+\.svg|fonts\/[a-zA-Z0-9._-]+\.(woff2|ttf|txt))$/.test(path)
+    || /^\/public\/assets\/supa-(home|agents|intelligence|memory|economy|social|trading|factory|about)-(?:(thumb|480|960)\.webp|960\.avif)$/.test(path);
 }
 
 export function localRequest(request: Request): boolean {
