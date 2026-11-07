@@ -34,6 +34,9 @@ export function createWheel({ host, canvas, items, onSelect, reducedMotion = fal
       thumbnail.alt = "";
       thumbnail.draggable = false;
       thumbnail.decoding = "async";
+      thumbnail.loading = "lazy";
+      thumbnail.width = 320;
+      thumbnail.height = 320;
       thumbnail.referrerPolicy = "no-referrer";
       button.append(thumbnail);
     } else if(entry.preview) {
