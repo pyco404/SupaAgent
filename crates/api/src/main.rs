@@ -25,6 +25,12 @@ async fn run() -> Result<()> {
         private_staging,
     )?;
     let scheduler_enabled = flag("SUPA_API_SCHEDULER_ENABLED", false)?;
+    let synthetic_factory = flag("SUPA_SYNTHETIC_FACTORY_ENABLED", false)?;
+    if synthetic_factory
+        && (!private_staging || scheduler_enabled || flag("SUPA_WORKER_ENABLED", false)?)
+    {
+        return Err(Error::Denied);
+    }
     let token = std::env::var("SUPA_API_TOKEN").map_err(|_| Error::Invalid)?;
     let provider = std::env::var("SUPA_PROVIDER").unwrap_or_else(|_| "offline".into());
     let credentials: Vec<supa_api::OperatorCredential> = std::env::var("SUPA_OPERATOR_CREDENTIALS")
@@ -155,6 +161,21 @@ async fn run() -> Result<()> {
         store.verify_runtime_schema().await?;
     } else {
         store.migrate().await?;
+    }
+    if synthetic_factory {
+        // This preview cannot start recovery writers, monitors, workers or schedulers.
+        let runtime = Runtime::new(store.clone(), Arc::new(Offline));
+        let state = AppState::new(store, runtime, token)?
+            .with_credentials(credentials)?
+            .with_credential_deadlines(deadlines)?
+            .with_synthetic_factory()?;
+        let listener = tokio::net::TcpListener::bind(bind)
+            .await
+            .map_err(|_| Error::Invalid)?;
+        return axum::serve(listener, router(state))
+            .with_graceful_shutdown(shutdown())
+            .await
+            .map_err(|_| Error::Invalid);
     }
     store.recover().await?;
     let runtime = Runtime::new(store.clone(), reasoner);
