@@ -36,7 +36,7 @@ export async function GET(request: Request, context: { params: Promise<{ path?: 
   const path = "/"+parts.join("/");
   if (path.startsWith("/api/public/")) return avatarRoute(request,path);
   if (path.startsWith("/api/factory/")) return factoryRoute(request, path);
-  if (factoryEnabled() && (["/sign-in", "/factory/create", "/my-agents"].includes(path) || (avatarsEnabled() && /^\/my-agents\/[0-9a-f-]{36}$/.test(path)))) {
+  if (factoryEnabled() && (["/sign-in", "/factory/create", "/my-agents"].includes(path) || /^\/my-agents\/[0-9a-f-]{36}$/.test(path))) {
     if (path !== "/sign-in" && !factoryAuthorization(request)) return new Response(null, {status:303,headers:{...headers,Location:"/sign-in"}});
     return new Response((await readFile(resolve(process.cwd(), "../reference-web/factory-create.html"),"utf8")).replace('<html lang="en">',avatarsEnabled()?'<html lang="en" data-avatars-enabled="true">':'<html lang="en">'),{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
   }
