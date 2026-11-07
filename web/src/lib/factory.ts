@@ -39,12 +39,14 @@ export async function factoryRoute(request: Request, path: string): Promise<Resp
       return Response.json({ signed_in: true, expires_in_seconds: 900 }, { headers: { ...headers, "Set-Cookie": `${factoryCookie}=${session}; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=900` } });
     } catch { return fail("invalid_sign_in", 400); }
   }
-  if (path !== "/api/factory/agents" || !["GET", "POST"].includes(request.method)) return fail("not_found", 404);
+  const detail = /^\/api\/factory\/agents\/([0-9a-f-]{36})$/.exec(path)?.[1];
+  if (detail && (!z.uuid().safeParse(detail).success || request.method !== "GET")) return fail("not_found", 404);
+  if (!detail && (path !== "/api/factory/agents" || !["GET", "POST"].includes(request.method))) return fail("not_found", 404);
   const authorization = factoryAuthorization(request);
   if (!authorization) return fail("sign_in_required", 401);
-  return backend(request, request.method as "GET" | "POST", authorization);
+  return backend(request, request.method as "GET" | "POST", authorization, detail);
 }
-async function backend(request: Request, method: "GET" | "POST", authorization: string): Promise<Response> {
+async function backend(request: Request, method: "GET" | "POST", authorization: string, detail?: string): Promise<Response> {
   const token = operatorToken(authorization);
   if (!token) return fail("sign_in_required", 401);
   let body;
@@ -59,10 +61,10 @@ async function backend(request: Request, method: "GET" | "POST", authorization: 
     const base = new URL(process.env.SUPA_BACKEND_URL ?? "");
     const privateHost = process.env.SUPA_SITE_MODE === "staging" && /^[a-z0-9][a-z0-9-]*\.railway\.internal$/.test(base.hostname);
     if (base.protocol !== "http:" || !(["127.0.0.1", "[::1]"].includes(base.hostname) || privateHost) || base.username || base.password || base.pathname !== "/" || base.search || base.hash) return fail("backend_configuration_invalid", 503);
-    const response = await fetch(new URL("/factory/agents", base), { method, headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(7000) });
-    if (!response.ok) { await response.body?.cancel(); return fail(response.status === 409 ? "submission_conflict" : "creation_not_authorized_or_unavailable", [400, 401, 403, 409].includes(response.status) ? response.status : 503); }
+    const response = await fetch(new URL("/factory/agents" + (detail ? `/${detail}` : ""), base), { method, headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(7000) });
+    if (!response.ok) { await response.body?.cancel(); return fail(response.status === 409 ? "submission_conflict" : "creation_not_authorized_or_unavailable", [400, 401, 403, 404, 409].includes(response.status) ? response.status : 503); }
     if (!response.headers.get("content-type")?.includes("application/json")) return fail("backend_contract_invalid", 502);
-    const data = (method === "GET" ? z.object({ agents: z.array(agent).max(100) }).strict() : agent).safeParse(await bounded(response, 1_500_000));
+    const data = (method === "GET" && !detail ? z.object({ agents: z.array(agent).max(100) }).strict() : agent).safeParse(await bounded(response, 1_500_000));
     return data.success ? Response.json(data.data, { headers }) : fail("backend_contract_invalid", 502);
   } catch { return fail("backend_unavailable_no_automatic_retry", 503); }
 }
