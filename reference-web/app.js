@@ -216,20 +216,6 @@ async function select(index,background=false){
   const buffer=$('.buffer');
   if(!background){
     $('.tab-file').textContent=item.label.split(' · ')[0];$('.winbar').textContent=`supa@${publicLanding?'public':'local'} — ${item.label} / read-only`;
-    const artwork=publicLanding?sectionArtwork[item.id]:null;
-    $('.section-composition').classList.toggle('has-artwork',!!artwork);
-    $('.section-illustration').hidden=!artwork;
-    if(artwork){
-      let image=$('.section-image');
-      if(!image){image=node('img','section-image');image.width=960;image.height=960;image.decoding='async';$('.section-illustration picture').append(image);}
-      const stem=`/public/assets/supa-${item.id}`;
-      image.alt=artwork.alt;image.sizes='(max-width:700px) 70vw, 340px';
-      image.srcset=`${stem}-480.webp 480w, ${stem}-960.webp 960w`;
-      $('.section-avif').srcset=`${stem}-960.avif`;
-      image.src=`${stem}-480.webp`;
-      $('.section-art-title').textContent=artwork.title;
-      $('.section-illustration').dataset.section=item.id;
-    }
     buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
     $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
     line(`supa@${publicLanding?'public':'local'} ~`,'prompt');line(publicLanding?'Opening public view…':'Loading saved view…','prompt');
@@ -250,6 +236,16 @@ async function select(index,background=false){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
     }else if(row.kind==='public-agent'){
       const figure=document.createElement('figure'),image=document.createElement('img'),link=document.createElement('a');image.src='/api/public/agent-avatars/'+row.agent.agent_id+'/'+row.agent.revision;image.width=96;image.height=96;image.alt='Avatar for '+row.agent.name;image.loading='lazy';link.href='/agents/'+row.agent.agent_id;link.textContent=row.agent.name;figure.append(image,link,node('p','terminal-line',row.agent.summary));buffer.append(figure);
+    }else if(row.kind==='artwork'){
+      if(!publicLanding||!Object.hasOwn(sectionArtwork,row.id))continue;
+      const artwork=sectionArtwork[row.id],stem=`/public/assets/supa-${row.id}`;
+      const figure=node('figure','section-illustration'),picture=node('picture'),source=node('source'),image=node('img','section-image'),caption=node('figcaption');
+      figure.dataset.section=row.id;source.type='image/avif';source.srcset=`${stem}-960.avif 960w`;
+      image.width=960;image.height=540;image.loading='lazy';image.decoding='async';image.alt=artwork.alt;
+      image.sizes='(max-width:700px) calc(100vw - 56px), (max-width:1100px) 55vw, 604px';
+      image.srcset=`${stem}-480.webp 480w, ${stem}-960.webp 960w`;image.src=`${stem}-480.webp`;
+      picture.append(source,image);caption.append(node('span','section-art-title',artwork.title),node('span','','Concept artwork / not live activity'));
+      figure.append(picture,caption);buffer.append(figure);
     }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
     else if(row.kind==='economy')buffer.append(economyPanel(row.view,row.agentId));
     else if(row.kind==='livework')buffer.append(liveWorkPanel(row.view,row.agentId));
