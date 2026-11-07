@@ -1,4 +1,6 @@
 mod access;
+mod avatars;
+pub use avatars::image_receipt_valid;
 mod autonomy;
 mod controlled;
 mod economy;
@@ -35,6 +37,7 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct AppState {
     synthetic_factory_enabled: bool,
+    agent_avatars_enabled: bool,
     pub live_work_enabled: bool,
     pub controlled: Option<supa_runtime::controlled::ControlledInference>,
     pub store: Store,
@@ -58,6 +61,7 @@ impl AppState {
         }
         Ok(Self {
             synthetic_factory_enabled: false,
+            agent_avatars_enabled: false,
             controlled: None,
             live_work_enabled: false,
             store,
@@ -167,7 +171,11 @@ async fn auth(State(state): State<AppState>, mut request: Request, next: Next) -
     }
     let path = request.uri().path();
     let public = request.method() == axum::http::Method::GET
-        && matches!(path, "/health" | "/directory" | "/autonomy" | "/services");
+        && (matches!(
+            path,
+            "/health" | "/directory" | "/autonomy" | "/services" | "/public/agent-profiles"
+        ) || path.starts_with("/public/agent-profiles/")
+            || path.starts_with("/public/agent-avatars/"));
     if !public {
         let Some(actor) = principal else {
             return ApiError(Error::Denied).into_response();
@@ -232,6 +240,7 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(access::routes())
         .merge(factory::routes())
+        .merge(avatars::routes())
         .route("/operator-status", get(operator_status::status))
         .merge(economy::routes())
         .merge(ecosystem::routes())
