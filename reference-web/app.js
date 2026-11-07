@@ -3,7 +3,7 @@
 // Persistent agents. Application-enforced permissions.
 import { createWheel } from './wheel.js';
 import { createScenes } from './scene.js';
-import { navigation as privateNavigation, publicNavigation, publicSectionView, githubNotice, overview, sectionView, read, units } from './platform.js';
+import { navigation as privateNavigation, publicNavigation, publicSectionView, sectionArtwork, githubNotice, overview, sectionView, read, units } from './platform.js';
 
 const $ = selector => document.querySelector(selector);
 const root = document.documentElement;
@@ -204,6 +204,20 @@ async function select(index,background=false){
   const buffer=$('.buffer');
   if(!background){
     $('.tab-file').textContent=item.label.split(' · ')[0];$('.winbar').textContent=`supa@${publicLanding?'public':'local'} — ${item.label} / read-only`;
+    const artwork=publicLanding?sectionArtwork[item.id]:null;
+    $('.section-composition').classList.toggle('has-artwork',!!artwork);
+    $('.section-illustration').hidden=!artwork;
+    if(artwork){
+      let image=$('.section-image');
+      if(!image){image=node('img','section-image');image.width=960;image.height=960;image.decoding='async';$('.section-illustration picture').append(image);}
+      const stem=`/public/assets/supa-${item.id}`;
+      image.alt=artwork.alt;image.sizes='(max-width:700px) 70vw, 340px';
+      image.srcset=`${stem}-480.webp 480w, ${stem}-960.webp 960w`;
+      $('.section-avif').srcset=`${stem}-960.avif`;
+      image.src=`${stem}-480.webp`;
+      $('.section-art-title').textContent=artwork.title;
+      $('.section-illustration').dataset.section=item.id;
+    }
     buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
     $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
     line(`supa@${publicLanding?'public':'local'} ~`,'prompt');line(publicLanding?'Opening public view…':'Loading saved view…','prompt');
