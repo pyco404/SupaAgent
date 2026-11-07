@@ -27,6 +27,143 @@ valid public-key decoding/canonical re-encoding; no trimming, Unicode substituti
 case folding or fallback to `supa`, `Supa` or `pump`. Agent tokens do not inherit the
 platform's vanity prefix requirement.
 
+## Offline generation and verification contract — 7 November 2026
+
+Architecture preparation only. The identity remains **Supa Agency / SUPA /
+Solana / exact uppercase `SUPA` prefix / Pump.fun / platform-owner authority**.
+The new `supa_domain::platform_token::validate_official_platform_mint_address`
+reuses canonical Base58 decoding/re-encoding and requires exactly 32 decoded
+bytes plus the exact prefix. It never generates or retains a key. Its synthetic
+public-string test fixture is not an actual mint, an Ed25519 keypair or evidence
+of signer ownership. No example candidate should be advertised as official.
+
+Solana distinguishes an Ed25519 public key from a PDA; a correctly encoded
+32-byte address alone does not prove a corresponding private signer exists.
+See [account-address specification](https://solana.com/docs/core/accounts/account-structure#account-address).
+The validation gates therefore remain separate:
+
+1. **Address syntax:** canonical Base58, 32 bytes, exact case-sensitive prefix.
+2. **Signer possession:** derive the public key from the held Ed25519 key and
+   verify a fresh domain-separated possession signature after encrypted recovery.
+3. **Owner authority:** independently authenticate the platform owner and verify
+   their explicit approval binding this mint and custody receipt. An agent's
+   creator role, an arbitrary wallet signature or a vanity prefix cannot confer it.
+4. **Launch confirmation:** the exact approved mint must be independently verified
+   on the approved chain before the public status changes from planned.
+
+### Local generation boundary
+
+The proposed generator is a separate, manually invoked owner-device tool, not
+an API route, browser worker, GitHub job, Railway service or autonomous agent.
+Prepare a reproducible build and audited dependency bundle while online; verify
+their hashes before disconnecting the owner-controlled device. Generation must
+have no RPC, HTTP, telemetry or cloud-generator dependency. Do not run it during
+this architecture task.
+
+Use the existing vetted `ring` Ed25519 and OS-CSPRNG primitives as the candidate
+implementation direction: independent random candidates, public-key derivation,
+canonical Base58 encoding, exact prefix check, then immediate encrypted retention
+of the first match. Entropy failure must stop, never fall back to timestamps,
+passwords, UUIDs, deterministic seeds or third-party generated keys. Never edit
+the public string to force a match. Require finite nonzero candidate and elapsed-
+time bounds, a small explicitly selected worker count, monotonic deadline checks
+and cancellation between candidates. Exhaustion/cancellation must not weaken
+the prefix, switch providers or automatically restart. No success-time guarantee
+or uniform-character probability estimate is implied.
+
+Existing `crates/providers/src/vault.rs` demonstrates `SystemRandom`, Ed25519,
+ChaCha20-Poly1305, restricted file modes and recover-then-derive verification.
+It is a **Devnet wallet vault**, not an approved platform-mint vault: do not relax
+its network guard, reuse an agent key or store the platform key in its existing
+wallet namespace. Reuse reviewed primitives, not its role/authority or an assumed
+production-custody approval. No generator implementation is enabled by adding
+the public-only validator.
+
+### Owner-only encrypted retention
+
+The candidate architecture uses a dedicated authenticated-encrypted envelope and
+an owner-held independent 256-bit master key, with a fresh AEAD nonce. A raw-key
+design needs no password KDF; a passphrase alternative requires separate review
+of a suitable memory-hard KDF and its parameters, not a plain hash. The master
+key must not sit beside the envelope, in a dotenv or in any platform service.
+Select the owner-controlled custody and recovery medium before implementation;
+arbitrary vanity-key import into a hardware wallet is not assumed to work.
+
+Envelope authenticated data binds its version, algorithm, ceremony ID, intended
+cluster/genesis, owner public identity and exact mint public key. Use a separate
+platform-mint namespace and no secret-bearing Debug/Serialize/public API. Only
+ciphertext reaches disk: a no-symlink, owner-only directory (0700), exclusively
+created private files (0600), atomic no-replace publication, file/directory fsync
+and explicit failure on overwrite or permission errors. A crash before successful
+encrypted commit leaves no accepted candidate. A crash after commit requires
+recovery/reconciliation of that exact envelope before any new search.
+
+Do not print or export losing candidates, seeds, PKCS8 documents, master keys,
+keypair arrays or decrypted envelopes. Keep them out of shell arguments, logs,
+clipboard, browser storage, crash reports, source control and application storage.
+Review swap/core-dump/cloud-backup exposure on the owner device. Zeroize owned
+temporary buffers where supported; do not claim perfect erasure of all upstream
+library, allocator or OS copies. Restrict access to the owner, including encrypted
+recovery media; prove recovery before the mint is approved for future use.
+
+### Retained-signer possession and recovery receipt
+
+After encrypted storage, close the in-memory candidate and reopen the exact
+envelope. Recover privately and independently rederive the public address. Reject
+any address, envelope authenticated-data, prefix or owner mismatch. Then sign a
+non-transaction, domain-separated possession challenge whose canonical bytes bind:
+
+- `SUPA-MINT-POSSESSION-V1`, the website origin and a one-use ceremony/challenge ID;
+- the exact mint public key and owner public identity;
+- cluster/genesis identity, tool/dependency hash and encrypted-envelope hash;
+- a fresh nonce, issue/expiry timestamps and the required `platform-token` purpose.
+
+Verify the Ed25519 signature locally against the exact challenge bytes and mint
+public key, and verify separate owner approval over the same receipt hash. Reject
+replay, expiration, changed bytes, a different recovered key or an agent-token
+scope. A directory path, claimed public key, boolean "owned" field or successful
+Base58 validation is never a substitute. The proof shows possession at that time;
+exclusive custody additionally depends on the owner-device and recovery controls.
+
+Store/export only a strict public receipt: canonical mint, owner public key,
+ceremony/challenge identifiers, timestamps, tool hashes, opaque custody reference,
+envelope digest, challenge and signatures. No private envelope location or key
+material goes into the website. A receipt is not a launch authorization, onchain
+mint reservation or transaction signature. Repeat the recovery/possession check
+after restoration and immediately before any separately authorized launch.
+Cryptographic proof generation is planned, not exercised with production keys here.
+
+### Pump.fun handoff and public status
+
+The current official [coin-creation account table and SDK example](https://github.com/pump-fun/pump-public-docs/blob/main/docs/instructions/COIN_CREATION.md)
+still describe a signer mint and a separate transaction payer, and the builder
+accepts a mint public key. This supports the chosen-signer architecture; it does
+not prove our integration, hosted-UI import support or current program acceptance
+of a specific candidate. Repin the exact SDK, IDL and program evidence at the
+future execution review. Do not execute the example's generic key generation,
+combined create-and-buy path or unapproved economic options.
+
+The owner-restricted website receives public receipt/intent data only. A local
+co-signer retains the mint key, validates the frozen transaction message and
+explicit owner-wallet signature, and returns only its signature after separate
+approval. No seed upload, generic remote signer or automatic sign-and-send path
+is introduced. Distinguish mint-creation signer custody from the token program's
+post-creation mint/metadata authorities; never promise the owner retains powers
+that the verified program assigns elsewhere. Follow the [Solana signing custody
+guidance](https://solana.com/docs/core/transactions/signing-in-production).
+
+Keep the public label **$SUPA — planned, not launched** during every preparation,
+generation, recovery and pending-submission state. Only successful independent
+onchain confirmation can establish the canonical official platform mint. Preserve
+the separate immutable original-mint and successor rules for user-created agents;
+this platform-only prefix validator does not constrain their mint prefixes or
+grant their creators platform launch authority.
+
+Before key handling, separately approve the concrete offline tool/custody backend,
+encrypted recovery drill and one bounded generation ceremony. Before launch,
+separately approve the exact owner-authorized intent, signatures, fees and Mainnet
+submission. No such operation, keypair generation or signing occurred here.
+
 ## Compatibility findings and evidence
 
 Official Pump.fun sources were retrieved at revision
@@ -156,8 +293,9 @@ revenue right or other financial claim.
 
 ## Website-publication-first sequence and remaining approvals
 
-1. Resolve the existing frontend security/publication gate; separately authorize
-   website publication, DNS/TLS/origin checks and acceptance at `supaagency.xyz`.
+1. Preserve website-publication-first ordering. Reverify HTTPS, owner access
+   boundaries and current security acceptance at the published `supaagency.xyz`
+   before launch; any website changes retain their separate approval requirement.
 2. Separately approve the generator/custody implementation, key ceremony and
    independent encrypted recovery. Nothing in this review creates a key.
 3. Implement/test inert owner authorization, canonical-mint registry, message
