@@ -15,7 +15,9 @@ impl AppState {
     }
 }
 pub(super) fn routes() -> Router<AppState> {
-    Router::new().route("/factory/agents", get(list).post(create))
+    Router::new()
+        .route("/factory/agents", get(list).post(create))
+        .route("/factory/agents/{id}", get(detail))
 }
 fn allowed(s: &AppState, actor: Principal) -> Result<()> {
     if !s.synthetic_factory_enabled || actor.role != Role::Owner {
@@ -28,6 +30,14 @@ async fn list(State(s): State<AppState>, Extension(actor): Extension<Principal>)
     Ok(Json(
         json!({"agents":s.store.factory_owned(actor.id).await?}),
     ))
+}
+async fn detail(
+    State(s): State<AppState>,
+    Extension(actor): Extension<Principal>,
+    Path(id): Path<Uuid>,
+) -> ApiResult {
+    allowed(&s, actor)?;
+    Ok(Json(s.store.factory_owned_agent(actor.id, id).await?))
 }
 async fn create(
     State(s): State<AppState>,
