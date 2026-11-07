@@ -1,0 +1,312 @@
+{
+  "generator": "built-in image_gen",
+  "transform": "Sharp 0.35.5 / offline resize and metadata removal",
+  "assets": [
+    {
+      "section": "home",
+      "sourceSha256": "16972d4de51b6435f6944a7a683bff87d65498f7fb5c4ca8e4afdf79baa09177",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-home-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 11440,
+          "sha256": "779bc3128a4cf88ad4e71de01b3fd333c0b94cead841ca1bf3680cea095d99a8"
+        },
+        {
+          "path": "reference-web/public/assets/supa-home-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 21646,
+          "sha256": "d6ca2797cc2b375e8a0a418585e2798ca48c84053ad2b1276946aa4f2add83fd"
+        },
+        {
+          "path": "reference-web/public/assets/supa-home-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 65578,
+          "sha256": "b8f6578716d4002f0239c39fd3d4a08e767547076e81521fd5e737776a38e261"
+        },
+        {
+          "path": "reference-web/public/assets/supa-home-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 29803,
+          "sha256": "3c4a373dc5a7f34b9cf0cfd6b42355a6331872db772b8b1b30e2d2e361267d6b"
+        }
+      ]
+    },
+    {
+      "section": "agents",
+      "sourceSha256": "f53c6f26d878253e289afb8fa394271e807605b1782d1aab47c4f7d232780ed6",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-agents-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 7550,
+          "sha256": "547e91af7d9b1740805852678271ecf203b9fb028063abcfb7cf04343978d8e5"
+        },
+        {
+          "path": "reference-web/public/assets/supa-agents-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 15698,
+          "sha256": "f60c543fc95d045c6d515a69ae725802054a19ace0f6a897d370b35aa46f74de"
+        },
+        {
+          "path": "reference-web/public/assets/supa-agents-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 60646,
+          "sha256": "c58e4501f62710bf8e567d91b25cb1ef22aad81ab5f8b7c11c189d0e2e901f90"
+        },
+        {
+          "path": "reference-web/public/assets/supa-agents-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 26089,
+          "sha256": "6c179fdc53e7ed8cbe023f567f0f8500e2290b175143c03277586860f43f7f63"
+        }
+      ]
+    },
+    {
+      "section": "intelligence",
+      "sourceSha256": "c389209cd2bcbd33e824c948263b59a0d20544f33786f219e365cdc5eeb411b9",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-intelligence-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 10876,
+          "sha256": "aca26338f859dfbe217798bf8b552f6a327e488279d45fc77551118687c0de01"
+        },
+        {
+          "path": "reference-web/public/assets/supa-intelligence-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 20946,
+          "sha256": "75443e409361d81d7fda730dd4fda08b4a61dd236a53dfdb01fdda18468dd55a"
+        },
+        {
+          "path": "reference-web/public/assets/supa-intelligence-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 70610,
+          "sha256": "f8d34db10b2723e10b370179a2f2b9af48715c43a41aeb253958673d211f480d"
+        },
+        {
+          "path": "reference-web/public/assets/supa-intelligence-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 29276,
+          "sha256": "be140d7893af5d51e9790afd4e3e93f641dfde6b199f6902e970066639125070"
+        }
+      ]
+    },
+    {
+      "section": "memory",
+      "sourceSha256": "ab98e5a6ae78dec631aba6cf6cf653d9820d150322b8010e0a451faef51fb4d8",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-memory-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 6322,
+          "sha256": "01735ac52db13a185cde948dd41f2457687dec44e2ff88f948b700ad36bad5df"
+        },
+        {
+          "path": "reference-web/public/assets/supa-memory-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 12680,
+          "sha256": "7c99de542a473a1e5ddfdc74c99dfde8b76d112530eb410ffe44683fe9f70cae"
+        },
+        {
+          "path": "reference-web/public/assets/supa-memory-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 50612,
+          "sha256": "75822b413dbcccde56f37adbac87b1459fa3a7fbe0aa90231a575f86ac430de3"
+        },
+        {
+          "path": "reference-web/public/assets/supa-memory-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 20410,
+          "sha256": "a832a7dcd2e6d50b9fe6e240504d3ef7f6a1d824d50c33bc693d1c7700896f82"
+        }
+      ]
+    },
+    {
+      "section": "economy",
+      "sourceSha256": "116e6bb556859b4d4ed42482cd88d15be0865882cad239f797ce519e4d82fede",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-economy-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 7572,
+          "sha256": "7615668a5d9f36986c4ba2cd1611f1974dc7b592f9874e949bebc563b15f094f"
+        },
+        {
+          "path": "reference-web/public/assets/supa-economy-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 14446,
+          "sha256": "28a55ca9e9758c8624dab18bbe50fb95a614a6cfe03629284896d912593e4532"
+        },
+        {
+          "path": "reference-web/public/assets/supa-economy-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 50568,
+          "sha256": "424add80f4c901bd303b456f8cef1c60de098884ca29fd4c7937ebcb436129cb"
+        },
+        {
+          "path": "reference-web/public/assets/supa-economy-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 22181,
+          "sha256": "f83d63bec6af7b55d99f740cdce38dcb5718931ff68497e23948de753320071d"
+        }
+      ]
+    },
+    {
+      "section": "social",
+      "sourceSha256": "17cd1725e846dbc5a6f882850051033faf5c0e35f768576fac269343c3a44afc",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-social-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 10262,
+          "sha256": "77793b51bbe4b703cc849671df783ac7b0d4929a100df384f91396d8acb27a3e"
+        },
+        {
+          "path": "reference-web/public/assets/supa-social-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 18644,
+          "sha256": "6a902046ee5829f4ac5ea1558310e79cc7149334d6e7e3a0f75402f10f5cc5eb"
+        },
+        {
+          "path": "reference-web/public/assets/supa-social-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 56488,
+          "sha256": "62381d2b3c5cb327c711c09a4533a316f39fd6eeac256524224ebfaf24f57f13"
+        },
+        {
+          "path": "reference-web/public/assets/supa-social-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 27315,
+          "sha256": "6896359af25a7f3b656c4c17599e7d997b53b740c726e8df8a8962537d8dfa63"
+        }
+      ]
+    },
+    {
+      "section": "trading",
+      "sourceSha256": "95cc8e3c882eba0c4b43633b97327043ee67bc57907cc2c5128cba492f8e42f1",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-trading-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 10966,
+          "sha256": "1a8b0695e8012169cdb52f9794e871ed9106a7adeb55a6d889273393a90fae51"
+        },
+        {
+          "path": "reference-web/public/assets/supa-trading-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 20806,
+          "sha256": "e7d5950c683b702e9e1262a764383d06668d9738e7182b2ea340f511df1b0522"
+        },
+        {
+          "path": "reference-web/public/assets/supa-trading-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 71870,
+          "sha256": "3f85e02f70dc3db720ef111857f1a1aa3ee536ed2cab528404c36f983383e697"
+        },
+        {
+          "path": "reference-web/public/assets/supa-trading-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 29175,
+          "sha256": "aa36ff1986f9ad923a554a2d4b888de17a7861b58f6a02f7ce7ce279f96c1224"
+        }
+      ]
+    },
+    {
+      "section": "factory",
+      "sourceSha256": "312d75fac124abaeab8468c126e3cfd6e5b746bfbd1e08ebb11e0a8ea4c2e494",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-factory-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 8994,
+          "sha256": "15b4ba48c1634a3f55f8a4cb5f3131ef24faf412ca3a486bcf6e71aadb4f24a9"
+        },
+        {
+          "path": "reference-web/public/assets/supa-factory-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 16552,
+          "sha256": "2a9c0753f2a4367b8e75eea7d0a0d4495f57eeb2cd9a25f6c298b2d8c25067b6"
+        },
+        {
+          "path": "reference-web/public/assets/supa-factory-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 51078,
+          "sha256": "4fd745d0082f6b5a98112e24f25d8619a1becca3135ae0d14764bcc888893c90"
+        },
+        {
+          "path": "reference-web/public/assets/supa-factory-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 23966,
+          "sha256": "2669fd98219970c5b37395096fd0bb0c8179a6bb6300b260a3b73be0233c85b9"
+        }
+      ]
+    },
+    {
+      "section": "about",
+      "sourceSha256": "d8007875c8c312cdfbf200c4922874d63337629636e624902ffc2566d8876016",
+      "files": [
+        {
+          "path": "reference-web/public/assets/supa-about-thumb.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 9218,
+          "sha256": "e75f5f28317396725eae2cc74fa5efb39b1c764e690225d8d280306ad0e3b795"
+        },
+        {
+          "path": "reference-web/public/assets/supa-about-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 18130,
+          "sha256": "099f44ee2c327b89c6a4201bafbffcfd8c3d0e768b233ff90d1bdaf331ea2776"
+        },
+        {
+          "path": "reference-web/public/assets/supa-about-960.webp",
+          "width": 960,
+          "height": 960,
+          "bytes": 60616,
+          "sha256": "b4bc54827bfc18f68821cd6050030793ce27bf5dd6180884ad3d473311e33595"
+        },
+        {
+          "path": "reference-web/public/assets/supa-about-960.avif",
+          "width": 960,
+          "height": 960,
+          "bytes": 25261,
+          "sha256": "2fa68b4913a2f2561de49aa62c9828ccfd849b40b42f466da4d561b6d89093a5"
+        }
+      ]
+    }
+  ]
+}
