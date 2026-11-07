@@ -39,6 +39,11 @@ test('sign-in assets are readable without exposing data, and cookie scope exclud
  for(const path of ['/sign-in','/style.css','/public/fonts/IBMPlexMono-Regular.ttf','/public/assets/supa-agent-code.svg'])assert.equal(check(path),200,path);
  for(const path of ['/api/agents','/operator','/my-agents','/factory/create','/api/factory/agents','/public/../private','/style.css/private'])assert.equal(check(path,{'x-supa-public-landing':'1'}),401,path);
  assert.equal(check('/my-agents',{cookie:`supa_factory_session=${cookie}`}),200);
+ const ownId='11111111-1111-4111-8111-111111111111';
+ for(const path of [`/my-agents/${ownId}`,`/api/factory/agents/${ownId}`]){
+  assert.equal(check(path),401,'details require authentication even without avatars');
+  assert.equal(check(path,{cookie:`supa_factory_session=${cookie}`}),200,'avatar feature is not a detail-access dependency');
+ }
  assert.equal(check('/operator',{cookie:`supa_factory_session=${cookie}`}),401);
  assert.equal(check('/api/agents',{cookie:`supa_factory_session=${cookie}`}),401);
  assert.equal(check('/api/factory/session',{origin:'https://untrusted.invalid'},'POST'),403);
@@ -55,4 +60,29 @@ test('avatar routes keep authentication, host, origin and disabled-feature bound
  assert.equal(check('/api/factory/avatar-uploads',undefined,{cookie:`supa_factory_session=${cookie}`,origin:'https://untrusted.invalid'},'POST'),403);
  assert.equal(check(`/api/factory/avatar-assets/../../credentials`),401);
  process.env.SUPA_AGENT_AVATARS_ENABLED='false';assert.equal(check(`/api/public/agent-avatars/${id}/1`,'supaagency.xyz'),401);
+});
+
+test('avatar-free detail adapter forwards one validated ID and rejects writes or malformed contracts',async()=>{
+ const stub='data:text/javascript,'+encodeURIComponent('export const avatarsEnabled=()=>false; export const avatarRoute=()=>{throw Error("unexpected_avatar_route")};');
+ const src=await readFile(new URL('../web/src/lib/factory.ts',import.meta.url),'utf8');
+ const zod=new URL('../web/node_modules/zod/index.js',import.meta.url).href;
+ const {factoryRoute}=await import('data:text/javascript,'+encodeURIComponent(ts.transpileModule(src.replace('"zod"',JSON.stringify(zod)).replace('"./factory-session"',JSON.stringify(moduleUrl)).replace('"./auth"',JSON.stringify(auth)).replace('"./avatars"',JSON.stringify(stub)),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText));
+ const id='11111111-1111-4111-8111-111111111111',path='/api/factory/agents/'+id;
+ const configuration={request_id:id,name:'Synthetic assistant',description:'Disposable fixture',purpose:'Review synthetic reports',personality:{voice:'Curious',traits:[]},goals:['Review a synthetic report'],requested_capabilities:[],autonomy:'disabled',spending_limit_microusd:0,private_consent:true};
+ const agent={agent_id:id,configuration,status:'paused',qualification:'pending_review',public:false,enabled_capabilities:[],execution_enabled:false,token_mint:null};
+ const originalFetch=globalThis.fetch,originalBackend=process.env.SUPA_BACKEND_URL;
+ const calls=[];process.env.SUPA_BACKEND_URL='http://127.0.0.1:3351';
+ const cookie=session.issueFactorySession('synthetic',password);
+ const request=(method='GET')=>new Request('http://127.0.0.1:3339'+path,{method,headers:{host:'127.0.0.1:3339',origin:'http://127.0.0.1:3339','content-type':'application/json',cookie:`supa_factory_session=${cookie}`}});
+ try{
+  globalThis.fetch=async(url,options)=>{calls.push({path:new URL(url).pathname,method:options.method});return Response.json(agent);};
+  assert.deepEqual(await (await factoryRoute(request(),path)).json(),agent);
+  assert.deepEqual(calls,[{path:'/factory/agents/'+id,method:'GET'}]);
+  assert.equal((await factoryRoute(request('POST'),path)).status,404);assert.equal(calls.length,1);
+  assert.equal((await factoryRoute(request(),'/api/factory/agents/not-a-uuid')).status,404);assert.equal(calls.length,1);
+  globalThis.fetch=async()=>Response.json({private_record:'must_not_escape'},{status:404});
+  const unavailable=await factoryRoute(request(),path);assert.equal(unavailable.status,404);assert(!(await unavailable.text()).includes('must_not_escape'));
+  globalThis.fetch=async()=>Response.json({...agent,execution_enabled:true});
+  assert.equal((await factoryRoute(request(),path)).status,502,'invalid backend state fails closed');
+ }finally{globalThis.fetch=originalFetch;if(originalBackend===undefined)delete process.env.SUPA_BACKEND_URL;else process.env.SUPA_BACKEND_URL=originalBackend;}
 });
