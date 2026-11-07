@@ -209,6 +209,9 @@ async function select(index,background=false){
     line(`supa@${publicLanding?'public':'local'} ~`,'prompt');line(publicLanding?'Opening public view…':'Loading saved view…','prompt');
   }
   const rows=publicLanding?publicSectionView(item.id):await sectionView(item.id,state,agentId);
+  if(publicLanding&&item.id==='agents'&&document.body.dataset.agentAvatars==='true'){
+    try{const response=await fetch('/api/public/agent-profiles',{credentials:'omit',cache:'no-store',redirect:'error',signal:AbortSignal.timeout(5000)});if(response.ok){const data=await response.json();if(Array.isArray(data.agents)&&data.agents.length&&data.agents.length<=100){const approved=data.agents.filter(a=>/^[0-9a-f-]{36}$/.test(a.agent_id)&&typeof a.name==='string'&&a.name.length<=80&&typeof a.summary==='string'&&a.summary.length<=280&&Number.isSafeInteger(a.revision));if(approved.length){rows.splice(2,rows.length-2,{kind:'heading',text:'Creator-approved public agents'},...approved.map(agent=>({kind:'public-agent',agent})),{kind:'notice',text:'Supa Agent remains our flagship personality. Only explicitly approved public profiles appear here.'});}}}}catch{/* An unavailable public projection must never fall back to private records. */}
+  }
   if(version!==renderVersion||document.body.dataset.view!=='projects')return;
   $('.winbar').textContent=`supa@${publicLanding?'public':'local'} — ${item.label} / ${rows.some(row=>row.kind==='live'&&row.view.enabled)?'operator controls':rows.some(row=>row.kind==='economy')?'bounded economic controls':rows.some(row=>['autonomy','schedule','launch'].includes(row.kind))?'offline controls':'read-only'}`;
   const fingerprint=JSON.stringify(rows.filter(row=>!row.text?.startsWith('Retrieved  ')));
@@ -219,6 +222,8 @@ async function select(index,background=false){
   for(const row of rows){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
+    }else if(row.kind==='public-agent'){
+      const figure=document.createElement('figure'),image=document.createElement('img'),link=document.createElement('a');image.src='/api/public/agent-avatars/'+row.agent.agent_id+'/'+row.agent.revision;image.width=96;image.height=96;image.alt='Avatar for '+row.agent.name;image.loading='lazy';link.href='/agents/'+row.agent.agent_id;link.textContent=row.agent.name;figure.append(image,link,node('p','terminal-line',row.agent.summary));buffer.append(figure);
     }else if(row.kind==='autonomy')buffer.append(autonomyPanel(row.policy));
     else if(row.kind==='economy')buffer.append(economyPanel(row.view,row.agentId));
     else if(row.kind==='livework')buffer.append(liveWorkPanel(row.view,row.agentId));
