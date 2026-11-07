@@ -1,5 +1,115 @@
 # Factory: purposeful agent creation
 
+## Authenticated synthetic creation milestone — local, November 7, 2026
+
+The local pilot implements **Sign In → Factory → review configuration → Create
+Agent → My Agents**. It is disabled by default and has not been pushed, built
+into release images, deployed or applied to a live database. The historical
+preview description below documents the currently released interface.
+
+Reuse: existing named server-side credentials, Rust authentication middleware,
+principal UUIDs and owner ACLs; `Agent`, personality, goal and capability models;
+PostgreSQL storage; `PurposeRevision` validation; ecosystem private-consent
+records; the existing Next.js host and approved terminal design. No wallet,
+token, inference, scheduler or publishing integration is invoked.
+
+New implementation:
+
+- `/sign-in` accepts only explicitly provisioned synthetic accounts. It checks
+  the live backend credential, role and deadline before issuing a signed,
+  HttpOnly, Secure, SameSite=Strict cookie. Sessions last at most 15 minutes;
+  the backend's existing credential deadline can expire sooner. Credentials
+  never enter localStorage, public HTML, cookies, URLs or logs. There is no
+  registration endpoint, implicit owner claim or permanent session. The cookie
+  admits only the Factory adapter and owner-management pages, not `/operator`
+  or the older console APIs. The only extra anonymous staging-host resources
+  are sign-in HTML and the reviewed stylesheet/logo/font asset allowlist.
+- `/factory/create` collects bounded name, description, purpose, personality,
+  goals, requested capabilities and explicit private-storage consent. A readable
+  review precedes submission. Autonomy is fixed to disabled and spending to zero.
+  Requested capabilities are review intent, **not enabled permissions**. All
+  launch and lifecycle controls remain disabled. A token is not required.
+- `/api/factory/agents` is a same-origin, bounded JSON server adapter. It maps the
+  authenticated session to its existing Rust credential; it does not accept
+  browser-supplied identity, role or owner flags. Responses use strict schemas.
+  No generic URL, arbitrary backend method or credential forwarding is exposed.
+- Rust `/factory/agents` requires the explicitly enabled pilot and a named
+  synthetic Owner-role credential. This role scopes creation of that principal's
+  own records; it does not provision real users or grant ownership of old agents.
+  Anonymous, service-only, viewer and expired credentials are rejected. Epoch
+  write protections remain intact. The dedicated main-process pilot branch
+  starts no scheduler, recovery writer, wallet integration or worker monitor.
+- A single SQL transaction creates a private paused agent, owner ACL/audit,
+  lifecycle/activity evidence, goals, private purpose, revoked/empty public
+  disclosure consent and durable submission receipt. Purpose qualification stays
+  `pending_review`; creation does not fabricate independent approval. There is
+  no public listing, balance, financial entry, memory or token association.
+- Creator/request-key idempotency survives restarts. Conflicting reuse fails.
+  One creator advisory lock serializes concurrent replays and the 100-submission
+  pilot quota. The browser locks a submitted configuration and reuses its key
+  after an ambiguous response; it does not retry writes automatically. My Agents
+  can be checked before a manual retry. No private drafts are stored in browser
+  persistence.
+- My Agents lists only records created through this pilot and still owned by
+  the authenticated creator. Shared access, token ownership and existing staging
+  records never populate it. It displays saved configuration, paused state and
+  pending qualification. Start, Pause, Resume, Stop and token launch are disabled.
+  Existing agent mutation endpoints reject pilot-managed agents; a database
+  trigger also freezes their underlying agent state until separately reviewed.
+
+`deployment/agent-factory.sql` is an explicit extension, outside the unchanged
+13 migrations. It requires the existing reviewed `ecosystem-social.sql` extension.
+Its fixed-search-path SECURITY DEFINER functions allow only new private creation,
+owner-bound projection and a managed-agent check. PUBLIC has no schema, table or
+function rights. The dedicated test login has only feature-schema usage,
+EXECUTE on those functions and SELECT on migration/epoch/access metadata needed
+by existing checks. It has no direct table-write, migration, role-management,
+financial or accounting privileges. Functions trust only the principal supplied
+by the authenticated server, not a browser claim. This is an application-service
+database role, not a separate database login or grant for every website visitor.
+
+Validation: `python3 scripts/validate-agent-factory.py` creates a new socket-only
+PostgreSQL 18 cluster, applies the original migrations and explicit extensions,
+tests the restricted role and real Axum authentication, then runs Chrome desktop
+and mobile through Next.js → Rust → PostgreSQL. It restarts PostgreSQL and checks
+replay persistence, owner isolation and revoked-ownership denial. It also covers
+concurrent identical/different submissions, conflicting keys, invalid inputs,
+blocked lifecycle operations, raw SQL denials, zero balances and atomic rollback
+after an injected late database failure. The fixture is stopped and disposed;
+sanitized logs and screenshots remain in `artifacts/functional-factory`.
+
+`node scripts/test-factory-session.mjs` covers signature tampering, duplicate
+cookies, expiry, account revocation, default-off behavior, exact same-origin
+writes, sign-in assets and exclusion of operator/private APIs. Existing public
+exploration and landing regressions remain required, alongside Rust, TypeScript,
+lint, history and secrets checks. Local browser success does not constitute a
+new image vulnerability scan or production-security certification.
+
+### Remaining approvals and release work
+
+1. Review and approve the exact local application commits for synchronization.
+2. Review a frontend/API build pinned to the new revision. The infrastructure
+   frontend recipe must package `reference-web/factory-create.html` as well as
+   `my-agents.html`; update asset expectations, source/recipe pins and runtime/
+   browser gates. Do not silently reuse the old image or recipe checksum.
+3. Separately authorize image builds/scans, retained-archive private publication
+   and controlled backend/frontend deployment. HIGH/CRITICAL and secret findings
+   continue to block release. Existing immutable images are unchanged.
+4. Separately approve installing the explicit extensions and minimal function
+   grants in an isolated synthetic staging target. No live database, permissions,
+   migrations or fixtures changed in this milestone. Public registration and
+   unrestricted user-data storage remain unavailable.
+5. Separately approve bounded synthetic account provisioning/renewal and setting
+   `SUPA_SYNTHETIC_FACTORY_ENABLED=true` on the dedicated API and frontend pilot.
+   Keep existing private networking, verified database TLS, origin checks and
+   all financial/provider/publishing controls. No activation is implied here.
+6. Run one controlled end-to-end demonstration. Independent purpose approval,
+   public listing consent, lifecycle execution, nonzero budgets and token launches
+   each require further reviewed implementation/authority. They are not needed
+   to create a private paused synthetic agent.
+
+## Previously released preview
+
 Local frontend preparation only. This does not change the running website,
 Railway configuration, database, grants or execution capabilities.
 
