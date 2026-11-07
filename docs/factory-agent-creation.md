@@ -108,6 +108,128 @@ new image vulnerability scan or production-security certification.
    each require further reviewed implementation/authority. They are not needed
    to create a private paused synthetic agent.
 
+## Agent appearance — optional local pilot
+
+The appearance step extends the same authenticated synthetic journey. Both
+`SUPA_SYNTHETIC_FACTORY_ENABLED=true` and `SUPA_AGENT_AVATARS_ENABLED=true` are
+required; defaults remain off. No public registrations, real accounts, live
+uploads, storage provisioning, deployments or production database changes are
+implied by this implementation.
+
+- **Upload Image:** PNG, JPEG or WebP, at most 5,000,000 actual streamed bytes.
+  The browser provides a square crop with zoom and horizontal/vertical position,
+  preview, explicit acceptance, replacement and removal. Filename/path strings
+  are not storage identifiers. Client checks are conveniences; server checks are
+  authoritative. SVG, unsupported formats, content-type mismatches, malformed or
+  truncated data, animations, invalid crop coordinates, dimensions above 4096
+  and inputs above 16,777,216 pixels are rejected. Server-side Sharp 0.35.5 fully
+  decodes, auto-orients, crops, resizes to 512×512 sRGB PNG and strips all ancillary
+  PNG chunks. Originals, EXIF, ICC data and user filenames are not retained.
+- **Generate with AI:** visibly unavailable. No provider call, generation endpoint,
+  budget, regeneration loop or paid inference is enabled. Name, purpose,
+  description and personality must not leave the platform for generation until
+  its service, consent, cost and authorization gates are separately configured.
+- **Use Default Avatar:** deterministic identicon from a versioned SHA-256 seed.
+  Image-free creation remains the original creation transaction and consumes no
+  upload quota. Existing records without an image render their default on read;
+  they do not require an external service, payment, stored upload or token.
+  The default seed is the persisted submission UUID, keeping the pre-creation
+  preview and subsequent profile appearance consistent.
+
+My Agents displays private avatars and links to authenticated individual profiles.
+Owners can upload, replace or revert their profile image, with a revision check
+that rejects concurrent/stale updates. Removing a staged image deletes only an
+unattached asset belonging to that uploader. Removing a saved profile avatar
+means explicitly saving a default revision; historical versions needed for audit
+or token-image snapshots remain private and retained. Image editing never updates
+frozen agent execution/configuration records.
+
+### Storage and trust boundary
+
+`deployment/agent-avatars.sql` is a separately installed extension, not a change
+to the 13 automatic migrations. It requires the existing Factory and ecosystem
+extensions. Normalized PNG bytes use private PostgreSQL `bytea` records with
+SHA-256 integrity checks; no bucket, public filesystem path or new credentials
+are created. The application login receives schema USAGE and EXECUTE on only
+`agent_avatars.command` and `agent_avatars.create_agent`; it receives no direct
+image table, financial, migration or role-management write permissions.
+
+The Next.js server is the image decoder/normalizer. A domain-separated HMAC
+receipt binds the normalized-byte checksum, image kind, request UUID and current
+owner API credential using the existing private service-authentication secret.
+The Rust API independently verifies this receipt and the byte checksum before
+admitting bytes. An ordinary owner bearer token cannot bypass normalization by
+asserting that arbitrary bytes are safe. The receipt is not sent to the browser
+or retained in SQL. This is a trusted processor boundary, **not** a claim that
+Rust independently decodes the original image or that a compromised application
+service/database administrator is an untrusted website visitor.
+
+Private image reads recheck ownership, including revocation. Public reads require
+an approved current avatar revision **and** current, non-revoked creator consent
+for public `agent_created` disclosure **and** an explicit public purpose summary.
+The public directory/profile projection contains only canonical ID, name,
+creator-approved summary and avatar revision. It never falls back to private
+agent lists, goals, personalities, memories, financial records or staging data.
+Unlisted/revoked profiles and images return unavailable; replacing an approved
+avatar requires a fresh image approval. Public image approval alone cannot
+publish an agent. Public/private PNG responses use fixed MIME, `nosniff`,
+no-store caching and no user-controlled filenames. Existing staging-host and
+cross-origin restrictions remain enforced.
+
+Limits: two concurrent decoder slots per frontend process, bounded upload reads,
+five-second codec timeout, ten authenticated upload attempts/minute and thirty
+image-management commands/minute per process, plus a durable twenty accepted
+uploads/hour per creator. PostgreSQL serializes quota/update checks per creator,
+limits storage to 20 MiB/100 assets per creator and retains at most fifty avatar
+revisions per agent. Idempotent retries do not create another stored asset.
+Temporary unbound uploads expire after one hour, become unreadable, and are
+removed on the next upload/cleanup call. Explicit removal/cleanup never deletes
+bound versions or token snapshots. No new worker or scheduled task is activated.
+
+### Token image preparation
+
+An owner must save an actual image revision, inspect it and explicitly confirm
+its checksum for future token use. A separate immutable token-image record pins
+that revision, exact stored PNG bytes and SHA-256. It remains unchanged after
+later avatar replacement, default reversion, visibility changes or restart. A
+second confirmation cannot silently overwrite the first. A virtual default must
+first be saved as an image version before confirmation. This confirmation does
+not publish the image, qualify an agent, authorize a launch, generate a mint
+signer, transfer rights or execute Pump.fun. Original-mint permanence, uniqueness
+and separately authorized successor history remain untouched. Future exceptional
+successor-image policies need their own review rather than rewriting a snapshot.
+
+### Evidence and release requirements
+
+`node scripts/test-avatar-images.mjs` tests the actual codec, all three input
+formats, orientation, square crop pixels, metadata removal, deterministic
+identicons, malformed/SVG/animated/oversized inputs, stream limits/timeouts and
+bounded processing. `python3 scripts/validate-agent-factory.py` additionally
+exercises authenticated image receipts, private/public reads, explicit consent,
+replacement, CAS/idempotency, quota exhaustion, temporary cleanup, atomic image
+attachment and token-image preservation through a real PostgreSQL 18 restart.
+Large normalized PNGs exercise the image-specific body limit without broadening
+legacy request limits. Default creation still succeeds when image quotas are
+exhausted. Real desktop/mobile Chrome runs cover upload/crop, image-free creation,
+My Agents/profile display, replacement, default reversion and token-image
+confirmation. An isolated GET-only hostname adapter tests approved public
+profiles against the real local backend, without contacting live domains.
+
+Evidence is retained under `artifacts/functional-factory` and
+`artifacts/avatar-tests`. TypeScript, lint, session/origin/public-boundary tests,
+secrets scanning and one-file Git audits remain required. These local checks do
+not replace new API/frontend container vulnerability and embedded-secret scans.
+
+The prior milestone's synchronization/build/publication/deployment approvals
+remain pending. A future reviewed frontend recipe must include both new HTML
+assets (`factory-create.html`, `public-agent-profile.html`), the pinned Sharp
+runtime dependency and the new server modules. Review the exact source/recipe
+pins and image/profile browser gates; do not reuse an old artifact or checksum.
+Separately approve installing the image extension/function grants in the isolated
+synthetic target and enabling its flag after scanned images are accepted. Keep
+AI generation, agent execution, token launches, wallet signing and publishing
+disabled. No live Railway/backend/database or DNS changes occurred here.
+
 ## Previously released preview
 
 Local frontend preparation only. This does not change the running website,
