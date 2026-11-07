@@ -45,7 +45,13 @@
         <div class="pane">
           <div class="workspace-controls"><label id="agent-label" for="agent-picker-trigger">Agent</label><div class="agent-picker"><select id="agent-select" hidden aria-hidden="true" tabindex="-1"><option value="">Select an agent</option></select><button type="button" id="agent-picker-trigger" class="agent-trigger" disabled aria-haspopup="listbox" aria-expanded="false" aria-controls="agent-options" aria-labelledby="agent-label agent-selected-name"><span id="agent-selected-name">Loading agents…</span><span class="agent-chevron" aria-hidden="true"></span></button><div id="agent-options" class="agent-options" role="listbox" aria-label="Agents" hidden></div></div><button type="button" class="skip-typing" hidden>Show all text</button></div>
           <p class="winbar">supa — read-only workspace</p>
-          <canvas class="blueprint" aria-label="Decorative architecture branches; not live agent activity" role="img"></canvas>
+          <div class="section-composition">
+            <canvas class="blueprint" aria-label="Decorative architecture branches; not live agent activity" role="img"></canvas>
+            <figure class="section-illustration" hidden>
+              <picture><source class="section-avif" type="image/avif"></picture>
+              <figcaption><span class="section-art-title"></span><span>Concept artwork / not live activity</span></figcaption>
+            </figure>
+          </div>
           <div class="buffer" tabindex="0" aria-label="Supa terminal" aria-live="polite"></div>
           <canvas class="entity" aria-hidden="true"></canvas>
         </div>
