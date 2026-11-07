@@ -42,6 +42,19 @@ test('Factory separates agent creation, qualification and optional permanent tok
  assert.equal(publicNavigation.some(row=>row.id==='token-launch'||row.id==='my-agents'),false);
 });
 
+test('synthetic Factory offers sign-in without collecting public input or enabling execution',()=>{
+ const doc=globalThis.document,fetch=globalThis.fetch;
+ globalThis.document={documentElement:{dataset:{publicLanding:'true',syntheticFactory:'true'}}};
+ globalThis.fetch=()=>{throw Error('public_factory_must_not_read_backend');};
+ try{
+  const rows=publicSectionView('factory'),text=rows.map(r=>r.text).join('\n');
+  assert.ok(rows.some(r=>r.kind==='link'&&r.href==='/sign-in'&&r.text==='Create Agent / synthetic sign-in'));
+  assert.match(text,/save a private paused agent/);assert.match(text,/only after sign-in and private-storage consent/);
+  assert.equal(rows.filter(r=>r.kind==='disabled').length,4);
+  assert.ok(!rows.some(r=>['agent','launch','schedule','live','form'].includes(r.kind)));
+ }finally{globalThis.fetch=fetch;if(doc===undefined)delete globalThis.document;else globalThis.document=doc;}
+});
+
 // Editorial placement is explicit public content; catalog entries alone never create images.
 test('public sections deliberately select zero, one or multiple approved illustrations',()=>{
  const expected={home:['home'],agents:['agents'],intelligence:[],memory:[],economy:[],social:[],trading:[],factory:['factory','intelligence'],about:[]};
