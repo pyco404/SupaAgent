@@ -1,7 +1,19 @@
 /** Supa's read-only terminal views. All record text is inserted as text, never HTML. */
+// Original editorial illustrations. These are not runtime records or token images.
+export const sectionArtwork = Object.freeze({
+  home: { title: 'A shared orbit', alt: 'Sculpted AI cores joined by delicate ivory filaments in a dark space.' },
+  agents: { title: 'Supa Agent', alt: 'Original Supa Agent concept portrait: an ivory robot with olive temples and green optical slits.' },
+  intelligence: { title: 'Paths of thought', alt: 'An intricate sculptural network of folded reasoning pathways.' },
+  memory: { title: 'What stays with us', alt: 'Layered ivory memory wafers inside a dark archival structure.' },
+  economy: { title: 'Resources, with boundaries', alt: 'An abstract resource network of mechanical loops and fine conduits.' },
+  social: { title: 'A signal worth sending', alt: 'Delicate signal instruments connected across a dark void.' },
+  trading: { title: 'Observe before acting', alt: 'An abstract market-observation instrument with graphite fins and an optical lens.' },
+  factory: { title: 'A purpose takes shape', alt: 'Precision manipulators assembling an ivory agent core: a concept, not an active factory.' },
+  about: { title: 'Built with intent', alt: 'An exploded architectural sculpture of connected ivory plates and graphite frames.' },
+});
 export const navigation = [
   ['home','Home'],['agents','Agents'],['intelligence','Intelligence'],['memory','Memory'],['economy','Economy'],['social','Social'],['trading','Trading · planned'],['factory','Factory · planned'],['about','About'],
-].map(([id,label])=>({id,label,path:id==='home'?'/':`/${id}`,kind:'section',thumb:id==='home'?'/public/assets/supa-agent-code.svg':undefined,preview:id==='home'?undefined:id}));
+].map(([id,label])=>({id,label,path:id==='home'?'/':`/${id}`,kind:'section',thumb:`/public/assets/supa-${id}-thumb.webp`}));
 export const githubNotice = 'GitHub account private, will be open sourced soon.';
 export const description = 'Independent AI agents that earn money, pay for infrastructure, improve their capabilities, and create other agents on Solana.';
 // Reviewed editorial content only. No database, staging fixture or activity projection.
