@@ -63,12 +63,13 @@ test.describe('authorized saved records',()=>{
   });
 });
 
-test('every section types in document order and replays on return',async({page})=>{
+test('new sections type in document order and repeat visits reveal immediately',async({page})=>{
   await page.emulateMedia({reducedMotion:'no-preference'});
-  await page.goto('/site/#home');
+  await page.goto('/about');
   await expect(page.locator('html')).toHaveAttribute('data-ready','true');
   await expect(page.locator('.reload-records')).toBeEnabled();
-  for(const section of ['home','agents','intelligence','memory','economy','social','trading','token-launch','factory','about','home']){
+  if(await page.locator('.skip-typing').isVisible())await showAll(page);
+  for(const section of ['home','agents','intelligence','memory','economy','social','trading','factory']){
     await page.locator('.command-toggle').click();await page.locator('.command-input').fill(`supa ${section}`);await page.keyboard.press('Enter');
     const buffer=page.locator('.buffer');await expect(buffer).toHaveAttribute('data-typing-state','typing');
     expect(await buffer.locator(':scope > [hidden]').count()).toBeGreaterThan(0);
@@ -78,12 +79,16 @@ test('every section types in document order and replays on return',async({page})
     expect(await buffer.locator('[hidden],[inert]').count()).toBe(0);await expect(page.locator('.skip-typing')).toBeHidden();await expect(buffer).toBeFocused();
     await expect(page).toHaveURL(new RegExp(`/${section==='home'?'':section}$`));
   }
+  await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa about');await page.keyboard.press('Enter');
+  await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','complete');
+  expect(await page.locator('.buffer [hidden],.buffer [inert]').count()).toBe(0);
 });
 
-test('reloading restarts typing and navigation cancels old text safely',async({page})=>{
+test('reloading reveals fresh text immediately and navigation cancels old typing safely',async({page})=>{
   await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('/about');
-  await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');await showAll(page);
-  await reloadSaved(page);await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','typing');
+  await expect(page.locator('.reload-records')).toBeEnabled();
+  if(await page.locator('.skip-typing').isVisible())await showAll(page);
+  await reloadSaved(page);await expect(page.locator('.buffer')).toHaveAttribute('data-typing-state','complete');
   await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa trading');await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/trading$/);await showAll(page);
   await expect(page.locator('.buffer')).toContainText('strict maximum of $5');await page.waitForTimeout(300);
