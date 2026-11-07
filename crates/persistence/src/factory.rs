@@ -17,10 +17,13 @@ pub struct FactoryRequest {
     pub autonomy: String,
     pub spending_limit_microusd: u64,
     pub private_consent: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avatar_upload_id: Option<Uuid>,
 }
 impl FactoryRequest {
     pub fn validate(&self) -> Result<()> {
         if self.request_id.is_nil()
+            || self.avatar_upload_id.is_some_and(|id| id.is_nil())
             || self.autonomy != "disabled"
             || self.spending_limit_microusd != 0
             || !self.private_consent
@@ -138,22 +141,28 @@ impl Store {
             expires_at: a.created_at + chrono::Duration::days(1),
             categories: vec![],
         };
-        let id: Uuid = sqlx::query_scalar("SELECT agent_factory.create_private($1,$2,$3,$4,$5,$6)")
+        let query = if r.avatar_upload_id.is_some() {
+            "SELECT agent_avatars.create_agent($1,$2,$3,$4,$5,$6,$7)"
+        } else {
+            "SELECT agent_factory.create_private($1,$2,$3,$4,$5,$6)"
+        };
+        let mut q = sqlx::query_scalar(query)
             .bind(actor)
             .bind(r.request_id)
             .bind(&body)
             .bind(encode(&a)?)
             .bind(serde_json::to_value(purpose).map_err(|_| Error::Invalid)?)
-            .bind(serde_json::to_value(consent).map_err(|_| Error::Invalid)?)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(
-                |e| match e.as_database_error().and_then(|e| e.code()).as_deref() {
-                    Some("40001") => Error::Stale,
-                    Some("42501") => Error::Denied,
-                    _ => db(e),
-                },
-            )?;
+            .bind(serde_json::to_value(consent).map_err(|_| Error::Invalid)?);
+        if let Some(asset) = r.avatar_upload_id {
+            q = q.bind(asset);
+        }
+        let id: Uuid = q.fetch_one(&self.pool).await.map_err(|e| {
+            match e.as_database_error().and_then(|e| e.code()).as_deref() {
+                Some("40001") => Error::Stale,
+                Some("42501") => Error::Denied,
+                _ => db(e),
+            }
+        })?;
         Ok(view(id, body))
     }
     pub async fn factory_owned(&self, actor: Uuid) -> Result<Vec<Value>> {
