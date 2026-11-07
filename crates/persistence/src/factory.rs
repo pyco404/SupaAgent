@@ -70,6 +70,15 @@ fn view(agent: Uuid, configuration: Value) -> Value {
         "execution_enabled":false,"token_mint":null})
 }
 impl Store {
+    /// Use the same creator/ACL projection as the list; never fall back to a
+    /// generic accessible-agent lookup or reveal whether another owner's ID exists.
+    pub async fn factory_owned_agent(&self, actor: Uuid, id: Uuid) -> Result<Value> {
+        self.factory_owned(actor)
+            .await?
+            .into_iter()
+            .find(|agent| agent["agent_id"] == json!(id))
+            .ok_or(Error::NotFound)
+    }
     pub async fn factory_managed(&self, id: Uuid) -> Result<bool> {
         sqlx::query_scalar("SELECT agent_factory.managed($1)")
             .bind(id)
