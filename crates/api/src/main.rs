@@ -26,6 +26,10 @@ async fn run() -> Result<()> {
     )?;
     let scheduler_enabled = flag("SUPA_API_SCHEDULER_ENABLED", false)?;
     let synthetic_factory = flag("SUPA_SYNTHETIC_FACTORY_ENABLED", false)?;
+    let agent_avatars = flag("SUPA_AGENT_AVATARS_ENABLED", false)?;
+    if agent_avatars && !synthetic_factory {
+        return Err(Error::Denied);
+    }
     if synthetic_factory
         && (!private_staging || scheduler_enabled || flag("SUPA_WORKER_ENABLED", false)?)
     {
@@ -165,10 +169,13 @@ async fn run() -> Result<()> {
     if synthetic_factory {
         // This preview cannot start recovery writers, monitors, workers or schedulers.
         let runtime = Runtime::new(store.clone(), Arc::new(Offline));
-        let state = AppState::new(store, runtime, token)?
+        let mut state = AppState::new(store, runtime, token)?
             .with_credentials(credentials)?
             .with_credential_deadlines(deadlines)?
             .with_synthetic_factory()?;
+        if agent_avatars {
+            state = state.with_agent_avatars()?;
+        }
         let listener = tokio::net::TcpListener::bind(bind)
             .await
             .map_err(|_| Error::Invalid)?;
