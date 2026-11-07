@@ -212,7 +212,7 @@ async function select(index,background=false){
   if(!background){
     $('.tab-file').textContent=item.label.split(' · ')[0];$('.winbar').textContent=`supa@${publicLanding?'public':'local'} — ${item.label} / read-only`;
     buffer.replaceChildren();buffer.setAttribute('aria-busy','true');buffer.dataset.typingState='loading';
-    $('.blueprint').hidden=!['home','about'].includes(item.id);scenes?.setSelection(index);
+    $('.blueprint').hidden=item.id!=='home';scenes?.setSelection(index);
     line(`supa@${publicLanding?'public':'local'} ~`,'prompt');line(publicLanding?'Opening public view…':'Loading saved view…','prompt');
   }
   const rows=publicLanding?publicSectionView(item.id):await sectionView(item.id,state,agentId);
@@ -226,6 +226,7 @@ async function select(index,background=false){
   if(background&&(fingerprint===viewFingerprint||buffer.contains(document.activeElement)||!$('.command').hidden||buffer.getAttribute('aria-busy')==='true'))return;
   viewFingerprint=fingerprint;if(background)cancelTyping();
   buffer.replaceChildren();line(`supa@${publicLanding?'public':'local'} ~`,'prompt');
+  if(item.id==='about')buffer.append($('#terminal-architecture-template').content.firstElementChild.cloneNode(true));
   for(const row of rows){
     if(row.kind==='agent'){
       const button=node('button','terminal-entry',row.text);button.addEventListener('click',()=>{agentId=row.agent.id;$('#agent-select').value=agentId;syncAgentPicker();wheel.select(2);void select(2);});buffer.append(button);line(`Identity ${row.agent.id}\nCreated ${row.agent.created_at}`,'prompt');
@@ -287,7 +288,7 @@ function typeTerminal(repeat=false) {
   if(reduced.matches||(repeat&&!publicLanding)){finish();return;}
   rows.forEach(row=>{
     row.hidden=true;row.inert=true;
-    if(repeat)return;
+    if(repeat||row.classList.contains('terminal-architecture'))return;
     const walker=document.createTreeWalker(row,NodeFilter.SHOW_TEXT);
     let text;while((text=walker.nextNode())){originals.push({text,value:text.textContent,row});text.textContent='';}
   });
