@@ -540,7 +540,8 @@ test('every workspace view reserves keyboard and footer flow below content',asyn
     const keyboard=await page.locator('.workspace-hands').boundingBox(),bar=await page.locator('.bar').boundingBox(),buffer=await page.locator('.buffer').boundingBox();
     expect(keyboard.y+keyboard.height).toBeCloseTo(page.viewportSize().height,0);expect(bar.y+bar.height).toBeLessThanOrEqual(keyboard.y+1);
     expect(buffer.height).toBeGreaterThan(60);expect(buffer.y+buffer.height).toBeLessThanOrEqual(bar.y+1);
-    if(['home','about'].includes(section))expect((await page.locator('.blueprint').boundingBox()).height).toBeGreaterThanOrEqual(190);
+    if(section==='home')expect((await page.locator('.blueprint').boundingBox()).height).toBeGreaterThanOrEqual(190);
+    if(section==='about'){await expect(page.locator('.blueprint')).toBeHidden();await expect(page.locator('.terminal-architecture')).toBeVisible();}
   }
   await page.setViewportSize({width:360,height:640});await open(page,'/site/#home');
   expect((await page.locator('.blueprint').boundingBox()).height).toBeGreaterThanOrEqual(112);
@@ -548,24 +549,16 @@ test('every workspace view reserves keyboard and footer flow below content',asyn
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 
-test('Home and About have distinct concept visuals with stable reduced motion', async ({page})=>{
-  await open(page,'/site/#home');
-  const diagram=page.locator('.blueprint');
-  const pixels=()=>diagram.evaluate(canvas=>{const bytes=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;let hash=0;for(let i=0;i<bytes.length;i+=4)hash=(Math.imul(hash,31)+bytes[i]+bytes[i+3])|0;return hash;});
-  await expect(diagram).toHaveAttribute('data-concept','architecture');
-  const home=await pixels();
-  await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa about');await page.keyboard.press('Enter');
-  await expect(diagram).toHaveAttribute('data-concept','identity');
-  await expect(diagram).toHaveAccessibleName(/identity, memory, goals, policy and limits/);
-  const about=await pixels();expect(about).not.toBe(home);
-  await page.waitForTimeout(150);expect(await pixels()).toBe(about);
-  const box=await diagram.boundingBox();expect(box.width).toBeGreaterThan(200);
-  expect(box.x+box.width).toBeLessThanOrEqual(page.viewportSize().width);
-  await page.emulateMedia({reducedMotion:'no-preference'});
-  await expect(diagram).toHaveAttribute('data-motion-state','running');
-  const moving=await pixels();await page.waitForTimeout(250);expect(await pixels()).not.toBe(moving);
-  await page.emulateMedia({reducedMotion:'reduce'});
-  await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa home');await page.keyboard.press('Enter');
-  await expect(diagram).toHaveAttribute('data-concept','architecture');
-  expect(await pixels()).toBe(home);
+test('Home retains animated branches while About presents readable illustrative architecture',async({page})=>{
+ await open(page,'/site/#home');const diagram=page.locator('.blueprint');
+ await expect(diagram).toBeVisible();await expect(diagram).toHaveAttribute('data-concept','architecture');
+ await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa about');await page.keyboard.press('Enter');
+ await expect(diagram).toBeHidden();await expect(page.locator('.terminal-architecture')).toBeVisible();
+ await expect(page.locator('.architecture-header')).toContainText('Illustrative / not executable');
+ expect(await page.locator('.architecture-code li').count()).toBe(12);
+ expect(await page.locator('.architecture-code li').first().evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
+ await page.locator('.command-toggle').click();await page.locator('.command-input').fill('supa home');await page.keyboard.press('Enter');
+ await expect(page.locator('.terminal-architecture')).toHaveCount(0);await expect(diagram).toBeVisible();
+ await page.emulateMedia({reducedMotion:'no-preference'});await expect(diagram).toHaveAttribute('data-motion-state','running');
+ await page.emulateMedia({reducedMotion:'reduce'});await expect(diagram).toHaveAttribute('data-motion-state','reduced');
 });
