@@ -58,6 +58,7 @@ export function publicSectionView(id) {
     add('Launch token / Disabled','disabled');
   } else if(id==='factory') {
     add('Factory / Create Agents','heading');
+    if (typeof document !== 'undefined' && document.documentElement?.dataset.syntheticFactory === 'true') rows.push({kind:'link',text:'Sign in / synthetic Factory preview',href:'/sign-in'});
     add('Build an agent around a purpose. Creation is Coming Soon; this preview does not save information or activate an agent.','notice');
     add('Create an agent without launching a token. Supa Agency is the platform; Supa Agent remains its flagship personality.');
     add('1. Create Agent','heading');
